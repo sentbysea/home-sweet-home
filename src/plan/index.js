@@ -1,9 +1,11 @@
 // 평면도 — 불러오기 · 등장(선 그리기 → 색 뽀잉 → 스티커) · 기울기 · 위글 · 방 스티커 버튼
 //   선 · 색 · 스티커는 레이어가 나뉘어 있다(.hsh-plan__lines / __color / __stickers, tools/floorplan.mjs).
-//   스티커를 누르면 hsh:room 이벤트(detail.room = 'v' | 'bath' | 'kitchen' | 'living' | 'entry' | 'e')가 올라간다.
+//   방 버튼을 누르면 hsh:room 이벤트(detail.room = 'v' | 'kitchen' | 'living' | 'entry' | 'e', 버튼 이름 · 색)가 올라가고
+//   room-window.js 가 그 방 창을 띄운다.
 
 import { enableTilt } from './tilt.js';
 import { mountClock } from './clock.js';
+import { enableRoomWindow } from './room-window.js';
 
 const SVG_URL = new URL('./floorplan.svg', import.meta.url);
 
@@ -42,6 +44,7 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
 
   mountClock(el.querySelector('.hsh-clock')); // 판 밖 화면 고정 — 기울여도 그대로
   enableStickers(el);
+  enableRoomWindow(el.parentElement, el, { reduced });
   const hint = setupHint(el);
   fitAroundClock(el);
   thinStars(el);
@@ -243,11 +246,13 @@ function activate(s) {
     [{ scale: '0.9' }, { scale: '1.12', offset: 0.5 }, { scale: '1' }],
     { duration: 300, easing: 'ease-out' },
   );
-  s.dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room: s.dataset.room } }));
+  const { room, label, bg, fg } = s.dataset;
+  const name = s.getAttribute('aria-label');
+  s.dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room, label, name, bg, fg } }));
 }
 
 // 방 버튼 네모 폭을 글자에 맞춘다(글꼴마다 글자 폭이 달라서 화면에서 잰다)
-const TAG_PAD_X = 14;
+const TAG_PAD_X = 17; // tools/floorplan.mjs 의 TAG.padX 와 같다
 
 function fitTags(el) {
   el.querySelectorAll('.hsh-tag').forEach((g) => {

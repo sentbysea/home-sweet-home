@@ -151,7 +151,7 @@
 .hsh-sticker__body {
   transform-box: fill-box;
   transform-origin: 50% 50%;
-  transition: scale 120ms ease-out;
+  transition: scale 120ms ease-out, rotate 220ms ease-out, translate 220ms ease-out;
 }
 
 .hsh-sticker.is-pressed .hsh-sticker__body { scale: 0.9; }
@@ -159,7 +159,7 @@
 /* 테두리 없는 단색 네모 + 성글게 띄운 둥근 글자(레퍼런스 'today's energy') */
 .hsh-tag__text {
   font-family: "Varela Round", "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  font-size: 28px; /* 평면도 단위 — tools/floorplan.mjs 의 TAG.font 와 같다 */
+  font-size: 33px; /* 평면도 단위 — tools/floorplan.mjs 의 TAG.font 와 같다 */
   font-weight: 400;
   letter-spacing: 2px;
 }
@@ -177,6 +177,15 @@
   25% { translate: 0 -3px; rotate: -3deg; }
   50% { translate: 0 0; rotate: 0deg; }
   75% { translate: 0 -1.5px; rotate: 2deg; }
+}
+
+/* 마우스를 올리면 까딱임을 멈추고 살짝 갸웃 */
+@media (hover: hover) {
+  .hsh-plan.is-done .hsh-sticker:hover .hsh-sticker__body {
+    animation: none;
+    rotate: -6deg;
+    translate: 0 -2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

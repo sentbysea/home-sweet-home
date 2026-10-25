@@ -584,7 +584,7 @@ ln(ellipse(717, 1291, 1.8, 1.8, 0), 'hsh-fine');
 //   네모마다 바탕 · 글자 색이 다르다. 글자 폭은 글꼴마다 달라서 네모 폭은 plan/index.js 가 글자에 맞춰 다시 잰다.
 //   class 는 예전 스티커 이름(hsh-sticker)을 그대로 써서 누르기 · 까딱 · 등장 동작을 같이 쓴다.
 // =========================================================
-const TAG = { font: 28, track: 2, padX: 14, h: 44 };
+const TAG = { font: 33, track: 2, padX: 17, h: 52 };
 const stickers = [];
 const tag = (roomId, text, name, x, y, bg, fg, tilt = 0) => {
   const w = Math.round(text.length * (TAG.font * 0.58 + TAG.track) + TAG.padX * 2); // 대략 — 화면에서 다시 맞춘다
@@ -597,7 +597,7 @@ const tag = (roomId, text, name, x, y, bg, fg, tilt = 0) => {
   );
 };
 tag('v', 'about V/E', '지원 · 우연 소개', 345, 395, '#e4d4fb', '#34b468', -3);
-tag('kitchen', 'teatime', '티타임', 662, 462, '#fbd5e3', '#4a98e4', 3);
+tag('kitchen', 'teatime?', '티타임', 662, 462, '#fbd5e3', '#4a98e4', 3);
 tag('living', 'notice', '공지', 590, 918, '#fbefae', '#e8893a', -2);
 tag('entry', 'neighbor', '이웃', 330, 1204, '#cdeed6', '#e65d98', -4);
 tag('e', 'archive', '기록', 712, 1180, '#cfe0fb', '#8a62dc', 3);
