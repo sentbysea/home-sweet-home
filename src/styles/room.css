@@ -239,13 +239,13 @@
   text-underline-offset: 5px;
 }
 
-/* 방 이름표 — 창 머리색 바탕 + 얇은 회색 외곽선. neighbor 에서는 누르는 칩 */
+/* 방 이름표 — 검정 알약 + 흰 글자(레퍼런스 'options'). neighbor 에서는 누르는 칩 */
 .hsh-win__pill {
   padding: 3px 12px 4px;
-  border: 1px solid var(--hsh-win-line);
+  border: 0;
   border-radius: 999px;
-  background: var(--hsh-win-tint);
-  color: var(--hsh-win-text);
+  background: #262628;
+  color: #fff;
   font-family: "Helvetica Neue", Arial, "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.3;
