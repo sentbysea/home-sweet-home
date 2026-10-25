@@ -131,19 +131,20 @@ const attr = (o) => Object.entries(o).filter(([, v]) => v != null).map(([k, v]) 
 /** 선 한 획 */
 const ln = (d, cls = '', extra = {}) =>
   lines.push([room, `<path data-stroke${attr({ class: cls || null, d, ...extra })}/>`]);
-/** 채색 — 튀어나오는 색 */
-//   기울인 조각은 겉 <g> 가 튀고 안쪽이 기울기를 가진다(튀는 transform 이 회전을 덮지 않게)
-const pop = (d, fill, extra = {}) =>
-  color.push([room, extra.transform
-    ? `<g class="hsh-pop"><path${attr({ d, fill, ...extra })}/></g>`
-    : `<path class="hsh-pop"${attr({ d, fill, ...extra })}/>`]);
-/** 여러 조각을 한 덩어리로 튀게 */
-const popGroup = (inner, extra = {}) =>
-  color.push([room, extra.transform
-    ? `<g class="hsh-pop"><g${attr(extra)}>${inner}</g></g>`
-    : `<g class="hsh-pop">${inner}</g>`]);
+/** 방 색 — 방마다 색 덩어리 하나(욕실은 타일 격자)만 색을 가진다 */
+const tint = (d, fill) => color.push([room, `<path class="hsh-pop"${attr({ d, fill })}/>`]);
+const tintGroup = (inner) => color.push([room, `<g class="hsh-pop">${inner}</g>`]);
 /** 흰 가리개 — 움직이지 않는다 */
 const mask = (d, extra = {}) => color.push([room, `<path class="hsh-mask"${attr({ d, ...extra })}/>`]);
+/** 가구 바탕 — 색은 빼고 바탕색으로 가린다(fill 인자는 예전 색 기록으로만 남긴다) */
+const pop = (d, _fill, extra = {}) => mask(d, extra);
+/** 여러 조각 가구 바탕 — 칠은 바탕색 가리개로, 색 선은 흐린 회색으로 */
+const popGroup = (inner, extra = {}) => {
+  const plain = inner
+    .replace(/ fill="#[0-9a-fA-F]{3,6}"/g, ' class="hsh-mask"')
+    .replace(/ stroke="#[0-9a-fA-F]{3,6}"/g, ' stroke="#9a9ea2"');
+  color.push([room, extra.transform ? `<g${attr(extra)}>${plain}</g>` : `<g>${plain}</g>`]);
+};
 /** 윤곽 + 바탕 */
 const shape = (d, fill, cls = '', extra = {}) => {
   if (fill === 'mask') mask(d, extra);
@@ -253,13 +254,13 @@ ln('M624 1004A74 74 0 0 1 550 1078', 'hsh-thin');
 // 방 색 덩어리(가구보다 먼저 = 아래)
 // =========================================================
 room = 'v';
-pop(blob([
+tint(blob([
   [108, 196], [116, 166], [170, 159], [236, 160], [270, 151], [338, 149], [398, 153], [414, 182],
   [410, 240], [416, 300], [406, 342], [368, 362], [312, 381], [262, 400], [242, 400], [240, 300],
   [112, 296], [104, 250],
 ]), C.sky);
 room = 'kitchen';
-pop(blob([
+tint(blob([
   [552, 298], [630, 290], [720, 293], [810, 288], [852, 302], [856, 380], [851, 460], [854, 540],
   [836, 596], [770, 606], [690, 600], [610, 604], [560, 590], [546, 520], [550, 440], [544, 360],
 ]), C.mint);
@@ -268,18 +269,18 @@ room = 'bath';
   let grid = '';
   for (let x = 117; x < 352; x += 17) grid += `M${x} 549V957`;
   for (let y = 566; y < 957; y += 17) grid += `M100 ${y}H352`;
-  popGroup(
+  tintGroup(
     `<rect x="100" y="549" width="252" height="408" fill="${C.tile}"/>` +
     `<path d="${grid}" fill="none" stroke="${C.tileLine}" stroke-width="0.8"/>`,
   );
 }
 room = 'living';
-pop(blob([
+tint(blob([
   [394, 694], [450, 688], [530, 691], [604, 688], [640, 700], [656, 740], [650, 800], [664, 880],
   [660, 922], [636, 934], [560, 936], [522, 942], [470, 965], [402, 969], [388, 940], [383, 860], [386, 760],
 ]), C.butter);
 room = 'e';
-pop(blob([
+tint(blob([
   [606, 1105], [642, 1090], [700, 1096], [742, 1087], [786, 1093], [794, 1150], [790, 1250],
   [800, 1336], [780, 1372], [700, 1379], [640, 1372], [612, 1340], [600, 1270], [612, 1200],
   [566, 1172], [562, 1132],
