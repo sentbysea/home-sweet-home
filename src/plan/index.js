@@ -37,6 +37,7 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   const card = el.querySelector('.hsh-plan__card');
   card.innerHTML = svgText;
   el.hidden = false;
+  roughenColors(el);
 
   mountClock(el.querySelector('.hsh-clock'), { reduced }); // 판 밖 화면 고정 — 기울여도 그대로
   enableStickers(el);
@@ -86,6 +87,52 @@ function startWobble(el, hint) {
       c.style.transform = `translateY(${(jitter(i, k, 4) * 0.7).toFixed(2)}px) rotate(${(jitter(i, k, 5) * 5).toFixed(1)}deg)`;
     });
   }, FRAME_MS);
+}
+
+// ---------- 색칠 질감 ----------
+//   마커로 칠한 듯 — 색 조각마다 가장자리를 따라 점을 찍고 바깥 · 안쪽으로 조금씩 밀어 울퉁불퉁한 면으로 다시 그린다.
+//   필터는 쓰지 않는다(iOS Safari 에서 깜빡임). 바탕색 가리개(.hsh-mask)와 스티커는 그대로.
+//   방 바닥 색 면은 크게, 가구 색은 작게 출렁인다. 선과 살짝 어긋나게 칠한 느낌도 조금.
+
+const ROUGH_STEP = 3; // 점 간격(평면도 단위)
+
+function roughenColors(el) {
+  const paths = [...el.querySelectorAll('.hsh-plan__color path[fill]')]
+    .filter((p) => p.getAttribute('fill') !== 'none');
+  paths.forEach((p, i) => {
+    const len = p.getTotalLength();
+    if (!(len > 20)) return;
+    const blob = p.parentElement?.matches('[data-room]') && len > 600; // 방 바닥 색 면
+    const amp = blob ? 2.6 : Math.min(1.1, len / 90);
+    const n = Math.max(16, Math.round(len / ROUGH_STEP));
+    const pts = [];
+    for (let k = 0; k < n; k++) pts.push(p.getPointAtLength((k / n) * len));
+    const ph1 = jitter(i, 0, 11) * Math.PI;
+    const ph2 = jitter(i, 0, 12) * Math.PI;
+    const waves = Math.max(2, Math.round(len / (blob ? 160 : 60)));
+    const out = pts.map((q, k) => {
+      const a = pts[(k - 1 + n) % n];
+      const b = pts[(k + 1) % n];
+      let nx = -(b.y - a.y);
+      let ny = b.x - a.x;
+      const m = Math.hypot(nx, ny) || 1;
+      nx /= m;
+      ny /= m;
+      const t = k / n;
+      const d = amp * (0.6 * Math.sin(t * Math.PI * 2 * waves + ph1)
+        + 0.3 * Math.sin(t * Math.PI * 2 * waves * 3.7 + ph2)
+        + 0.25 * jitter(i, k, 13));
+      return [q.x + nx * d, q.y + ny * d];
+    });
+    p.setAttribute('d', 'M' + out.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L') + 'Z');
+    // 선과 살짝 어긋나게
+    if (!blob) {
+      const ox = (jitter(i, 1, 14) * 0.7).toFixed(2);
+      const oy = (jitter(i, 1, 15) * 0.7).toFixed(2);
+      const t0 = p.getAttribute('transform');
+      p.setAttribute('transform', `${t0 ? t0 + ' ' : ''}translate(${ox} ${oy})`);
+    }
+  });
 }
 
 // ---------- 시계 자리 ----------
