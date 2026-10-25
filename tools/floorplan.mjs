@@ -4,7 +4,7 @@
 // 레이어
 //   .hsh-plan__color  채색 — 방 색 덩어리 · 가구 색 · 바탕색 가리개(.hsh-mask).
 //                     방([data-room]) 하나가 통째로 튀어나온다(plan/index.js).
-//   .hsh-plan__lines  선 — 벽 · 창 · 문 · 가구 윤곽 · 글자. [data-stroke] 가 한 획.
+//   .hsh-plan__lines  선 — 벽 · 창 · 문 · 가구 윤곽. [data-stroke] 가 한 획.
 // 모든 가구는 바로 위에서 내려다본 모양(다리 · 정면 모습 없음).
 
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -38,8 +38,8 @@ const VIEW = (() => {
 const CENTER = [HOUSE.x + HOUSE.w / 2, HOUSE.y + HOUSE.h / 2];
 
 /** 꺾은선 — 마디 사이를 살짝 휜 2차 곡선으로 */
-function poly(pts, { closed = false, amp = 0.7 } = {}) {
-  const p = pts.map(([x, y]) => [x + j(0.35), y + j(0.35)]);
+function poly(pts, { closed = false, amp = 0.7, jit = 0.35 } = {}) {
+  const p = pts.map(([x, y]) => [x + j(jit), y + j(jit)]);
   if (closed) p.push(p[0]);
   let d = `M${n(p[0][0])} ${n(p[0][1])}`;
   for (let i = 1; i < p.length; i++) {
@@ -153,8 +153,6 @@ const shape = (d, fill, cls = '', extra = {}) => {
   else if (fill) pop(d, fill, extra);
   ln(d, cls, extra);
 };
-const label = (x, y, text) =>
-  lines.push([room, `<text class="hsh-plan__label" data-label x="${x}" y="${y}">${text}</text>`]);
 
 // 색 — 차분한 파스텔(일상 조각 스티커 바탕색 참고)
 const C = {
@@ -183,7 +181,21 @@ const C = {
 // 벽 — 벽 덩어리마다 한 번에 둘러 그린다(바깥선·안선이 이어진 한 획)
 // =========================================================
 room = 'wall';
-const wall = (pts) => ln(poly(pts, { closed: true, amp: 0.9 }), 'hsh-wall');
+// 위글 — 벽마다 조금씩 다른 4장. 0장만 펜으로 그려지고(data-stroke), 다 그린 뒤 plan/index.js 가 190ms 마다 장을 바꾼다.
+//   1~3장은 따로 시드를 써서 나머지 그림의 흔들림 값이 바뀌지 않게 한다.
+const WALL_FRAMES = 4;
+let wallNo = 0;
+const wall = (pts) => {
+  const opt = { closed: true, amp: 1.6, jit: 1.1 };
+  ln(poly(pts, opt), 'hsh-wall', { 'data-wall': 0 });
+  const saved = seed;
+  for (let k = 1; k < WALL_FRAMES; k++) {
+    seed = 1000 + wallNo * 31 + k * 7;
+    lines.push([room, `<path class="hsh-wall"${attr({ d: poly(pts, opt), 'data-wall': k })}/>`]);
+  }
+  seed = saved;
+  wallNo++;
+};
 
 // 지원 방 왼쪽 · 아래 + 욕실 + 현관 왼쪽
 wall([
@@ -342,7 +354,6 @@ shape(
   );
   ln(rrect(273, 464, 52, 52, 5), '', { transform: rot(22, 299, 490) });
 }
-label(347, 390, 'ROOM-V');
 
 // =========================================================
 // 욕실(지원 방 아래)
@@ -363,7 +374,6 @@ shape(ellipse(158, 866, 31, 29), 'mask');
 ln(ellipse(161, 866, 22, 21), 'hsh-fine');
 shape(rrect(104, 824, 25, 82, 5), 'mask');
 ln(ellipse(114, 864, 2.4, 2.4, 0), 'hsh-fine');
-label(234, 787, 'BATH');
 
 // =========================================================
 // 주방
@@ -411,7 +421,6 @@ ln('M645 559L640 545M645 559L648 541M645 559L654 548M645 559L636 552', 'hsh-stem
   );
 }
 shape(ellipse(645, 568, 10, 11), 'mask');
-label(658, 469, 'KITCHEN');
 
 // =========================================================
 // 거실
@@ -444,7 +453,6 @@ ln(rrect(723, 756, 12, 70, 2), 'hsh-fine');
   popGroup(g);
   ln(rrect(705, 864, 36, 36, 2), 'hsh-fine');
 }
-label(579, 916, 'LIVING');
 
 // =========================================================
 // 현관
@@ -499,7 +507,6 @@ ln('M462 1317L466 1317M472 1317L476 1317', 'hsh-fine');
 }
 shape(ellipse(510, 1262, 8, 8, 0), C.sky);
 ln(ellipse(510, 1262, 3.5, 3.5, 0), 'hsh-fine');
-label(316, 1211, 'ENTRY');
 
 // =========================================================
 // 우연 방(오른쪽 아래)
@@ -570,7 +577,6 @@ ln('M878 1262Q898 1270 914 1284', 'hsh-crease-pink');
 shape(ellipse(717, 1291, 52, 52, 0.008), C.lilac);
 ln('M717 1291L700 1270M717 1291L736 1272M717 1291L742 1298M717 1291L724 1316M717 1291L694 1306', 'hsh-crease-pink');
 ln(ellipse(717, 1291, 1.8, 1.8, 0), 'hsh-fine');
-label(712, 1184, 'ROOM-E');
 
 // ---------- SVG ----------
 

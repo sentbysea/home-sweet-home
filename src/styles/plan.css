@@ -7,6 +7,7 @@
   --hsh-plan-paper: #fcfbf8; /* 로딩 화면과 같은 아이보리 — 사이트 바탕(body)과 같다 */
   --hsh-plan-ink: #262628;
   --hsh-plan-soft: #9a9ea2;
+  --hsh-plan-wall: #8f9497; /* 집 외곽선(벽) — 로딩 화면 집 테두리(--hsh-line)와 같은 색 */
   --hsh-plan-gutter: 16px;
 
   position: fixed;
@@ -79,7 +80,14 @@
   stroke-linejoin: round;
 }
 
-.hsh-plan__lines .hsh-wall { stroke-width: 3.2; }
+.hsh-plan__lines .hsh-wall { stroke-width: 3.2; stroke: var(--hsh-plan-wall); }
+/* 벽 위글 — 4장 중 한 장만(plan/index.js 가 data-wall-frame 을 바꾼다) */
+.hsh-plan__lines [data-wall] { display: none; }
+.hsh-plan:not([data-wall-frame]) [data-wall="0"],
+.hsh-plan[data-wall-frame="0"] [data-wall="0"],
+.hsh-plan[data-wall-frame="1"] [data-wall="1"],
+.hsh-plan[data-wall-frame="2"] [data-wall="2"],
+.hsh-plan[data-wall-frame="3"] [data-wall="3"] { display: inline; }
 .hsh-plan__lines .hsh-door { stroke-width: 1.4; }
 .hsh-plan__lines .hsh-thin { stroke-width: 1.1; }
 .hsh-plan__lines .hsh-fine { stroke-width: 1.1; }
@@ -91,15 +99,6 @@
 .hsh-plan__lines .hsh-pencil { stroke-width: 1.6; stroke: #b88d4e; }
 .hsh-plan__lines .hsh-stem { stroke-width: 0.9; stroke: #7ea466; }
 .hsh-plan__lines .hsh-pen { stroke-width: 2.6; }
-
-.hsh-plan__label {
-  font-family: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 19px; /* viewBox 단위 */
-  letter-spacing: 3.5px;
-  text-anchor: middle;
-  fill: var(--hsh-plan-ink);
-  stroke: none;
-}
 
 /* ---------- 채색 ---------- */
 

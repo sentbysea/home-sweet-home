@@ -32,10 +32,25 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   card.innerHTML = svgText;
   el.hidden = false;
 
-  if (!reduced) enableTilt(el, card);
+  if (!reduced) {
+    enableTilt(el, card);
+    startWallWobble(el);
+  }
 
   const replay = () => reveal(el, { reduced });
   return { done: replay(), replay };
+}
+
+// 벽 위글 — 로딩 화면 집 윤곽처럼 4장을 190ms 마다 번갈아(필터 없음). 다 그려진 뒤(.is-done)에만, 그리는 동안은 0장.
+const WALL_FRAMES = 4;
+const WALL_FRAME_MS = 190;
+
+function startWallWobble(el) {
+  let k = 0;
+  setInterval(() => {
+    k = el.classList.contains('is-done') ? (k + 1) % WALL_FRAMES : 0;
+    el.dataset.wallFrame = k;
+  }, WALL_FRAME_MS);
 }
 
 let running = [];
@@ -52,7 +67,6 @@ function reveal(el, { reduced }) {
   }
 
   const strokes = [...el.querySelectorAll('.hsh-plan__lines [data-stroke]')];
-  const labels = [...el.querySelectorAll('.hsh-plan__lines [data-label]')];
   // 색은 방 하나(바닥색 + 가구 색)가 한 덩어리로 튄다
   const rooms = [...el.querySelectorAll('.hsh-plan__color > [data-room]')]
     .sort((a, b) => ROOM_ORDER.indexOf(a.dataset.room) - ROOM_ORDER.indexOf(b.dataset.room));
@@ -70,14 +84,6 @@ function reveal(el, { reduced }) {
       [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
       { duration: dur, delay, easing: 'cubic-bezier(.45,.05,.35,1)', fill: 'backwards' },
     ));
-  });
-
-  // 방 이름 — 그 방 획이 거의 다 그려질 때 살짝
-  labels.forEach((t) => {
-    const roomStrokes = strokes.filter((s) => s.closest('[data-room]') === t.closest('[data-room]'));
-    const i = strokes.indexOf(roomStrokes[roomStrokes.length - 1]);
-    const delay = Math.round((i / last) ** 0.9 * LINE_SPAN);
-    running.push(t.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay, fill: 'backwards' }));
   });
 
   // ② 색 — 선이 다 그려진 뒤, 방 순서대로 한 방씩 뽀잉(0.82 → 1.05 → 1)
