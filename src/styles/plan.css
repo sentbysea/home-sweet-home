@@ -280,15 +280,14 @@
 .hsh-clock__word { font-size: 30px; letter-spacing: -0.1em; } /* 12 · 3 · 6 자리 단어 — 촘촘하게, 장평은 clock.js 가 줄인다 */
 .hsh-clock__tick { stroke: #a9cbee; stroke-width: 1.6; stroke-linecap: round; }
 .hsh-clock__word.is-sweet { font-style: italic; }
-.hsh-clock__underline { fill: none; stroke: #f3a2b2; stroke-width: 1.5; stroke-linecap: round; }
+.hsh-clock__underline { fill: none; stroke-width: 1.5; stroke-linecap: round; }
+.hsh-clock__underline.is-sweet { stroke: #f3a2b2; }
+.hsh-clock__underline.is-jiwon { stroke: #4fb3a9; } /* bubbles.js PEOPLE 색과 같다 */
+.hsh-clock__underline.is-wooyeon { stroke: #e5a83a; }
 
-/* sweet 자리 — 시계 그림 위에 얹은 투명 버튼(dday.js). 시계의 나머지는 그대로 누름이 판으로 간다 */
-.hsh-clock__sweet {
+/* 시계 단어 자리 — 그림 위에 얹은 투명 버튼(bubbles.js). 시계의 나머지는 그대로 누름이 판으로 간다 */
+.hsh-clock__hit {
   position: absolute;
-  left: 72%;
-  top: 28%;
-  width: 28%;
-  height: 46%;
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -298,30 +297,34 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.hsh-clock__sweet:focus-visible { outline: 1.5px solid #a9cbee; outline-offset: 2px; }
+.hsh-clock__hit.is-sweet { left: 72%; top: 28%; width: 28%; height: 46%; }
+.hsh-clock__hit.is-top { left: 31%; top: -4%; width: 30%; height: 30%; }
+.hsh-clock__hit.is-bottom { left: 31%; top: 74%; width: 30%; height: 30%; }
+.hsh-clock__hit:focus-visible { outline: 1.5px solid #a9cbee; outline-offset: 2px; }
 
-/* ---------- 디데이 생각 풍선(왼쪽 위, dday.js) — 끌어 옮길 수 있다 ---------- */
+/* ---------- 풍선(왼쪽 위, bubbles.js) — 디데이 생각 풍선 · 쌓이는 말풍선. 끌어 옮길 수 있다 ---------- */
 
-.hsh-dday {
+.hsh-bubble {
+  --hsh-bubble-accent: #7fb1e4;
   position: absolute;
   top: var(--hsh-clock-top);
   left: max(var(--hsh-clock-gap), env(safe-area-inset-left));
   z-index: 5;
   width: clamp(190px, 46vw, 250px);
   aspect-ratio: 240 / 160;
-  transform-origin: 8% 92%; /* 꼬리(작은 동그라미) 쪽에서 부풀어 오른다 */
+  transform-origin: 8% 92%; /* 꼬리 쪽에서 부풀어 오른다 */
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   cursor: grab;
 }
 
-.hsh-dday[hidden] { display: none; }
-.hsh-dday.is-dragging { cursor: grabbing; }
+.hsh-bubble[hidden] { display: none; }
+.hsh-bubble.is-dragging { cursor: grabbing; }
 
-.hsh-dday__art { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hsh-bubble__art { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 
-.hsh-dday__cloud {
+.hsh-bubble__line {
   fill: var(--hsh-plan-paper);
   stroke: var(--hsh-plan-line);
   stroke-width: 1.2;
@@ -329,38 +332,58 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* 글자 — 구름 몸통(viewBox 32..224 × 24..116) 한가운데 */
-.hsh-dday__text {
+/* 글자 — 풍선 몸통 한가운데 */
+.hsh-bubble__text {
   position: absolute;
-  left: 14%;
-  right: 7%;
-  top: 15%;
-  height: 58%;
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.hsh-bubble.is-thought .hsh-bubble__text {
+  left: 14%; right: 7%; top: 15%; height: 58%;
   font-family: "Helvetica Neue", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif; /* 시계 글자와 같게 */
   font-weight: 300;
   color: #7fb1e4;
   white-space: nowrap;
-  pointer-events: none;
 }
 
-.hsh-dday__since { font-size: 11px; font-style: italic; letter-spacing: 0.06em; color: #a9cbee; }
-.hsh-dday__count { font-size: clamp(22px, 6.4vw, 28px); letter-spacing: -0.02em; }
-.hsh-dday__count b { font-weight: 400; }
-.hsh-dday__deco { color: #7fb1e4; }
-.hsh-dday__heart { color: #f3a2b2; }
+.hsh-bubble.is-speech .hsh-bubble__text {
+  left: 12%; right: 8%; top: 14%; height: 66%;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  color: var(--hsh-plan-ink);
+  word-break: keep-all;
+}
 
-.hsh-dday__x {
+.hsh-bubble__small[hidden] { display: none; }
+.hsh-bubble__small { font-size: 11px; font-style: italic; letter-spacing: 0.06em; color: #a9cbee; }
+.hsh-bubble__big { font-size: clamp(22px, 6.4vw, 28px); letter-spacing: -0.02em; }
+.hsh-bubble__big b { font-weight: 400; }
+.hsh-bubble__deco { color: #7fb1e4; }
+.hsh-bubble__heart { color: #f3a2b2; }
+
+/* 대사 — 그림처럼 크게, 누구 말인지는 시계 home 과 같은 색 밑줄로 */
+.hsh-bubble__say {
+  display: inline;
+  font-size: clamp(17px, 4.8vw, 21px);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  text-decoration: underline 2px var(--hsh-bubble-accent);
+  text-underline-offset: 5px;
+}
+
+.hsh-bubble__x {
   position: absolute;
-  top: 6%;
-  right: 4%;
-  width: 24px;
-  height: 24px;
+  top: 7%;
+  right: 5%;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -371,8 +394,15 @@
   cursor: pointer;
 }
 
-.hsh-dday__x svg { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
-.hsh-dday__x:focus-visible { outline: 1.5px solid #a9cbee; outline-offset: 2px; }
+/* 손가락으로 누르기 쉽게 — 보이는 동그라미는 작게, 누르는 자리는 넓게 */
+.hsh-bubble__x::before { content: ""; position: absolute; inset: -10px; }
+.hsh-bubble__x svg { width: 7px; height: 7px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
+.hsh-bubble__x:focus-visible { outline: 1.5px solid #a9cbee; outline-offset: 2px; }
+
+@media (min-width: 768px) {
+  .hsh-bubble__x { width: 22px; height: 22px; }
+  .hsh-bubble__x svg { width: 8px; height: 8px; }
+}
 
 .hsh-clock__hand line { stroke-linecap: round; }
 .hsh-clock__hour line { stroke: #46474b; stroke-width: 5; }

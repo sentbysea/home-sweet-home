@@ -53,10 +53,16 @@ function build() {
     if (word) {
       const [text, x, y] = word;
       const t = label(text, 0, 0, h === 3 ? 'hsh-clock__word is-sweet' : 'hsh-clock__word');
+      const line = (cls, half) => face.append(el('path', {
+        class: `hsh-clock__underline ${cls}`,
+        d: `M${x - half} ${y + 15}Q${x - 6} ${y + 17.5} ${x + 8} ${y + 15.5}T${x + half + 2} ${y + 15}`,
+      }));
       t.setAttribute('transform', `translate(${x} ${y}) scale(${WORD_SQUEEZE} 1)`); // 0,0 에서 좁힌 뒤 자리로
       face.append(t);
-      // sweet — 이탤릭 + 손으로 그은 듯한 분홍 밑줄(누르면 디데이, dday.js)
-      if (h === 3) face.append(el('path', { class: 'hsh-clock__underline', d: `M${x - 24} ${y + 15}Q${x - 6} ${y + 17.5} ${x + 8} ${y + 15.5}T${x + 26} ${y + 15}` }));
+      // 손으로 그은 듯한 밑줄 — 누르면 풍선(bubbles.js). sweet: 이탤릭 + 분홍(디데이) · 위 home: 청록(지원) · 아래 home: 벌꿀색(우연)
+      if (h === 3) line('is-sweet', 24);
+      if (h === 12) line('is-jiwon', 22);
+      if (h === 6) line('is-wooyeon', 22);
     } else {
       face.append(label(String(h), (sx * RX).toFixed(1), (cy * RY).toFixed(1), 'hsh-clock__num'));
     }

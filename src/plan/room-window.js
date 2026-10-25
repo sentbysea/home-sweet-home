@@ -1,5 +1,5 @@
 // 방 버튼을 누르면 뜨는 창 — 폴더 탭 + 주소창이 있는 브라우저 창 꼴에 무늬 스티커를 걸쳐 둔다.
-//   스티커는 열 때마다 새로 — 3~6개, 모양(별 · 하트 · 뾰족이 · 클로버 · 구름) · 무늬(줄무늬 · 도트 · 망점 · 단색 · 깅엄) ·
+//   스티커는 열 때마다 새로 — 2~4개, 모양(별 · 하트 · 뾰족이 · 클로버 · 구름) · 무늬(줄무늬 · 도트 · 망점 · 단색 · 깅엄) ·
 //   색 · 크기 · 기울기가 무작위. 창 둘레를 개수만큼 나눠 칸마다 하나씩 놓아 몰리지 않게(탭 · × 쪽은 비운다).
 //   창 머리(탭 · 주소창 줄)는 누른 버튼의 바탕색, 제목 밑줄은 버튼 글자색을 따른다.
 //   선은 모두 로딩 화면 집 윤곽과 같은 얇은 회색.
@@ -105,7 +105,7 @@ function edgePoint(t) {
 
 function scatter(frame) {
   frame.querySelectorAll('.hsh-win__deco').forEach((n) => n.remove());
-  const n = 3 + Math.floor(Math.random() * 4); // 3 ~ 6
+  const n = 2 + Math.floor(Math.random() * 3); // 2 ~ 4
   const start = Math.random();
   const big = Math.floor(Math.random() * n); // 하나는 크게
   for (let i = 0; i < n; i++) {
