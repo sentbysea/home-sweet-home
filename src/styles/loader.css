@@ -39,10 +39,10 @@
   translate: 0 -3%; /* 첨부처럼 가운데보다 아주 조금 위 */
 }
 
-/* 첨부 비율 그대로: 집 폭 340 : 높이 318. 모바일 176~208px, 짧은 가로 화면에서는 높이에 맞춘다 */
+/* 첨부 비율 그대로: 집 폭 340 : 높이 318. 모바일 141~166px, 짧은 가로 화면에서는 높이에 맞춘다 */
 .hsh-loader__house {
   display: block;
-  width: min(clamp(176px, 51vw, 208px), 50svh * 340 / 318);
+  width: min(clamp(141px, 41vw, 166px), 40svh * 340 / 318);
   height: auto;
   aspect-ratio: 340 / 318;
   overflow: visible;
@@ -50,7 +50,7 @@
 
 @media (min-width: 768px) {
   .hsh-loader__house {
-    width: min(240px, 50svh * 340 / 318);
+    width: min(192px, 40svh * 340 / 318);
   }
 }
 
