@@ -9,13 +9,32 @@
   <link rel="preload" href="src/fonts/nanum-gothic-coding-status.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <!-- 방 창 안쪽 글자 — Pretendard(필요한 글자만 받는 subset) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <!-- 평면도 SVG · 모듈을 미리 받아 둔다 — main.js 를 읽고 나서야 하나씩 알게 되는 줄줄이 대기를 없앤다 -->
+  <link rel="preload" href="src/plan/floorplan.svg" as="fetch" crossorigin>
+  <link rel="modulepreload" href="src/main.js">
+  <link rel="modulepreload" href="src/loader/index.js">
+  <link rel="modulepreload" href="src/loader/ready.js">
+  <link rel="modulepreload" href="src/loader/typing.js">
+  <link rel="modulepreload" href="src/loader/status.js">
+  <link rel="modulepreload" href="src/loader/draw.js">
+  <link rel="modulepreload" href="src/loader/enter.js">
+  <link rel="modulepreload" href="src/loader/exit.js">
+  <link rel="modulepreload" href="src/loader/wobble.js">
+  <link rel="modulepreload" href="src/plan/index.js">
+  <link rel="modulepreload" href="src/plan/tilt.js">
+  <link rel="modulepreload" href="src/plan/clock.js">
+  <link rel="modulepreload" href="src/plan/bubbles.js">
+  <link rel="modulepreload" href="src/plan/room-window.js">
+  <link rel="modulepreload" href="src/plan/about.js">
+  <link rel="modulepreload" href="src/plan/neighbor.js">
+  <!-- 방 창 안쪽 글자 — Pretendard(필요한 글자만 받는 subset). 로딩 화면은 안 쓰므로 첫 화면을 막지 않게 뒤에서 받는다 -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="src/styles/base.css">
   <link rel="stylesheet" href="src/styles/loader.css">
   <link rel="stylesheet" href="src/styles/plan.css">
   <link rel="stylesheet" href="src/styles/room.css">
-  <noscript><style>.hsh-loader__text { visibility: visible; }</style></noscript>
+  <noscript><style>.hsh-loader__text { visibility: visible; }</style><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></noscript>
 </head>
 <body>
   <!-- 로딩 화면 — 이식할 때는 이 블록 + loader.css + src/loader/ 를 옮긴다 -->

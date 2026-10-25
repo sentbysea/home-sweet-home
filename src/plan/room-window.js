@@ -326,7 +326,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const nbBox = win.querySelector('.hsh-nb');
   const neighbor = mountNeighbor(nbBox, () => syncRail());
   const veBox = win.querySelector('.hsh-ve');
-  const about = mountAbout(veBox, () => syncRail(), win.querySelector('.hsh-win__scroll'));
+  const about = mountAbout(veBox, () => syncRail());
   const thumb = win.querySelector('.hsh-win__thumb');
   const noteTabs = win.querySelector('.hsh-note__tabs');
   const scroller = win.querySelector('.hsh-win__scroll');
