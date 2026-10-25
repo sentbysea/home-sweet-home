@@ -370,11 +370,11 @@ ln(rrect(598, 322, 53, 31, 3, 0.3), 'hsh-fine');
 ln('M624 305L624 324M617 305L631 305', '');
 ln(ellipse(624, 337, 1.6, 1.6, 0), 'hsh-fine');
 popGroup(
-  `<path d="${rrect(769, 314, 63, 38, 4)}" fill="${C.dark}"/>` +
-  `<circle cx="786" cy="333" r="9.5" fill="none" stroke="#a9a9ad" stroke-width="1.6"/>` +
-  `<circle cx="814" cy="333" r="9.5" fill="none" stroke="#a9a9ad" stroke-width="1.6"/>`,
+  `<path d="${rrect(724, 314, 63, 38, 4)}" fill="${C.dark}"/>` +
+  `<circle cx="741" cy="333" r="9.5" fill="none" stroke="#a9a9ad" stroke-width="1.6"/>` +
+  `<circle cx="769" cy="333" r="9.5" fill="none" stroke="#a9a9ad" stroke-width="1.6"/>`,
 );
-ln(rrect(769, 314, 63, 38, 4));
+ln(rrect(724, 314, 63, 38, 4));
 shape(rrect(797, 420, 65, 77, 3), C.grey);
 shape(rrect(793, 504, 70, 70, 4), 'mask');
 shape(rrect(795, 577, 69, 50, 4), 'mask');
@@ -445,20 +445,55 @@ label(579, 916, 'LIVING');
 // 현관
 // =========================================================
 room = 'entry';
-for (const cx of [349, 379]) {
-  shape(ellipse(cx, 1307, 11.5, 25, 0.01), C.cream);
+// 슬리퍼 두 켤레 — 원래 크림 + 새로 분홍
+const slipper = (cx, fill) => {
+  shape(ellipse(cx, 1307, 11.5, 25, 0.01), fill);
   ln(`M${cx - 10} 1299Q${cx} 1290 ${cx + 10} 1299M${cx - 10} 1305Q${cx} 1296 ${cx + 10} 1305`, 'hsh-fine');
+};
+for (const cx of [349, 379]) slipper(cx, C.cream);
+for (const cx of [293, 319]) slipper(cx, C.pink);
+// 왼쪽 벽 신발장 — 위에서 본 긴 장, 문 두 짝
+shape(rrect(184, 1110, 40, 114, 2), C.wood);
+ln('M184 1167L224 1167', 'hsh-fine');
+ln('M219 1132L219 1150M219 1184L219 1202', 'hsh-fine');
+// 왼쪽 벽 화분 — 둥근 화분 + 큰 잎(위에서)
+{
+  const cx = 224;
+  const cy = 1032;
+  shape(ellipse(cx, cy, 22, 22, 0.01), C.cream);
+  ln(ellipse(cx, cy, 17, 17, 0), 'hsh-fine');
+  const leaves = [
+    [cx - 15, cy - 14, 9, 17, -40], [cx + 14, cy - 15, 9, 17, 38], [cx + 17, cy + 10, 8, 15, 120],
+    [cx - 16, cy + 12, 8, 15, -125], [cx + 1, cy - 20, 7, 14, 4], [cx + 2, cy + 18, 7, 13, 176],
+  ];
+  popGroup(
+    leaves.map(([x, y, rx, ry, r]) =>
+      `<path d="${ellipse(x, y, rx, ry, 0)}" transform="${rot(r, x, y)}" fill="${C.leaf}" stroke="${C.leafLine}" stroke-width="0.8"/>`,
+    ).join(''),
+  );
+  ln(`M${cx} ${cy}L${cx - 13} ${cy - 12}M${cx} ${cy}L${cx + 12} ${cy - 13}M${cx} ${cy}L${cx + 14} ${cy + 9}M${cx} ${cy}L${cx - 13} ${cy + 10}`, 'hsh-stem');
 }
-// 신발장 — 위에서 본 장 · 그 위에 눕혀 둔 사진 액자
-shape(rrect(422, 1254, 80, 83, 2), C.cream);
-pop(rrect(422, 1309, 80, 28, 1), C.wood);
-ln('M422 1309L502 1309M462 1309L462 1337', 'hsh-fine');
-popGroup(
-  `<path d="${rrect(434, 1264, 49, 35, 2)}" fill="#bcdcf6"/>` +
-  `<path d="M436 1297L436 1284Q444 1276 452 1280Q462 1270 472 1276Q478 1272 481 1274L481 1297Z" fill="#eef7fd"/>`,
-);
-ln(rrect(434, 1264, 49, 35, 2));
-ln('M444 1288L447 1286L450 1288M471 1272L474 1270L477 1272', 'hsh-hair-dark');
+// 선반 — 넓게. 위에 세워 둔 사진 액자(나무 테 · 흰 여백 · 산과 해) + 작은 꽃병
+shape(rrect(410, 1236, 118, 96, 2), C.cream);
+pop(rrect(410, 1302, 118, 30, 1), C.wood);
+ln('M410 1302L528 1302M469 1302L469 1332', 'hsh-fine');
+ln('M462 1317L466 1317M472 1317L476 1317', 'hsh-fine');
+{
+  const t = { transform: rot(-6, 456, 1268) };
+  popGroup(
+    `<path d="${rrect(424, 1244, 64, 48, 3)}" fill="#d9b27a"/>` +
+    `<path d="${rrect(430, 1250, 52, 36, 1)}" fill="#fff"/>` +
+    `<path d="${rrect(434, 1254, 44, 28, 1)}" fill="#bcdcf6"/>` +
+    `<path d="M434 1282L434 1274L446 1262L455 1271L462 1265L478 1279L478 1282Z" fill="#9fcf9a"/>` +
+    `<circle cx="469" cy="1261" r="3.6" fill="#f7d580"/>`,
+    t,
+  );
+  ln(rrect(424, 1244, 64, 48, 3), '', t);
+  ln(rrect(430, 1250, 52, 36, 1), 'hsh-fine', t);
+  ln('M434 1274L446 1262L455 1271L462 1265L478 1279', 'hsh-hair-dark', t);
+}
+shape(ellipse(510, 1262, 8, 8, 0), C.sky);
+ln(ellipse(510, 1262, 3.5, 3.5, 0), 'hsh-fine');
 label(316, 1211, 'ENTRY');
 
 // =========================================================
