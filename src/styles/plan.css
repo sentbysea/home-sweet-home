@@ -40,7 +40,7 @@
    그래도 집과 겹칠 때만 index.js 가 --hsh-clock-room 만큼(세로 화면은 위, 가로 화면은 양옆) 비운다 */
 .hsh-plan {
   --hsh-clock-h: 126px;
-  --hsh-clock-w: calc(var(--hsh-clock-h) * 280 / 268); /* clock.js 의 viewBox 비율 */
+  --hsh-clock-w: calc(var(--hsh-clock-h) * 206 / 268); /* clock.js 의 viewBox 비율 */
   --hsh-clock-gap: 12px;
   --hsh-clock-top: max(var(--hsh-clock-gap), env(safe-area-inset-top));
   --hsh-clock-right: max(var(--hsh-clock-gap), env(safe-area-inset-right));
