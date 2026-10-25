@@ -1,8 +1,13 @@
-// 방문 단계 — 집 아래 작은 글과 아이콘. 초인종 → 문 → 신발 순서.
+// 방문 단계 — 집 아래 작은 글과 아이콘. 초인종 → 달려나옴 → 문 → 신발 순서.
 // 각 단계는 최소 minStep 동안 보이고, 마지막 단계는 준비 완료 신호가 올 때까지 머문다.
+// 글을 바꾸면 한글 서브셋 폰트도 다시 받는다(README).
+
+const HOSTS = ['차우연이', '홍지원이'];
+const host = HOSTS[Math.floor(Math.random() * HOSTS.length)]; // 불러올 때마다 한 명
 
 export const VISIT_STEPS = [
   { key: 'bell', text: '초인종 누르는 중' },
+  { key: 'run', text: `${host} 달려나오는 중` },
   { key: 'door', text: '문 열리는 중' },
   { key: 'shoes', text: '신발 벗는 중' },
 ];
