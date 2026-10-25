@@ -223,16 +223,21 @@
 
 .hsh-plan__hint-char { display: inline-block; } /* plan/index.js 가 글자마다 살짝 기울인다 */
 
-/* 괄호 속 — 평면도 버튼을 작게 줄인 색 네모. 버튼 이름이 돌아가며 바뀐다(index.js) */
-.hsh-plan__hint-chip {
-  display: inline-block;
-  margin: 0 5px;
-  padding: 2px 8px 3px;
-  font-family: "Varela Round", "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  line-height: 1.3;
-  transition: background-color 300ms ease, color 300ms ease;
+/* 괄호 속 — 나중에 누를 물건 아이콘이 돌아가며 바뀐다(index.js). 칸 크기 고정이라 글자는 제자리 */
+.hsh-plan__hint-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0 4px;
+  overflow: visible;
+}
+
+.hsh-plan__hint-art * {
+  stroke: var(--hsh-plan-line);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 
 /* ---------- 시계(오른쪽 위, 화면 고정 — clock.js) ---------- */

@@ -18,7 +18,7 @@ const POP_MS = 460;
 const ROOM_ORDER = ['v', 'kitchen', 'bath', 'living', 'entry', 'e'];
 const STICKER_GAP = 90; // 스티커가 하나씩 붙는 간격
 const STICKER_MS = 420;
-const ICON_MS = 1400; // 하단 안내 괄호 속 버튼 이름이 바뀌는 간격
+const ICON_MS = 1400; // 하단 안내 괄호 속 물건 아이콘이 바뀌는 간격
 const DRAG_SLOP = 6; // tilt.js 와 같다 — 이보다 많이 끌었으면 누름이 아니다
 
 /** SVG 를 받아 둔다(로딩 화면이 떠 있는 동안). */
@@ -90,6 +90,7 @@ function startWobble(el, hint) {
     hint.chars.forEach((c, i) => {
       c.style.transform = `translateY(${(jitter(i, k, 4) * 0.7).toFixed(2)}px) rotate(${(jitter(i, k, 5) * 5).toFixed(1)}deg)`;
     });
+    hint.icon.style.transform = `translateY(${(jitter(99, k, 4) * 0.7).toFixed(2)}px) rotate(${(jitter(99, k, 5) * 6).toFixed(1)}deg)`;
   }, FRAME_MS);
 }
 
@@ -284,11 +285,42 @@ function fitTags(el) {
 }
 
 // ---------- 하단 안내 — click the ( ) ----------
-//   글자는 하나씩 span 으로(위글), 괄호 속에는 평면도 버튼을 작게 줄인 색 네모가 이름을 바꿔 가며 들어간다.
+//   글자는 하나씩 span 으로(위글), 괄호 속에는 나중에 누를 수 있게 될 물건 아이콘이 돌아가며 들어간다.
+//   아이콘 칸은 폭이 고정이라 글자는 움직이지 않는다. 아이콘은 -13..13 칸에 비슷한 크기로.
+
+const HINT_ICONS = [
+  // 왼쪽 위 방 — 태블릿
+  `<rect x="-7.5" y="-10.5" width="15" height="21" rx="2.6" fill="#c9d8f4"/>
+   <rect x="-5.3" y="-7.8" width="10.6" height="14" rx="1" fill="#fff"/>
+   <circle cx="0" cy="8.4" r="0.9" fill="#fff"/>`,
+  // 부엌 — 가스레인지(불꽃 둘 + 손잡이 셋)
+  `<path d="M-5 -3.2C-7.6 -4.8 -6.4 -8 -5 -10.4C-3.6 -8 -2.4 -4.8 -5 -3.2Z" fill="#f8c49a"/>
+   <path d="M5 -3.2C2.4 -4.8 3.6 -8 5 -10.4C6.4 -8 7.6 -4.8 5 -3.2Z" fill="#f8c49a"/>
+   <rect x="-10.5" y="-2.4" width="21" height="12.4" rx="2.2" fill="#e9eef0"/>
+   <path d="M-10.5 1.4H10.5" fill="none"/>
+   <circle cx="-5" cy="5.6" r="1.4" fill="#fff"/><circle cx="0" cy="5.6" r="1.4" fill="#fff"/><circle cx="5" cy="5.6" r="1.4" fill="#fff"/>`,
+  // 입구 — 액자(걸린 끈 + 하트 그림)
+  `<path d="M-5 -8.6L0 -12.2L5 -8.6" fill="none"/>
+   <rect x="-9.5" y="-8.6" width="19" height="19" rx="1" fill="#f6dc8f"/>
+   <rect x="-6.6" y="-5.7" width="13.2" height="13.2" fill="#fff"/>
+   <path d="M0 4.4C-2.8 2.4 -3.8 0.9 -3.8 -0.5C-3.8 -1.8 -2.8 -2.6 -1.8 -2.6C-1 -2.6 -0.3 -2.1 0 -1.5C0.3 -2.1 1 -2.6 1.8 -2.6C2.8 -2.6 3.8 -1.8 3.8 -0.5C3.8 0.9 2.8 2.4 0 4.4Z" fill="#f4a6c9"/>`,
+  // 우연이 방 — 베이스(비스듬히)
+  `<g transform="rotate(35) translate(0 1)">
+     <rect x="-1.1" y="-13" width="2.2" height="11" fill="#e8d2b4"/>
+     <rect x="-2" y="-14.6" width="4" height="3.6" rx="1" fill="#c9b5f2"/>
+     <path d="M0 -2.6C2.8 -2.6 4.3 -0.8 3.8 1.4C5.8 2.6 6.2 6.2 4.3 8.2C2.4 10.2 -2.4 10.2 -4.3 8.2C-6.2 6.2 -5.8 2.6 -3.8 1.4C-4.3 -0.8 -2.8 -2.6 0 -2.6Z" fill="#c9b5f2"/>
+     <rect x="-2.2" y="5" width="4.4" height="1.6" rx="0.5" fill="#fff"/>
+   </g>`,
+  // 우연이 방 — 노트(왼쪽 스프링 + 줄)
+  `<rect x="-7.5" y="-10.5" width="16" height="21" rx="1.6" fill="#cbe6b6"/>
+   <rect x="-4.2" y="-10.5" width="12.7" height="21" rx="1.6" fill="#fff"/>
+   <path d="M-1.6 -5H5.6M-1.6 -1H5.6M-1.6 3H5.6" fill="none"/>
+   <path d="M-9.6 -7H-5.6M-9.6 -2.4H-5.6M-9.6 2.2H-5.6M-9.6 6.8H-5.6" fill="none"/>`,
+];
 
 function setupHint(el) {
   const p = el.querySelector('.hsh-plan__hint');
-  const chip = p.querySelector('.hsh-plan__hint-chip');
+  const icon = p.querySelector('.hsh-plan__hint-icon');
   for (const node of [...p.childNodes]) {
     if (node.nodeType !== Node.TEXT_NODE) continue;
     const frag = document.createDocumentFragment();
@@ -300,8 +332,7 @@ function setupHint(el) {
     }
     node.replaceWith(frag);
   }
-  const tags = [...el.querySelectorAll('.hsh-tag')].map((g) => g.dataset);
-  const hint = { chars: [...p.querySelectorAll('.hsh-plan__hint-char')], chip, tags, i: 0 };
+  const hint = { chars: [...p.querySelectorAll('.hsh-plan__hint-char')], icon, i: 0 };
   showHintIcon(hint);
   return hint;
 }
@@ -309,11 +340,7 @@ function setupHint(el) {
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function showHintIcon(hint) {
-  const t = hint.tags[hint.i % hint.tags.length];
-  if (!t) return;
-  hint.chip.textContent = t.label;
-  hint.chip.style.backgroundColor = t.bg;
-  hint.chip.style.color = t.fg;
+  hint.icon.innerHTML = `<g class="hsh-plan__hint-art">${HINT_ICONS[hint.i % HINT_ICONS.length]}</g>`;
 }
 
 function cycleHintIcon(el, hint) {
@@ -321,6 +348,7 @@ function cycleHintIcon(el, hint) {
     if (!el.classList.contains('is-done')) return;
     hint.i++;
     showHintIcon(hint);
+    hint.icon.animate([{ scale: '0.6' }, { scale: '1.12', offset: 0.6 }, { scale: '1' }], { duration: 280, easing: 'ease-out' });
   }, ICON_MS);
 }
 

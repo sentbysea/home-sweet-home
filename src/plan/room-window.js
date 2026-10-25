@@ -166,6 +166,7 @@ function punyDecode(input) {
 // ---------- 공지(notice 버튼) ----------
 
 const NOTICE_TAG = '@3tatichearts · 수아'; // 공지 창의 검정 이름표
+const NOTICE_THUMB = 'src/images/notice-thumb.jpg'; // 공지 창 썸네일 사진
 // 칸마다 [제목, [[본문, 화살표 줄], …] 또는 한 줄] — **…** 는 강조
 const NOTICE = [
   ['ABOUT', [
@@ -270,6 +271,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const like = win.querySelector('.hsh-win__like');
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
+  const thumb = win.querySelector('.hsh-win__thumb');
   const noteTabs = win.querySelector('.hsh-note__tabs');
   const scroller = win.querySelector('.hsh-win__scroll');
   const rail = win.querySelector('.hsh-win__rail');
@@ -364,6 +366,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     show(label, '곧 채워질 방이에요.');
     scatter(frame);
     setPill(room, label === 'notice' ? NOTICE_TAG : name);
+    thumb.style.backgroundImage = label === 'notice' ? `url("${NOTICE_THUMB}")` : '';
     paintLike();
     win.hidden = false;
     win.classList.remove('is-closing');

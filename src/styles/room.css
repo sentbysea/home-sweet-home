@@ -221,6 +221,7 @@
   height: 54px;
   border: 1px solid var(--hsh-win-line);
   border-radius: 9px;
+  background: center / cover no-repeat; /* 사진은 room-window.js 가 방마다 넣는다 */
 }
 
 /* 썸네일 귀퉁이에 걸친 망점 하트 */
@@ -296,7 +297,6 @@
 .hsh-win__empty[hidden],
 .hsh-win__note[hidden],
 .hsh-note__tabs[hidden],
-.hsh-note__sec[hidden],
 .hsh-win__rail[hidden] { display: none; }
 
 /* 스크롤바 — 얇은 회색 길 위에 창 머리 색 알약 */
@@ -359,7 +359,10 @@
   word-break: keep-all;
 }
 
-.hsh-note__sec { display: grid; gap: 15px; }
+/* 세 칸을 한자리에 겹쳐 두고 고른 칸만 보인다 — 높이는 제일 긴 칸(ABOUT · ME)에 맞춰 고정 */
+.hsh-note { display: grid; align-items: start; }
+.hsh-note__sec { grid-area: 1 / 1; display: grid; gap: 15px; }
+.hsh-note__sec[hidden] { display: grid; visibility: hidden; }
 
 .hsh-note__item { display: grid; gap: 0; margin: 0; }
 
