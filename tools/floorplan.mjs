@@ -153,26 +153,26 @@ const shape = (d, fill, cls = '', extra = {}) => {
 const label = (x, y, text) =>
   lines.push([room, `<text class="hsh-plan__label" data-label x="${x}" y="${y}">${text}</text>`]);
 
-// 색 — 맑고 쨍한 파스텔(별 스티커 · 말풍선 참고)
+// 색 — 밝고 쨍한 파스텔(별 스티커 · 말풍선 참고)
 const C = {
-  sky: '#c6efff',
-  mint: '#c4fbe2',
-  butter: '#fff5b4',
-  pink: '#ffd6ee',
-  tile: '#effcff',
-  tileLine: '#c4ecf7',
-  shower: '#a8f0ff',
-  cream: '#fffae4',
-  wood: '#ffe6bd',
-  blueBlanket: '#8ae4ff',
-  pinkBlanket: '#ffbadf',
+  sky: '#a3e7ff',
+  mint: '#a6fcd6',
+  butter: '#fff29a',
+  pink: '#ffc2e5',
+  tile: '#dff8ff',
+  tileLine: '#a4e3f4',
+  shower: '#86e3ff',
+  cream: '#fff7d2',
+  wood: '#ffd79c',
+  blueBlanket: '#6cd6ff',
+  pinkBlanket: '#ff9fd3',
   dark: '#505154',
-  grey: '#e3e1f4',
-  yellow: '#fff3a0',
-  leaf: '#4cd97b',
-  leafLine: '#2c9d55',
-  pillowBlue: '#c6d2ff',
-  lilac: '#f7c4ff',
+  grey: '#d2d0fa',
+  yellow: '#fff078',
+  leaf: '#3ed67a',
+  leafLine: '#24a356',
+  pillowBlue: '#b2beff',
+  lilac: '#f2a8ff',
   orange: '#ffb340',
 };
 
@@ -433,7 +433,7 @@ popGroup(
 ln(rrect(712, 727, 12, 128, 3));
 ln(rrect(723, 756, 12, 70, 2), 'hsh-fine');
 {
-  const cols = ['#8ae4ff', '#a8f8ff', '#ffbadf', '#fff3a0', '#c6d2ff', '#a8fce0'];
+  const cols = ['#6cd6ff', '#86f4ff', '#ff9fd3', '#fff078', '#b2beff', '#86f7c8'];
   let g = '';
   cols.forEach((c, i) => {
     g += `<rect x="${706 + (i % 3) * 11.5}" y="${866 + Math.floor(i / 3) * 17}" width="10" height="14" rx="1.5" fill="${c}"/>`;
@@ -521,19 +521,20 @@ ln('M862 1232Q884 1240 904 1252', 'hsh-crease-pink');
 ln('M878 1262Q898 1270 914 1284', 'hsh-crease-pink');
 // 옷걸이 — 왼쪽 벽을 따라 세로 봉 + 빽빽이 걸린 옷(위에서)
 {
-  const cols = [C.blueBlanket, C.pinkBlanket, C.yellow, '#a8fce0', C.pillowBlue, C.orange, C.lilac, '#ffffff', C.leaf, '#a8f8ff'];
+  const cols = [C.blueBlanket, C.pinkBlanket, C.yellow, C.mint, C.pillowBlue, C.orange, C.lilac, '#ffffff'];
   cols.forEach((c, i) => {
-    const y = 1152 + i * 11;
+    const y = 1152 + i * 10;
     const w = i % 3 === 1 ? 46 : 52;
     shape(rrect(584 - w / 2, y, w, 9, 4), c, 'hsh-fine', { transform: rot(i % 2 ? 3 : -3, 584, y + 4.5) });
   });
-  ln(poly([[584, 1146], [584, 1262]], { amp: 0.2 }));
+  ln(poly([[584, 1146], [584, 1236]], { amp: 0.2 }));
   ln(ellipse(584, 1145, 3, 3, 0), 'hsh-fine');
-  ln(ellipse(584, 1263, 3, 3, 0), 'hsh-fine');
+  ln(ellipse(584, 1237, 3, 3, 0), 'hsh-fine');
 }
-// 흰 베이스 기타 — 왼쪽 아래 구석에 비스듬히(위에서). 몸통 · 검은 픽가드 · 넥 · 헤드 · 4줄
+// 흰 베이스 기타 — 왼쪽 아래 구석, 스탠드에 곧게 세워 벽에 기대 둠. 몸통 · 검은 픽가드 · 넥 · 헤드 · 4줄
 {
-  const t = { transform: 'translate(592 1348) rotate(20)' };
+  const t = { transform: 'translate(578 1356) scale(0.85)' };
+  ln('M-16 26L-25 38M16 26L25 38M-25 38L-17 38M25 38L17 38M-7 -58Q0 -52 7 -58', 'hsh-fine', t);
   const body = 'M5 -20C10 -30 20 -38 23 -29C25 -19 18 -12 20 -2C24 10 26 26 10 30C3 32 -3 32 -10 30' +
     'C-26 26 -26 10 -21 -2C-18 -12 -24 -20 -20 -27C-16 -32 -10 -26 -5 -20Z';
   const head = 'M-4 -100L-6 -123Q-5 -129 1 -128L7 -122L4 -100Z';
