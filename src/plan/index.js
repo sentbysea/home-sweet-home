@@ -286,36 +286,49 @@ function fitTags(el) {
 
 // ---------- 하단 안내 — click the ( ) ----------
 //   글자는 하나씩 span 으로(위글), 괄호 속에는 나중에 누를 수 있게 될 물건 아이콘이 돌아가며 들어간다.
-//   아이콘 칸은 폭이 고정이라 글자는 움직이지 않는다. 아이콘은 -13..13 칸에 비슷한 크기로.
+//   아이콘 칸은 폭이 고정이라 글자는 움직이지 않는다.
+//   그림은 평면도(tools/floorplan.mjs)에 그린 물건을 그대로 — 가운데로 옮겨 -13..13 칸에 비슷한 크기로 줄였다.
+//   class o = 윤곽(평면도 선), d = 안쪽 묘사(평면도 hsh-fine 처럼 연하게). 베이스만 눌림을 풀고 넥을 줄였다.
 
 const HINT_ICONS = [
-  // 왼쪽 위 방 — 태블릿
-  `<rect x="-7.5" y="-10.5" width="15" height="21" rx="2.6" fill="#c9d8f4"/>
-   <rect x="-5.3" y="-7.8" width="10.6" height="14" rx="1" fill="#fff"/>
-   <circle cx="0" cy="8.4" r="0.9" fill="#fff"/>`,
-  // 부엌 — 가스레인지(불꽃 둘 + 손잡이 셋)
-  `<path d="M-5 -3.2C-7.6 -4.8 -6.4 -8 -5 -10.4C-3.6 -8 -2.4 -4.8 -5 -3.2Z" fill="#f8c49a"/>
-   <path d="M5 -3.2C2.4 -4.8 3.6 -8 5 -10.4C6.4 -8 7.6 -4.8 5 -3.2Z" fill="#f8c49a"/>
-   <rect x="-10.5" y="-2.4" width="21" height="12.4" rx="2.2" fill="#e9eef0"/>
-   <path d="M-10.5 1.4H10.5" fill="none"/>
-   <circle cx="-5" cy="5.6" r="1.4" fill="#fff"/><circle cx="0" cy="5.6" r="1.4" fill="#fff"/><circle cx="5" cy="5.6" r="1.4" fill="#fff"/>`,
-  // 입구 — 액자(걸린 끈 + 하트 그림)
-  `<path d="M-5 -8.6L0 -12.2L5 -8.6" fill="none"/>
-   <rect x="-9.5" y="-8.6" width="19" height="19" rx="1" fill="#f6dc8f"/>
-   <rect x="-6.6" y="-5.7" width="13.2" height="13.2" fill="#fff"/>
-   <path d="M0 4.4C-2.8 2.4 -3.8 0.9 -3.8 -0.5C-3.8 -1.8 -2.8 -2.6 -1.8 -2.6C-1 -2.6 -0.3 -2.1 0 -1.5C0.3 -2.1 1 -2.6 1.8 -2.6C2.8 -2.6 3.8 -1.8 3.8 -0.5C3.8 0.9 2.8 2.4 0 4.4Z" fill="#f4a6c9"/>`,
-  // 우연이 방 — 베이스(비스듬히)
-  `<g transform="rotate(35) translate(0 1)">
-     <rect x="-1.1" y="-13" width="2.2" height="11" fill="#e8d2b4"/>
-     <rect x="-2" y="-14.6" width="4" height="3.6" rx="1" fill="#c9b5f2"/>
-     <path d="M0 -2.6C2.8 -2.6 4.3 -0.8 3.8 1.4C5.8 2.6 6.2 6.2 4.3 8.2C2.4 10.2 -2.4 10.2 -4.3 8.2C-6.2 6.2 -5.8 2.6 -3.8 1.4C-4.3 -0.8 -2.8 -2.6 0 -2.6Z" fill="#c9b5f2"/>
-     <rect x="-2.2" y="5" width="4.4" height="1.6" rx="0.5" fill="#fff"/>
+  // 지원 방 책상 위 태블릿(-11° 기울임)
+  `<g transform="rotate(-11) scale(0.42)">
+     <rect class="o" x="-26" y="-20" width="52" height="40" rx="4" fill="#7e8085"/>
+     <path d="M-3 -7L5 5L-11 5Z" fill="#f4f4f4"/>
    </g>`,
-  // 우연이 방 — 노트(왼쪽 스프링 + 줄)
-  `<rect x="-7.5" y="-10.5" width="16" height="21" rx="1.6" fill="#cbe6b6"/>
-   <rect x="-4.2" y="-10.5" width="12.7" height="21" rx="1.6" fill="#fff"/>
-   <path d="M-1.6 -5H5.6M-1.6 -1H5.6M-1.6 3H5.6" fill="none"/>
-   <path d="M-9.6 -7H-5.6M-9.6 -2.4H-5.6M-9.6 2.2H-5.6M-9.6 6.8H-5.6" fill="none"/>`,
+  // 부엌 가스레인지 — 검은 상판 + 화구 둘
+  `<g transform="scale(0.36)">
+     <rect class="o" x="-31.5" y="-19" width="63" height="38" rx="4" fill="#7e8085"/>
+     <circle cx="-14.5" cy="0" r="9.5" fill="none" stroke="#c6c7cb" stroke-width="3"/>
+     <circle cx="13.5" cy="0" r="9.5" fill="none" stroke="#c6c7cb" stroke-width="3"/>
+   </g>`,
+  // 현관 선반 위 사진 액자 — 나무 테 · 흰 여백 · 산과 해(-6°)
+  `<g transform="rotate(-6) scale(0.36)">
+     <rect class="o" x="-32" y="-24" width="64" height="48" rx="3" fill="#d9b27a"/>
+     <rect class="d" x="-26" y="-18" width="52" height="36" rx="1" fill="#fff"/>
+     <rect x="-22" y="-14" width="44" height="28" rx="1" fill="#d3e3f3"/>
+     <path d="M-22 14L-22 6L-10 -6L-1 3L6 -3L22 11L22 14Z" fill="#cfe5c4"/>
+     <circle cx="13" cy="-7" r="3.6" fill="#f7e6ad"/>
+     <path class="d" d="M-22 6L-10 -6L-1 3L6 -3L22 11" fill="none"/>
+   </g>`,
+  // 우연 방 흰 베이스 기타 — 평면도에선 기대어 눌려 보이던 것을 펴고, 넥을 줄여 비스듬히
+  `<g transform="rotate(40) scale(0.25) translate(0 24)">
+     <path class="o" d="M5 -20C10 -30 20 -38 23 -29C25 -19 18 -12 20 -2C24 10 26 26 10 30C3 32 -3 32 -10 30C-26 26 -26 10 -21 -2C-18 -12 -24 -20 -20 -27C-16 -32 -10 -26 -5 -20Z" fill="#fff"/>
+     <path class="d" d="M-4 -14C2 -18 12 -16 14 -8C16 0 12 10 4 12L-4 12C-12 10 -14 0 -12 -8C-10 -12 -8 -13 -4 -14Z" fill="none"/>
+     <path class="o" d="M-4 -62L4 -62L4 -18L-4 -18Z" fill="#fff"/>
+     <path class="o" d="M-4 -62L-6 -80Q-5 -86 1 -85L7 -79L4 -62Z" fill="#fff"/>
+     <rect class="d" x="-7" y="-6" width="14" height="5" rx="1.5" fill="none"/>
+     <rect class="d" x="-6" y="18" width="12" height="6" rx="1" fill="none"/>
+     <path class="d" d="M-2.4 -62L-2.4 20M2.4 -62L2.4 20M-5 -66L-10 -66M-5.3 -70L-10.3 -70M-5.6 -74L-10.6 -74M-5.9 -78L-10.9 -78" fill="none"/>
+   </g>`,
+  // 우연 방 책상 위 펼친 노트 + 펜
+  `<g transform="scale(0.34) translate(-9.5 0)">
+     <path d="M-27 -13Q-14 -19 0 -13L0 17Q-14 11 -27 17Z" fill="#fff"/>
+     <path d="M0 -13Q14 -19 27 -13L27 17Q14 11 0 17Z" fill="#fff"/>
+     <path d="M-23 -8H-5M-23 -2H-5M-23 4H-7M4 -8H23M4 -2H23M4 4H19M4 10H21" fill="none" stroke="#e09ab3" stroke-width="1.3" stroke-dasharray="3 1.5"/>
+     <path class="d" d="M-27 -13Q-14 -19 0 -13Q14 -19 27 -13L27 17Q14 11 0 17Q-14 11 -27 17ZM0 -13L0 17" fill="none"/>
+     <path class="o pen" d="M35 -19L46 15" fill="none"/>
+   </g>`,
 ];
 
 function setupHint(el) {
@@ -347,8 +360,7 @@ function cycleHintIcon(el, hint) {
   setInterval(() => {
     if (!el.classList.contains('is-done')) return;
     hint.i++;
-    showHintIcon(hint);
-    hint.icon.animate([{ scale: '0.6' }, { scale: '1.12', offset: 0.6 }, { scale: '1' }], { duration: 280, easing: 'ease-out' });
+    showHintIcon(hint); // 튀는 동작 없이 바로 바뀐다
   }, ICON_MS);
 }
 

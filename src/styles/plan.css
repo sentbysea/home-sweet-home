@@ -232,13 +232,17 @@
   overflow: visible;
 }
 
-.hsh-plan__hint-art * {
+.hsh-plan__hint-art .o,
+.hsh-plan__hint-art .d {
   stroke: var(--hsh-plan-line);
-  stroke-width: 1.1;
+  stroke-width: 1;
   stroke-linejoin: round;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
+
+.hsh-plan__hint-art .d { stroke: var(--hsh-plan-detail); stroke-width: 0.8; }
+.hsh-plan__hint-art .pen { stroke-width: 1.8; }
 
 /* ---------- 시계(오른쪽 위, 화면 고정 — clock.js) ---------- */
 
