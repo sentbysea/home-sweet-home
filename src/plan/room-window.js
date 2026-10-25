@@ -1,4 +1,6 @@
-// 방 버튼을 누르면 뜨는 창 — 폴더 탭 + 주소창이 있는 브라우저 창 꼴에 망점 별 · 하트를 걸쳐 둔다.
+// 방 버튼을 누르면 뜨는 창 — 폴더 탭 + 주소창이 있는 브라우저 창 꼴에 무늬 스티커를 걸쳐 둔다.
+//   스티커는 열 때마다 새로 — 3~6개, 모양(별 · 하트 · 뾰족이 · 클로버 · 구름) · 무늬(줄무늬 · 도트 · 망점 · 단색 · 깅엄) ·
+//   색 · 크기 · 기울기가 무작위. 창 둘레를 개수만큼 나눠 칸마다 하나씩 놓아 몰리지 않게(탭 · × 쪽은 비운다).
 //   창 머리(탭 · 주소창 줄)는 누른 버튼의 바탕색, 제목 밑줄은 버튼 글자색을 따른다.
 //   선은 모두 로딩 화면 집 윤곽과 같은 얇은 회색.
 //   뒤의 홈 화면은 반투명 덮개로 살짝 가린다. 닫기: ×, 덮개 누르기, Esc.
@@ -23,39 +25,103 @@ function burst(points, outer, inner, wobble = 0.18, seed = 1) {
 
 const HEART = 'M0 9C-7 3 -12 -1 -12 -6C-12 -10 -9 -12 -6 -12C-3 -12 -1 -10 0 -8C1 -10 3 -12 6 -12C9 -12 12 -10 12 -6C12 -1 7 3 0 9Z';
 
-// 망점 무늬 — 색마다 하나. 장식 · 썸네일 하트가 같이 쓴다
-const DOTS = { blue: '#5b7fd6', green: '#5cc28a', pink: '#f08cbf' };
+// ---------- 스티커 ----------
 
-// 창에 걸쳐 둘 장식(세 개만) — [색, 모양, 자리, viewBox]
-const DECOR = [
-  ['blue', burst(8, 31, 7, 0.25, 1), 'is-tr', '-34 -34 68 68'],
-  ['green', HEART, 'is-heart-r', '-14 -14 28 28'],
-  ['pink', burst(5, 31, 13, 0, 5), 'is-b', '-34 -34 68 68'],
-];
+const S = 31; // 모양은 -34..34 칸을 거의 채운다
+const scaleD = (d, k) => d.replace(/-?\d+(\.\d+)?/g, (n) => (Number(n) * k).toFixed(1));
+const SHAPES = {
+  star: burst(5, S, 13, 0, 5),
+  bigstar: burst(8, S, 17, 0, 2), // 통통한 팔각 별
+  spiky: burst(8, S, 7, 0.25, 1), // 뾰족뾰족이
+  heart: scaleD(HEART, 2.6),
+  // 동그라미 넷이 붙은 클로버 — 바깥 윤곽만
+  clover: 'M0 -20.5A15 15 0 1 1 20.5 0A15 15 0 1 1 0 20.5A15 15 0 1 1 -20.5 0A15 15 0 1 1 0 -20.5Z',
+  // 세로로 긴 동그라미 셋이 붙은 구름 — 바깥 윤곽만
+  cloud: 'M-10 -7.5A11 18 0 0 1 10 -7.5A11 18 0 1 1 10 7.5A11 18 0 0 1 -10 7.5A11 18 0 1 1 -10 -7.5Z',
+};
+const COLORS = ['#f4a6c9', '#8fb0ec', '#a9d78a', '#f6dc8f', '#c9b5f2', '#8fd8bd'];
+const PATTERNS = ['stripe', 'dot', 'halftone', 'solid', 'gingham'];
+const LINE = '#8f9497'; // 외곽선 — 로딩 화면 집 윤곽과 같은 회색
 
-/** 망점 + 번짐 모양 — 같은 색을 흐리게 몇 겹 깔고(필터 없이), 점 무늬로 채우고, 얇은 회색 외곽선 */
-function dotted(color, d, viewBox, cls) {
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+let patternNo = 0;
+
+/** 무늬 하나 — <pattern> 마크업과 fill 값 */
+function patternFill(kind, color) {
+  if (kind === 'solid') return { defs: '', fill: color };
+  const id = `hsh-win-pt-${patternNo++}`;
+  const open = (w, h, extra = '') => `<pattern id="${id}" width="${w}" height="${h}" patternUnits="userSpaceOnUse"${extra}>`;
+  const body = {
+    stripe: open(10, 10) + `<rect width="10" height="5" fill="${color}" fill-opacity="0.75"/>`,
+    dot: open(11, 11) + `<circle cx="3" cy="3" r="2.6" fill="${color}"/><circle cx="8.5" cy="8.5" r="2.6" fill="${color}"/>`,
+    halftone: open(3.8, 3.8, ' patternTransform="rotate(45)"') + `<circle cx="1.9" cy="1.9" r="1.3" fill="${color}"/>`,
+    gingham: open(12, 12) + `<rect width="6" height="12" fill="${color}" fill-opacity="0.45"/><rect width="12" height="6" fill="${color}" fill-opacity="0.45"/>`,
+  }[kind];
+  return { defs: `<defs>${body}</pattern></defs>`, fill: `url(#${id})` };
+}
+
+/** 스티커 한 장 — 흰 바탕(뒤가 비치지 않게) + 무늬 + 얇은 회색 외곽선 */
+function sticker({ shape, kind, color, tilt = 0 }, cls) {
+  const d = SHAPES[shape];
+  const { defs, fill } = patternFill(kind, color);
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('class', cls);
-  svg.setAttribute('viewBox', viewBox);
+  svg.setAttribute('viewBox', '-34 -34 68 68');
   svg.setAttribute('aria-hidden', 'true');
-  const c = DOTS[color];
-  svg.innerHTML =
-    `<path d="${d}" fill="${c}" fill-opacity="0.18" stroke="${c}" stroke-opacity="0.12" stroke-width="7" stroke-linejoin="round"/>` +
-    `<path d="${d}" fill="none" stroke="${c}" stroke-opacity="0.2" stroke-width="3" stroke-linejoin="round"/>` +
-    `<path d="${d}" fill="url(#hsh-win-dots-${color})"/>` +
-    `<path class="hsh-win__outline" d="${d}"/>`;
+  const glow = kind === 'halftone' // 망점은 가장자리가 살짝 번지게
+    ? `<path d="${d}" fill="none" stroke="${color}" stroke-opacity="0.25" stroke-width="6" stroke-linejoin="round"/>`
+    : '';
+  svg.innerHTML = defs +
+    `<g transform="rotate(${tilt.toFixed(1)})">${glow}<path d="${d}" fill="#fff"/><path d="${d}" fill="${fill}"/>` +
+    `<path class="hsh-win__outline" d="${d}" stroke="${LINE}"/></g>`;
   return svg;
 }
 
-function dotPatterns() {
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('class', 'hsh-win__defs');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = '<defs>' + Object.entries(DOTS).map(([name, c]) =>
-    `<pattern id="hsh-win-dots-${name}" width="3.6" height="3.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">` +
-    `<circle cx="1.8" cy="1.8" r="1.25" fill="${c}"/></pattern>`).join('') + '</defs>';
-  return svg;
+/**
+ * 창 둘레에 n 개 — 둘레(탭 · × 가 있는 위 왼쪽은 빼고)를 n 칸으로 나눠 칸마다 하나.
+ * 둘레 위치 t(0..1) → 창 안 좌표(%). 위 오른쪽 → 오른쪽 → 아래 → 왼쪽 순서.
+ */
+function edgePoint(t) {
+  const segs = [
+    [[62, 0], [100, 0]], // 위(탭 오른쪽부터)
+    [[100, 0], [100, 100]], // 오른쪽
+    [[100, 100], [0, 100]], // 아래
+    [[0, 100], [0, 18]], // 왼쪽(탭 아래까지)
+  ];
+  const lens = segs.map(([[x0, y0], [x1, y1]]) => Math.hypot(x1 - x0, y1 - y0));
+  let d = t * lens.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < segs.length; i++) {
+    if (d <= lens[i] || i === segs.length - 1) {
+      const [[x0, y0], [x1, y1]] = segs[i];
+      const k = Math.min(1, d / lens[i]);
+      return [x0 + (x1 - x0) * k, y0 + (y1 - y0) * k];
+    }
+    d -= lens[i];
+  }
+  return [100, 50];
+}
+
+function scatter(frame) {
+  frame.querySelectorAll('.hsh-win__deco').forEach((n) => n.remove());
+  const n = 3 + Math.floor(Math.random() * 4); // 3 ~ 6
+  const start = Math.random();
+  const big = Math.floor(Math.random() * n); // 하나는 크게
+  for (let i = 0; i < n; i++) {
+    const t = (start + (i + 0.2 + Math.random() * 0.6) / n) % 1;
+    const [x, y] = edgePoint(t);
+    const size = i === big ? 78 + Math.random() * 22 : 30 + Math.random() * 30;
+    const svg = sticker({
+      shape: pick(Object.keys(SHAPES)),
+      kind: pick(PATTERNS),
+      color: pick(COLORS),
+      tilt: Math.random() * 40 - 20,
+    }, 'hsh-win__deco');
+    svg.style.left = `${x}%`;
+    svg.style.top = `${y}%`;
+    svg.style.width = svg.style.height = `${Math.round(size)}px`;
+    svg.style.animationDelay = `${(-Math.random() * 3).toFixed(2)}s`;
+    frame.append(svg);
+  }
 }
 
 /** 지금 사이트 주소(한글 도메인은 한글로) */
@@ -140,14 +206,8 @@ function build() {
         </div>
       </div>
     </section>`;
-  root.prepend(dotPatterns());
-  root.querySelector('.hsh-win__thumb').append(dotted('pink', HEART, '-14 -14 28 28', 'hsh-win__thumb-heart'));
-  const frame = root.querySelector('.hsh-win__frame');
-  for (const [color, d, at, box] of DECOR) {
-    const s = dotted(color, d, box, 'hsh-win__deco');
-    s.dataset.at = at;
-    frame.append(s);
-  }
+  // 썸네일 귀퉁이 하트 — 단색
+  root.querySelector('.hsh-win__thumb').append(sticker({ shape: 'heart', kind: 'solid', color: '#f4a6c9' }, 'hsh-win__thumb-heart'));
   return root;
 }
 
@@ -210,6 +270,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.style.setProperty('--hsh-win-tint', bg);
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.');
+    scatter(frame);
     setPill(room, name);
     paintLike();
     win.hidden = false;

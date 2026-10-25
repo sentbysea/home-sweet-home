@@ -1,6 +1,6 @@
 /* =========================================================
    home sweet home — 방 창(방 버튼을 누르면 뜬다, plan/room-window.js)
-   폴더 탭 + 주소창 줄이 있는 브라우저 창 꼴(스크롤바 없음)에 망점 별 · 하트를 걸쳐 둔다.
+   폴더 탭 + 주소창 줄이 있는 브라우저 창 꼴(스크롤바 없음)에 무늬 스티커를 무작위로 걸쳐 둔다.
    선은 모두 로딩 화면 집 윤곽처럼 얇은 회색. 탭 · 주소창 줄은 누른 버튼의 바탕색(--hsh-win-tint),
    제목 밑줄은 버튼 글자색(--hsh-win-ink).
    ========================================================= */
@@ -27,9 +27,6 @@
 }
 
 .hsh-win[hidden] { display: none; }
-
-/* 망점 무늬 정의만 담는 svg */
-.hsh-win__defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 /* 홈 화면 위 반투명 덮개 */
 .hsh-win__veil {
@@ -278,16 +275,17 @@
   color: var(--hsh-win-note);
 }
 
-/* ---------- 장식 — 창 가장자리에 걸친 망점 별 · 하트(세 개) ---------- */
+/* ---------- 스티커 — 창 둘레에 무작위로 3~6개(자리 · 크기는 room-window.js) ---------- */
 
 .hsh-win__deco {
   position: absolute;
+  translate: -50% -50%; /* 자리(left · top)가 스티커 가운데 */
   overflow: visible;
   pointer-events: none;
   animation: hsh-win-nod 3.2s ease-in-out infinite;
 }
 
-/* 장식 · 썸네일 하트 외곽선 — 로딩 집 윤곽처럼 화면에서 1px 회색 */
+/* 스티커 · 썸네일 하트 외곽선 — 로딩 집 윤곽처럼 화면에서 1px 회색 */
 .hsh-win__outline {
   fill: none;
   stroke: var(--hsh-win-line);
@@ -296,10 +294,6 @@
   vector-effect: non-scaling-stroke;
 }
 
-.hsh-win__deco[data-at="is-tr"] { width: 96px; height: 96px; top: -42px; right: 12%; }
-.hsh-win__deco[data-at="is-heart-r"] { width: 40px; height: 40px; top: 44%; right: -18px; animation-delay: -1.4s; }
-.hsh-win__deco[data-at="is-b"] { width: 46px; height: 46px; bottom: -20px; right: 24%; animation-delay: -2.2s; }
-
 @keyframes hsh-win-nod {
   0%, 100% { rotate: 0deg; }
   50% { rotate: 8deg; }
@@ -307,7 +301,6 @@
 
 @media (max-width: 480px) {
   .hsh-win__title { font-size: 24px; }
-  .hsh-win__deco[data-at="is-tr"] { width: 76px; height: 76px; top: -32px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

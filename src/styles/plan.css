@@ -52,6 +52,11 @@
   .hsh-plan { --hsh-clock-h: 132px; }
 }
 
+/* 세로 화면은 집이 위로 쏠려 보여서 조금 아래로 */
+@media (max-aspect-ratio: 1/1) {
+  .hsh-plan { --hsh-plan-drop: 3.5vh; }
+}
+
 @media (min-aspect-ratio: 1/1) {
   .hsh-plan {
     padding-top: max(var(--hsh-plan-gutter), env(safe-area-inset-top));
@@ -76,7 +81,7 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  transform: translate3d(var(--tx), var(--ty), 0) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--s));
+  transform: translate3d(var(--tx), calc(var(--ty) + var(--hsh-plan-drop, 0px)), 0) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--s));
   transform-origin: 50% 50%;
   transition: transform 420ms cubic-bezier(0.25, 0.8, 0.3, 1); /* 놓으면 부드럽게 제자리(지나치지 않음) */
   will-change: transform;
