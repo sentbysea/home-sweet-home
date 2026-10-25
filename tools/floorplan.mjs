@@ -596,11 +596,12 @@ const tag = (roomId, text, name, x, y, bg, fg, tilt = 0) => {
     `</g></g>`,
   );
 };
-tag('v', 'about V/E', '지원 · 우연 소개', 345, 395, '#e4d4fb', '#34b468', -3);
-tag('kitchen', 'teatime?', '티타임', 662, 462, '#fbd5e3', '#4a98e4', 3);
-tag('living', 'notice', '공지', 590, 918, '#fbefae', '#e8893a', -2);
-tag('entry', 'neighbor', '이웃', 330, 1204, '#cdeed6', '#e65d98', -4);
-tag('e', 'archive', '기록', 712, 1180, '#cfe0fb', '#8a62dc', 3);
+// 버튼은 그 방 가구 위에 띄운다 — 책상 · 식탁 · 동그란 탁자 · 신발장 · 책상
+tag('v', 'about V/E', '지원 · 우연 소개', 343, 213, '#e4d4fb', '#34b468', -3);
+tag('kitchen', 'teatime?', '티타임', 640, 575, '#fbd5e3', '#4a98e4', 3);
+tag('living', 'notice', '공지', 582, 820, '#fbefae', '#e8893a', -2);
+tag('entry', 'neighbor', '이웃', 288, 1167, '#cdeed6', '#e65d98', -4);
+tag('e', 'archive', '기록', 724, 1034, '#cfe0fb', '#8a62dc', 3);
 
 // ---------- SVG ----------
 
