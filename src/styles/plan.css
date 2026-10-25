@@ -4,7 +4,7 @@
    ========================================================= */
 
 .hsh-plan {
-  --hsh-plan-paper: #fff; /* 사이트 바탕(body)과 같다 */
+  --hsh-plan-paper: #fcfbf8; /* 로딩 화면과 같은 아이보리 — 사이트 바탕(body)과 같다 */
   --hsh-plan-ink: #262628;
   --hsh-plan-soft: #9a9ea2;
   --hsh-plan-gutter: 16px;
@@ -21,7 +21,7 @@
     max(var(--hsh-plan-gutter), env(safe-area-inset-left));
   background: var(--hsh-plan-paper);
   overflow: hidden;
-  perspective: 1100px;
+  perspective: 700px; /* 가까이 둘수록 기울 때 원근이 세다 */
   /* 누른 채 끄는 것은 기울이기에만 — 스크롤 · 당겨서 새로고침 · 확대 없음 */
   touch-action: none;
   overscroll-behavior: none;
@@ -41,19 +41,21 @@
   --ry: 0deg;
   --tx: 0px;
   --ty: 0px;
+  --s: 1;
 
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  transform: translate3d(var(--tx), var(--ty), 0) rotateX(var(--rx)) rotateY(var(--ry));
+  transform: translate3d(var(--tx), var(--ty), 0) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--s));
   transform-origin: 50% 50%;
-  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1); /* 놓으면 부드럽게 제자리 */
+  transition: transform 720ms cubic-bezier(0.34, 1.56, 0.64, 1); /* 놓으면 살짝 지나쳤다 통통 제자리 */
   will-change: transform;
 }
 
 .hsh-plan__card.is-pressed {
-  transition: none; /* 끄는 동안에는 JS 가 프레임마다 따라간다 */
+  --s: 0.94; /* 누르면 눌려 들어간다 */
+  transition: transform 140ms ease-out; /* 끄는 동안에도 아주 짧게 따라가 덜컥이지 않게 */
 }
 
 .hsh-plan__svg {
@@ -106,7 +108,8 @@
   fill: var(--hsh-plan-paper);
 }
 
-.hsh-plan__color .hsh-pop {
+/* 방 하나가 한 덩어리로 튄다(plan/index.js) */
+.hsh-plan__color > [data-room] {
   transform-box: fill-box;
-  transform-origin: 50% 50%; /* 자기 중심에서 튄다 */
+  transform-origin: 50% 50%; /* 방 가운데에서 튄다 */
 }

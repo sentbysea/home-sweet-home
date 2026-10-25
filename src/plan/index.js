@@ -9,9 +9,8 @@ const SVG_URL = new URL('./floorplan.svg', import.meta.url);
 const LINE_SPAN = 1000; // 마지막 획이 시작하는 때
 const LINE_MIN = 170; // 획 하나 길이(짧은 획)
 const LINE_MAX = 560; // 획 하나 길이(벽처럼 긴 획)
-const COLOR_GAP_ROOM = 150; // 방마다 색이 시작하는 간격
-const COLOR_GAP_ITEM = 34; // 한 방 안의 색 조각 간격
-const POP_MS = 440;
+const COLOR_GAP_ROOM = 210; // 방마다 색이 시작하는 간격 — 뿅 · 뿅 · 뿅
+const POP_MS = 460;
 const ROOM_ORDER = ['v', 'kitchen', 'bath', 'living', 'entry', 'e'];
 
 /** SVG 를 받아 둔다(로딩 화면이 떠 있는 동안). */
@@ -54,7 +53,9 @@ function reveal(el, { reduced }) {
 
   const strokes = [...el.querySelectorAll('.hsh-plan__lines [data-stroke]')];
   const labels = [...el.querySelectorAll('.hsh-plan__lines [data-label]')];
-  const pops = [...el.querySelectorAll('.hsh-plan__color .hsh-pop')];
+  // 색은 방 하나(바닥색 + 가구 색)가 한 덩어리로 튄다
+  const rooms = [...el.querySelectorAll('.hsh-plan__color > [data-room]')]
+    .sort((a, b) => ROOM_ORDER.indexOf(a.dataset.room) - ROOM_ORDER.indexOf(b.dataset.room));
 
   // ① 선 — 획마다 대시를 길이만큼 밀어 두었다가 펜처럼 당긴다. 앞 획이 끝나기 전에 다음 획이 시작한다.
   const last = Math.max(1, strokes.length - 1);
@@ -79,20 +80,14 @@ function reveal(el, { reduced }) {
     running.push(t.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay, fill: 'backwards' }));
   });
 
-  // ② 색 — 선이 다 그려진 뒤, 방 순서대로 하나씩 뽀잉(0.85 → 1.04 → 1)
+  // ② 색 — 선이 다 그려진 뒤, 방 순서대로 한 방씩 뽀잉(0.82 → 1.05 → 1)
   const colorStart = lineEnd - 60;
-  let end = colorStart;
-  const counts = {};
-  pops.forEach((p) => {
-    const r = p.closest('[data-room]')?.dataset.room;
-    const ri = Math.max(0, ROOM_ORDER.indexOf(r));
-    const k = (counts[r] = (counts[r] ?? -1) + 1);
-    const delay = colorStart + ri * COLOR_GAP_ROOM + k * COLOR_GAP_ITEM;
-    end = Math.max(end, delay + POP_MS);
-    running.push(p.animate(
+  rooms.forEach((g, i) => {
+    const delay = colorStart + i * COLOR_GAP_ROOM;
+    running.push(g.animate(
       [
-        { opacity: 0, transform: 'scale(0.85)' },
-        { opacity: 1, transform: 'scale(1.04)', offset: 0.55 },
+        { opacity: 0, transform: 'scale(0.82)' },
+        { opacity: 1, transform: 'scale(1.05)', offset: 0.55 },
         { opacity: 1, transform: 'scale(1)' },
       ],
       { duration: POP_MS, delay, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'backwards' },
