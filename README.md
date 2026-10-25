@@ -22,7 +22,7 @@ npm run dev        # node scripts/serve.mjs — 설치할 것 없음
 index.html              로딩 화면 마크업(SVG 집 + 글자)
 src/styles/loader.css   모양 · 위글 · 페이드 · 모션 줄이기
 src/loader/typing.js    타이핑 · 지우기 · 반복 — 글자 opacity 만 바꿔 위치 고정
-src/loader/status.js    방문 단계(초인종 → 달려나옴 → 문 → 신발) · 들어가기 안내
+src/loader/status.js    방문 단계(초인종 → 달려나옴 → 문) · 들어가기 안내
 src/loader/enter.js     화면 누르기(키보드 Enter 도 받음)
 src/loader/ready.js     준비 완료 신호(createReadySignal / demoReady)
 src/loader/exit.js      페이드 아웃 후 DOM 제거
@@ -48,8 +48,8 @@ ready.resolve();
 ## 흐름
 
 1. 집과 글자가 위글거리고 home → sweet → home → `...` 를 타이핑한다(글자 위글은 SVG 필터 `#hsh-wobble`). 다 쓰면 잠시 머물렀다 지우고 다시 쓴다(들어갈 때까지 반복).
-2. 집 아래에 방문 단계가 차례로 뜬다 — 초인종 누르는 중 → (차우연이 · 홍지원이 중 랜덤) 달려나오는 중 → 문 열리는 중 → 신발 벗는 중.
-3. 첫 타이핑 · 네 단계 · 준비 완료가 모두 끝나면 `화면을 눌러 들어가기`(모바일·데스크톱 같은 문구).
+2. 집 아래에 방문 단계가 차례로 뜬다 — 초인종 누르는 중 → (차우연이 · 홍지원이 중 랜덤) 달려나오는 중 → 문 열리는 중.
+3. 첫 타이핑 · 세 단계 · 준비 완료가 모두 끝나면 `화면을 눌러 들어가기`(모바일·데스크톱 같은 문구).
 4. 화면을 누르면(키보드 Enter 도 됨) 서서히 사라지고 빈 흰 화면.
 
 - 윤곽: 조금씩 다른 4장을 190ms 씩 번갈아(`--hsh-boil-frame`). 집 크기·위치는 움직이지 않는다.

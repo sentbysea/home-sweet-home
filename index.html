@@ -18,10 +18,10 @@
       <svg class="hsh-loader__house" viewBox="0 0 340 318" aria-hidden="true" focusable="false">
         <!-- 손그림 윤곽 4장 — tools/wobble.mjs 로 만든다 -->
         <g class="hsh-loader__boil">
-          <path class="hsh-loader__frame" d="M168.6 3.8Q251.4 76.9 334.2 149.8Q305.7 151.5 277.1 153.8Q276.1 234 273.8 314.1Q163.9 312.9 53.9 311.5Q56.7 231.2 57.5 150.8Q30.9 151.2 4.3 151.2Q85 75.9 168.6 3.8Z"/>
-          <path class="hsh-loader__frame" d="M168.7 4.3Q253 77.1 335.4 152.1Q306.2 153.5 277.1 153.7Q277.5 233.9 274.7 314.1Q164.6 313.6 54.5 315.1Q53.1 233.5 54.6 151.9Q28.7 153.6 2.8 153.4Q85.4 78.5 168.7 4.3Z"/>
-          <path class="hsh-loader__frame" d="M168.7 5.7Q251.1 77.4 333.2 149.6Q303.4 149.7 273.6 150.9Q275 232 274.9 313.2Q165 311.4 55.1 314.1Q55.4 231.9 56.4 149.8Q31.4 149.9 6.3 149.9Q85.9 76 168.7 5.7Z"/>
-          <path class="hsh-loader__frame" d="M168.7 2.8Q252.4 76 333 152.7Q305 152.3 277.1 150.7Q273.8 231 274.4 311.4Q165.1 314.8 55.8 313.7Q55.1 231.6 57.8 149.6Q31.1 150.1 4.4 151.1Q85.2 75.4 168.7 2.8Z"/>
+          <path class="hsh-loader__frame" d="M169.1 4.2Q251.7 77.4 334.5 150.5Q305.6 151.7 276.8 153.2Q276.1 233.5 274.5 313.8Q164.6 313 54.6 312Q56.5 231.6 57 151.2Q30.8 151.5 4.5 151.5Q85.8 76.7 169.1 4.2Z"/>
+          <path class="hsh-loader__frame" d="M169.1 4.5Q252.8 77.6 335.2 152.1Q306 153 276.7 153.1Q277 233.4 275.2 313.7Q165.1 313.4 55 314.4Q54 233.2 55.1 152Q29.3 153.1 3.5 153Q86.1 78.5 169.1 4.5Z"/>
+          <path class="hsh-loader__frame" d="M169.1 5.5Q251.6 77.8 333.8 150.4Q304.1 150.4 274.4 151.3Q275.3 232.2 275.3 313.1Q165.3 311.9 55.4 313.7Q55.6 232.1 56.3 150.5Q31.1 150.6 5.9 150.6Q86.4 76.8 169.1 5.5Z"/>
+          <path class="hsh-loader__frame" d="M169.1 3.6Q252.4 76.8 333.6 152.5Q305.2 152.2 276.7 151.1Q274.5 231.5 274.9 311.9Q165.4 314.2 55.9 313.4Q55.4 231.9 57.2 150.4Q30.9 150.7 4.6 151.4Q85.9 76.4 169.1 3.6Z"/>
         </g>
         <!-- 글자는 처음부터 제자리에 놓고, 한 글자씩 보이게만 한다 -->
         <text class="hsh-loader__text" x="81">
@@ -60,11 +60,6 @@
             </g>
             <path d="M4 20.5h16"/>
           </g>
-          <g class="hsh-icon hsh-icon--shoes">
-            <g class="hsh-shoe"><path d="M2.5 17.5v-3.4c0-.5.4-.9.9-.9h1.4l1.5 1.7h2.8c1 0 1.9.8 1.9 1.8v.8z"/></g>
-            <g transform="translate(10.5 0)"><g class="hsh-shoe hsh-shoe--late"><path d="M2.5 17.5v-3.4c0-.5.4-.9.9-.9h1.4l1.5 1.7h2.8c1 0 1.9.8 1.9 1.8v.8z"/></g></g>
-            <path d="M1.5 19h21"/>
-          </g>
           <g class="hsh-icon hsh-icon--tap">
             <circle class="hsh-tap" cx="12" cy="12" r="4"/>
             <circle cx="12" cy="12" r="1.6"/>
@@ -77,10 +72,10 @@
     <!-- home sweet home 손그림 위글 — 노이즈 seed 를 190ms 마다 바꾼다(집 viewBox 단위) -->
     <svg class="hsh-defs" aria-hidden="true" focusable="false">
       <filter id="hsh-wobble" x="-10%" y="-40%" width="120%" height="180%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="1" seed="1" result="noise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.074" numOctaves="1" seed="1" result="noise">
           <animate attributeName="seed" values="1;5;9;13" dur="0.76s" calcMode="discrete" repeatCount="indefinite"/>
         </feTurbulence>
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
     </svg>
   </div>

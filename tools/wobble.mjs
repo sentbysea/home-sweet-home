@@ -12,8 +12,8 @@ const HOUSE = [
   [5, 152],   // 왼쪽 처마
 ];
 
-const VERTEX_JITTER = 2.6; // 꼭짓점 흔들림(viewBox 단위)
-const BOW = 3.0;           // 변이 휘는 정도
+const VERTEX_JITTER = 1.75; // 꼭짓점 흔들림(viewBox 단위)
+const BOW = 2.0;           // 변이 휘는 정도
 
 function rng(seed) {
   return () => {

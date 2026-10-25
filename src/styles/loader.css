@@ -39,10 +39,10 @@
   translate: 0 -3%; /* 첨부처럼 가운데보다 아주 조금 위 */
 }
 
-/* 첨부 비율 그대로: 집 폭 340 : 높이 318. 모바일 141~166px, 짧은 가로 화면에서는 높이에 맞춘다 */
+/* 첨부 비율 그대로: 집 폭 340 : 높이 318. 모바일 209~247px(첫 크기의 95%), 짧은 가로 화면에서는 높이에 맞춘다 */
 .hsh-loader__house {
   display: block;
-  width: min(clamp(141px, 41vw, 166px), 40svh * 340 / 318);
+  width: min(clamp(209px, 61vw, 247px), 59svh * 340 / 318);
   height: auto;
   aspect-ratio: 340 / 318;
   overflow: visible;
@@ -50,7 +50,7 @@
 
 @media (min-width: 768px) {
   .hsh-loader__house {
-    width: min(192px, 40svh * 340 / 318);
+    width: min(285px, 59svh * 340 / 318);
   }
 }
 
@@ -145,7 +145,6 @@
 .hsh-status[data-step="bell"] .hsh-icon--bell,
 .hsh-status[data-step="run"] .hsh-icon--run,
 .hsh-status[data-step="door"] .hsh-icon--door,
-.hsh-status[data-step="shoes"] .hsh-icon--shoes,
 .hsh-status[data-step="tap"] .hsh-icon--tap { display: inline; }
 
 /* 초인종 — 잠깐 쉬었다 딩동 */
@@ -231,22 +230,6 @@
   100% { scale: 1 1; }
 }
 
-/* 신발 — 한 짝씩 톡톡 */
-.hsh-shoe {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: hsh-hop 1.1s ease-in-out infinite;
-}
-
-.hsh-shoe--late {
-  animation-delay: -0.55s;
-}
-
-@keyframes hsh-hop {
-  0%, 45%, 100% { translate: 0 0; rotate: 0deg; }
-  22% { translate: 0 -2.5px; rotate: -10deg; }
-}
-
 /* 들어가기 */
 .hsh-tap {
   fill: none;
@@ -273,7 +256,6 @@
   .hsh-run__body,
   .hsh-run__speed,
   .hsh-door__panel,
-  .hsh-shoe,
   .hsh-tap {
     animation: none;
   }
