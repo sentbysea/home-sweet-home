@@ -1,23 +1,50 @@
-// 시계 단어를 누르면 왼쪽 위에 풍선이 뜬다 — 글자 · 색은 시계와 같은 톤(가는 Helvetica · 하늘색).
-//   sweet(3시)  → 생각 풍선: 디데이. 6월 14일이 1일(그날 = D+1), 한국 날짜로 센다.
-//   위 home(12시) → 말풍선: 지원 대사(청록 밑줄) 중 하나를 무작위로
-//   아래 home(6시) → 말풍선: 우연 대사(벌꿀색 밑줄) 중 하나를 무작위로
-//     말풍선은 누를 때마다 새로 하나씩 — 최신 것이 위에 덮인다(조금씩 어긋나게, 많아지면 오래된 것부터 사라짐).
-//   풍선은 꾹 누른 채 끌어 옮길 수 있고, × 로 닫는다. 디데이는 다시 누르면 처음 자리로 새로 뜬다.
+// 시계 단어를 누르면
+//   sweet(3시)    → 화면 왼쪽 위 구석에 생각 풍선: 디데이. 6월 14일이 1일(그날 = D+1), 한국 날짜로 센다.
+//                   글자 · 색은 시계와 같은 톤(가는 Helvetica · 하늘색). 꾹 눌러 끌어 옮기고 × 로 닫는다.
+//   위 home(12시)  → 하단 안내(click the) 위에 지원 대사가 타이핑된다:  < (  대사  )   — 왼쪽, 청록
+//   아래 home(6시) → 그 아래 줄에 우연 대사:                          (  대사  ) >  — 오른쪽, 벌꿀색
+//     대사는 무작위 하나(바로 앞과 같은 건 피함). 다 치고 몇 초 뒤 사라진다. 쓰는 중에 또 누르면 무시.
 
 const START = { y: 2026, m: 6, d: 14 }; // 디데이 1일째
 
-// 대사 — 줄마다 하나. 비어 있으면 '…' 를 띄운다
+// 대사 — 줄마다 하나. 지원은 부산 사투리, 우연은 표준어
 const LINES = {
-  jiwon: [],
-  wooyeon: [],
+  jiwon: [
+    '차우연, 많이 늦나.',
+    '...저리 가서 혼자 놀아라.',
+    '오늘은 니가 설거지 당번이다.',
+    '방 좀 치워라. 꼴이 저게 뭐꼬.',
+    '밥은 뭇나.',
+    '니 또 내 옷 입고 나갔제.',
+    '시끄럽다, 고마 자라.',
+    '우산 챙깃나? 비 온다 카던데.',
+    '퍼뜩 온나. 밥 식는다.',
+    '내가 언제 그랬노.',
+    '니 그거 다 묵을 끼가?',
+    '늦게 댕기지 마라. 걱정된다 아이가.',
+    '고마 웃어라. 정들겠다.',
+    '...와, 니 진짜 대단하다.',
+  ],
+  wooyeon: [
+    '오늘 저녁은 뭐 먹지?',
+    '홍지원, 나 심심해!',
+    '오늘은 내가 요리해봐도 돼?',
+    '야, 변기 뚜껑 내리랬지!',
+    '홍지원! 이거 봐봐, 완전 귀엽지?',
+    '오늘 산책 갈래?',
+    '내 과자 누가 먹었어?',
+    '우리 영화 보자, 내가 고를게!',
+    '에이, 삐졌어?',
+    '나 오늘 머리 자른 거 알아챘어?',
+    '아침에 알람 세 번이나 껐어…',
+    '주말에 바다 가고 싶다.',
+    '고양이 키우면 안 돼?',
+    '잘 자, 내일 봐!',
+  ],
 };
-const PEOPLE = {
-  jiwon: { name: '지원', color: '#4fb3a9' }, // 청록 — clock.js 위 home 밑줄과 같다
-  wooyeon: { name: '우연', color: '#e5a83a' }, // 벌꿀색 — 아래 home 밑줄과 같다
-};
-
-const SPEECH_MAX = 8; // 쌓아 두는 말풍선 수
+const TYPE_MS = 75; // 글자 하나 치는 간격
+const HOLD_MS = 3200; // 다 치고 머무는 시간
+const FADE_MS = 500;
 const KST_OFFSET = 9 * 3600 * 1000;
 const DAY = 86400000;
 
@@ -45,15 +72,12 @@ function cloudPath(cx, cy, rx, ry, n) {
   return d + 'Z';
 }
 
-// 풍선 모양 — 둘 다 viewBox 0 0 240 160, 꼬리는 왼쪽 아래
+// 풍선 모양 — viewBox 0 0 240 160, 꼬리는 왼쪽 아래
 const SHAPES = {
   thought:
     `<path class="hsh-bubble__line" d="${cloudPath(128, 70, 96, 46, 10)}"/>` +
     '<circle class="hsh-bubble__line" cx="34" cy="138" r="11"/>' +
     '<circle class="hsh-bubble__line" cx="15" cy="155" r="4.5"/>',
-  // 타원 말풍선 + 왼쪽 아래 짧은 꼬리(한 획) — 타원 둘레 160° 에서 128° 까지를 돌아 꼬리 끝으로
-  speech:
-    '<path class="hsh-bubble__line" d="M33.9 100A104 56 0 1 1 54.4 113.6L16 140Z"/>',
 };
 
 let topZ = 5; // 새로 뜨거나 끌기 시작한 풍선이 맨 위
@@ -129,8 +153,6 @@ function makeBubble(plan, kind, label, { reduced, onHide } = {}) {
   };
 }
 
-const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-
 /**
  * @param {HTMLElement} plan   .hsh-plan — 풍선을 붙일 곳
  * @param {HTMLElement} clock  .hsh-clock — 단어 위에 누르는 자리를 얹는다
@@ -138,7 +160,6 @@ const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>'
  */
 export function mountBubbles(plan, clock, { reduced = false } = {}) {
   const thought = makeBubble(plan, 'thought', '디데이', { reduced });
-  const speeches = []; // 쌓인 말풍선 — 오래된 것부터
 
   // 시계 단어 위 투명 버튼 — 시계 그림은 그대로 두고 여기만 누를 수 있다(자리는 plan.css)
   const hit = (cls, label, onClick) => {
@@ -160,31 +181,50 @@ export function mountBubbles(plan, clock, { reduced = false } = {}) {
     }, button);
   };
 
+  // 대사 두 줄 — 하단 안내 위. 줄 자리는 늘 잡아 두고(안 보일 때도) 글자만 쳤다 지운다
+  const talkBox = document.createElement('div');
+  talkBox.className = 'hsh-talk';
+  talkBox.setAttribute('aria-live', 'polite');
+  talkBox.innerHTML =
+    '<p class="hsh-talk__row is-jiwon"><span class="hsh-talk__mark">&lt; (</span><span class="hsh-talk__say"></span><span class="hsh-talk__mark">)</span></p>' +
+    '<p class="hsh-talk__row is-wooyeon"><span class="hsh-talk__mark">(</span><span class="hsh-talk__say"></span><span class="hsh-talk__mark">) &gt;</span></p>';
+  plan.append(talkBox);
+
   const last = {};
-  const talk = (who) => (button) => {
+  const busy = {};
+  const pickLine = (who) => {
     const lines = LINES[who];
-    let line = '…';
-    if (lines.length) {
-      // 바로 앞과 같은 대사는 피한다(둘 이상일 때)
-      let i;
-      do i = Math.floor(Math.random() * lines.length); while (lines.length > 1 && i === last[who]);
-      last[who] = i;
-      line = lines[i];
+    if (!lines.length) return '…';
+    let i;
+    do i = Math.floor(Math.random() * lines.length); while (lines.length > 1 && i === last[who]);
+    last[who] = i;
+    return lines[i];
+  };
+
+  const talk = (who) => async () => {
+    if (busy[who]) return; // 쓰는 중 · 머무는 중에는 무시
+    busy[who] = true;
+    const row = talkBox.querySelector(`.is-${who}`);
+    const say = row.querySelector('.hsh-talk__say');
+    const line = pickLine(who);
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    say.textContent = '';
+    row.classList.remove('is-fading');
+    row.classList.add('is-on', 'is-typing');
+    if (reduced) say.textContent = line;
+    else {
+      for (const ch of line) {
+        say.textContent += ch;
+        await wait(TYPE_MS);
+      }
     }
-    // 새 말풍선을 맨 위에 — 조금씩 어긋나게 덮는다
-    const b = makeBubble(plan, 'speech', `${PEOPLE[who].name} 한마디`, {
-      reduced,
-      onHide: () => { b.box.remove(); speeches.splice(speeches.indexOf(b), 1); },
-    });
-    speeches.push(b);
-    if (speeches.length > SPEECH_MAX) speeches.shift().box.remove();
-    const n = speeches.length - 1;
-    b.show({
-      smallText: '',
-      bigHtml: `<span class="hsh-bubble__say">${esc(line)}</span>`, // 밑줄 색으로 누구 말인지
-      accent: PEOPLE[who].color,
-      nudge: [(n % 4) * 10 + Math.random() * 8, (n % 4) * 14 + Math.random() * 8, Math.random() * 8 - 4],
-    }, button);
+    row.classList.remove('is-typing');
+    await wait(HOLD_MS);
+    row.classList.add('is-fading');
+    await wait(reduced ? 0 : FADE_MS);
+    row.classList.remove('is-on', 'is-fading');
+    say.textContent = '';
+    busy[who] = false;
   };
 
   hit('is-top', '지원 한마디', talk('jiwon'));

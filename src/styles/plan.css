@@ -244,6 +244,60 @@
 .hsh-plan__hint-art .d { stroke: var(--hsh-plan-detail); stroke-width: 0.8; }
 .hsh-plan__hint-art .pen { stroke-width: 1.8; }
 
+/* ---------- 대사 두 줄 — 하단 안내 위(bubbles.js). 지원은 왼쪽 < (  ), 우연은 오른쪽 (  ) > ---------- */
+
+.hsh-talk {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(18px, calc(env(safe-area-inset-bottom) + 10px)) + 28px); /* 하단 안내 바로 위 */
+  translate: -50% 0;
+  width: min(calc(100% - 32px), 380px);
+  display: grid;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.hsh-talk__row {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  min-height: 1.5em;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--hsh-plan-ink);
+  white-space: nowrap;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.hsh-talk__row.is-jiwon { justify-self: start; }
+.hsh-talk__row.is-wooyeon { justify-self: end; }
+.hsh-talk__row.is-on { visibility: visible; opacity: 1; }
+.hsh-talk__row.is-fading { opacity: 0; }
+
+/* 괄호 · 화살표 — 시계 home 밑줄과 같은 색 */
+.hsh-talk__mark { white-space: pre; }
+.hsh-talk__row.is-jiwon .hsh-talk__mark { color: #4fb3a9; }
+.hsh-talk__row.is-wooyeon .hsh-talk__mark { color: #e5a83a; }
+
+/* 치는 동안 깜빡이는 커서 */
+.hsh-talk__row.is-typing .hsh-talk__say::after {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: hsh-caret 0.8s steps(1) infinite;
+}
+
+@keyframes hsh-caret { 50% { opacity: 0; } }
+
 /* ---------- 시계(오른쪽 위, 화면 고정 — clock.js) ---------- */
 
 .hsh-clock {
@@ -302,13 +356,13 @@
 .hsh-clock__hit.is-bottom { left: 31%; top: 74%; width: 30%; height: 30%; }
 .hsh-clock__hit:focus-visible { outline: 1.5px solid #a9cbee; outline-offset: 2px; }
 
-/* ---------- 풍선(왼쪽 위, bubbles.js) — 디데이 생각 풍선 · 쌓이는 말풍선. 끌어 옮길 수 있다 ---------- */
+/* ---------- 디데이 생각 풍선(화면 왼쪽 위 구석, bubbles.js) — 끌어 옮길 수 있다 ---------- */
 
 .hsh-bubble {
   --hsh-bubble-accent: #7fb1e4;
   position: absolute;
-  top: var(--hsh-clock-top);
-  left: max(var(--hsh-clock-gap), env(safe-area-inset-left));
+  top: max(4px, env(safe-area-inset-top));
+  left: max(4px, env(safe-area-inset-left));
   z-index: 5;
   width: clamp(190px, 46vw, 250px);
   aspect-ratio: 240 / 160;
@@ -353,30 +407,12 @@
   white-space: nowrap;
 }
 
-.hsh-bubble.is-speech .hsh-bubble__text {
-  left: 12%; right: 8%; top: 14%; height: 66%;
-  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
-  color: var(--hsh-plan-ink);
-  word-break: keep-all;
-}
-
 .hsh-bubble__small[hidden] { display: none; }
 .hsh-bubble__small { font-size: 11px; font-style: italic; letter-spacing: 0.06em; color: #a9cbee; }
 .hsh-bubble__big { font-size: clamp(22px, 6.4vw, 28px); letter-spacing: -0.02em; }
 .hsh-bubble__big b { font-weight: 400; }
 .hsh-bubble__deco { color: #7fb1e4; }
 .hsh-bubble__heart { color: #f3a2b2; }
-
-/* 대사 — 그림처럼 크게, 누구 말인지는 시계 home 과 같은 색 밑줄로 */
-.hsh-bubble__say {
-  display: inline;
-  font-size: clamp(17px, 4.8vw, 21px);
-  font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
-  text-decoration: underline 2px var(--hsh-bubble-accent);
-  text-underline-offset: 5px;
-}
 
 .hsh-bubble__x {
   position: absolute;
