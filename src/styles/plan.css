@@ -36,14 +36,16 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 시계 자리 — 세로 화면은 위를, 가로 화면은 양옆을 시계 크기만큼 비워 집(방 · 스티커)과 겹치지 않게 */
+/* 시계 자리 — 시계는 집 오른쪽 위(주방 위) 빈 곳에 들어가는 것이 먼저.
+   그래도 집과 겹칠 때만 index.js 가 --hsh-clock-room 만큼(세로 화면은 위, 가로 화면은 양옆) 비운다 */
 .hsh-plan {
   --hsh-clock-h: 126px;
   --hsh-clock-w: calc(var(--hsh-clock-h) * 280 / 268); /* clock.js 의 viewBox 비율 */
   --hsh-clock-gap: 12px;
   --hsh-clock-top: max(var(--hsh-clock-gap), env(safe-area-inset-top));
   --hsh-clock-right: max(var(--hsh-clock-gap), env(safe-area-inset-right));
-  padding-top: calc(var(--hsh-clock-top) + var(--hsh-clock-h) + 8px);
+  --hsh-clock-room: 0px;
+  padding-top: calc(max(var(--hsh-plan-gutter), env(safe-area-inset-top)) + var(--hsh-clock-room));
 }
 
 @media (min-width: 768px) and (min-height: 600px) {
@@ -53,8 +55,8 @@
 @media (min-aspect-ratio: 1/1) {
   .hsh-plan {
     padding-top: max(var(--hsh-plan-gutter), env(safe-area-inset-top));
-    padding-right: calc(var(--hsh-clock-right) + var(--hsh-clock-w) + 8px);
-    padding-left: calc(var(--hsh-clock-right) + var(--hsh-clock-w) + 8px); /* 집은 가운데에 그대로 */
+    padding-right: calc(max(var(--hsh-plan-gutter), env(safe-area-inset-right)) + var(--hsh-clock-room));
+    padding-left: calc(max(var(--hsh-plan-gutter), env(safe-area-inset-left)) + var(--hsh-clock-room)); /* 집은 가운데에 그대로 */
   }
 }
 

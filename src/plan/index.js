@@ -41,11 +41,12 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   mountClock(el.querySelector('.hsh-clock'), { reduced }); // 판 밖 화면 고정 — 기울여도 그대로
   enableStickers(el);
   const hint = setupHint(el);
+  fitAroundClock(el);
   thinStars(el);
   let resizing = 0;
   window.addEventListener('resize', () => {
     clearTimeout(resizing);
-    resizing = setTimeout(() => thinStars(el), 200);
+    resizing = setTimeout(() => { fitAroundClock(el); thinStars(el); }, 200);
   });
   if (!reduced) {
     enableTilt(el, card);
@@ -85,6 +86,47 @@ function startWobble(el, hint) {
       c.style.transform = `translateY(${(jitter(i, k, 4) * 0.7).toFixed(2)}px) rotate(${(jitter(i, k, 5) * 5).toFixed(1)}deg)`;
     });
   }, FRAME_MS);
+}
+
+// ---------- 시계 자리 ----------
+//   집 오른쪽 위(주방 위 · 지원 방 오른쪽)는 비어 있어 시계가 들어갈 수 있다. 시계가 집이 차지한 곳과 겹치면
+//   겹치지 않을 때까지 조금씩 비운다(--hsh-clock-room). 평면도는 시계 없을 때 크기에 되도록 가깝게.
+
+// 집이 차지한 곳(평면도 viewBox 좌표) — 지원 방 · 욕실 · 현관 열(x < FREE_X) 과 주방 위 벽 아래(y > FREE_Y)
+const FREE_X = 514;
+const FREE_Y = 254;
+const ROOM_STEP = 6;
+
+function fitAroundClock(el) {
+  const clock = el.querySelector('.hsh-clock');
+  const house = el.querySelector('.hsh-plan__svg > g');
+  if (!clock || !house) return;
+  const box = house.getBBox();
+  const hits = () => {
+    const ctm = house.getScreenCTM();
+    if (!ctm) return false;
+    const inv = ctm.inverse();
+    const r = clock.getBoundingClientRect();
+    // 시계 네 모서리 + 가장자리 가운데를 집 좌표로
+    const pts = [[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom],
+      [(r.left + r.right) / 2, r.bottom], [r.left, (r.top + r.bottom) / 2]]
+      .map(([x, y]) => new DOMPoint(x, y).matrixTransform(inv));
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const l = Math.min(...xs) - 8;
+    const rr = Math.max(...xs) + 8;
+    const t = Math.min(...ys) - 8;
+    const b = Math.max(...ys) + 8;
+    const inHouse = rr > box.x && l < box.x + box.width && b > box.y && t < box.y + box.height;
+    return inHouse && (l < FREE_X || b > FREE_Y);
+  };
+  let room = 0;
+  el.style.setProperty('--hsh-clock-room', '0px');
+  const max = clock.getBoundingClientRect().width + 24;
+  while (hits() && room < max) {
+    room += ROOM_STEP;
+    el.style.setProperty('--hsh-clock-room', `${room}px`);
+  }
 }
 
 // ---------- 바깥 여백 별 ----------
