@@ -187,20 +187,38 @@ function fitAroundClock(el) {
 }
 
 // ---------- 바깥 여백 별 ----------
-//   집 · 시계 · 하단 안내와 겹치거나 가까운 별은 지우고, 남은 여백 별도 몇 개만(약 25%) 옅게 남긴다.
+//   집(방 모양 그대로) · 시계 · 하단 안내와 겹치거나 가까운 별은 지우고, 남은 여백 별은 듬성듬성(약 절반) 옅게 남긴다.
+//   집은 큰 네모가 아니라 방 덩어리 네 개로 본다 — 주방 위 · 주방 오른쪽 · 현관 아래 같은 빈 귀퉁이에도 별이 남게.
 
-const STAR_KEEP = 0.25;
-const STAR_CLEAR = 14; // 집 · 시계 · 안내 둘레로 이만큼은 비운다(px)
+const STAR_KEEP = 0.5;
+const STAR_CLEAR = 14; // 시계 · 안내 둘레로 이만큼은 비운다(px)
+const HOUSE_CLEAR = 22; // 집 둘레로 이만큼은 비운다(평면도 단위)
+// 방 덩어리(평면도 viewBox 좌표, tools/floorplan.mjs 의 벽 좌표)
+const HOUSE_RECTS = [
+  [84, 118, 509, 973], // 지원 방 · 욕실 · 거실 왼쪽
+  [509, 262, 885, 962], // 주방 · 거실
+  [536, 930, 969, 1413], // 우연 방
+  [164, 962, 536, 1357], // 현관
+];
 
 function thinStars(el) {
   const grow = (r) => ({ l: r.left - STAR_CLEAR, t: r.top - STAR_CLEAR, r: r.right + STAR_CLEAR, b: r.bottom + STAR_CLEAR });
-  const keepOut = ['.hsh-plan__svg > g', '.hsh-clock', '.hsh-plan__hint']
+  const keepOut = ['.hsh-clock', '.hsh-plan__hint']
     .map((q) => el.querySelector(q))
     .filter(Boolean)
     .map((n) => grow(n.getBoundingClientRect()));
+  const house = el.querySelector('.hsh-plan__svg > g');
+  const inv = house?.getScreenCTM()?.inverse();
+  const inHouse = (x, y) => {
+    if (!inv) return false;
+    const p = new DOMPoint(x, y).matrixTransform(inv);
+    return HOUSE_RECTS.some(([l, t, r, b]) =>
+      p.x > l - HOUSE_CLEAR && p.x < r + HOUSE_CLEAR && p.y > t - HOUSE_CLEAR && p.y < b + HOUSE_CLEAR);
+  };
   el.querySelectorAll('.hsh-plan__stars use').forEach((u, i) => {
     const r = u.getBoundingClientRect();
-    const hit = keepOut.some((k) => r.right > k.l && r.left < k.r && r.bottom > k.t && r.top < k.b);
+    const hit = keepOut.some((k) => r.right > k.l && r.left < k.r && r.bottom > k.t && r.top < k.b)
+      || inHouse((r.left + r.right) / 2, (r.top + r.bottom) / 2);
     const keep = !hit && (jitter(i, 0, 9) + 1) / 2 < STAR_KEEP;
     u.classList.toggle('is-away', !keep);
     u.classList.toggle('is-faint', keep);
