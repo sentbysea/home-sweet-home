@@ -12,6 +12,11 @@ export const VISIT_STEPS = [
 ];
 
 const SWAP = 220; // 글 바꿀 때 페이드(ms) — loader.css 의 .hsh-status 전환과 같다
+const MIN_STEP = 1600;
+
+/** 준비가 일찍 끝났을 때 단계가 다 지나가는 시간 — 타이핑이 이에 맞춰 끝난다 */
+export const visitDuration = ({ minStep = MIN_STEP, steps = VISIT_STEPS } = {}) =>
+  steps.length * minStep + (steps.length - 1) * SWAP;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -45,7 +50,7 @@ async function swap(el, key, text, reduced) {
  * @param {{ ready: Promise<unknown>, reduced?: boolean, minStep?: number, steps?: typeof VISIT_STEPS }} opts
  * @returns {Promise<void>} 모든 단계를 보였고 준비도 끝났을 때
  */
-export async function runVisitSteps(el, { ready, reduced = false, minStep = 1600, steps = VISIT_STEPS }) {
+export async function runVisitSteps(el, { ready, reduced = false, minStep = MIN_STEP, steps = VISIT_STEPS }) {
   for (let i = 0; i < steps.length; i++) {
     if (i === 0) show(el, steps[i].key, steps[i].text);
     else await swap(el, steps[i].key, steps[i].text, reduced);
@@ -56,5 +61,5 @@ export async function runVisitSteps(el, { ready, reduced = false, minStep = 1600
 
 /** 들어가기 안내 — 모바일·데스크톱 같은 문구 */
 export function showEnterHint(el, { reduced = false } = {}) {
-  return swap(el, 'tap', '화면을 눌러 들어가기', reduced);
+  return swap(el, 'tap', '집을 눌러 들어가기', reduced);
 }

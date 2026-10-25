@@ -1,6 +1,6 @@
 /* =========================================================
    home sweet home — 로딩 화면
-   상태: (기본) → .is-started → .is-ready(누르기 기다림) → .is-leaving → 제거
+   상태: (기본) → .is-started → .is-ready(집 누르기 기다림) → .is-leaving(집이 다가옴) → 제거
    ========================================================= */
 
 .hsh-loader {
@@ -10,7 +10,7 @@
   --hsh-note: #7d8386;
   --hsh-paper: #fcfbf8; /* 순백이 아닌 아주 연한 아이보리 */
   --hsh-pattern: #c5d8dd; /* 배경 별(별 사진의 회청색) */
-  --hsh-fade: 700ms;
+  --hsh-fade: 900ms; /* 누른 뒤 사라질 때까지 — 집이 다가오는 시간 */
 
   position: fixed;
   inset: 0; /* 주소창이 줄었다 늘어도 보이는 영역 가운데 */
@@ -20,17 +20,38 @@
   background: var(--hsh-paper);
   overflow: hidden;
   opacity: 1;
-  transition: opacity var(--hsh-fade) ease;
+  /* 집이 반쯤 다가온 뒤부터 바래서, 다 다가왔을 때 다음 화면 */
+  transition: opacity calc(var(--hsh-fade) * 0.45) ease-in calc(var(--hsh-fade) * 0.55);
   -webkit-tap-highlight-color: transparent;
 }
 
-.hsh-loader.is-ready {
+.hsh-loader.is-ready .hsh-loader__house {
   cursor: pointer;
 }
 
 .hsh-loader.is-leaving {
   opacity: 0;
   pointer-events: none;
+}
+
+/* ---------- 들어가기 — 글자는 먼저 숨고, 집이 사용자 쪽으로 다가온다 ---------- */
+
+.hsh-loader__house,
+.hsh-bg {
+  transition: scale var(--hsh-fade) cubic-bezier(0.6, 0, 0.85, 0.3); /* 점점 빠르게 */
+}
+
+.hsh-loader.is-leaving .hsh-loader__house {
+  scale: 9;
+}
+
+.hsh-loader.is-leaving .hsh-bg {
+  scale: 1.12; /* 배경은 조금만 — 깊이감 */
+}
+
+.hsh-loader.is-leaving :is(.hsh-loader__text, .hsh-status) {
+  opacity: 0;
+  transition: opacity 160ms ease-out;
 }
 
 /* ---------- 배경 패턴 ---------- */
@@ -83,6 +104,22 @@
 
 .hsh-loader:not(.is-wobbling) .hsh-loader__frame:first-child,
 .hsh-loader__frame.is-on {
+  display: inline;
+}
+
+/* 덧그린 굵은 선 — draw.js 가 윤곽 4장을 본떠 넣는다. 윤곽과 같은 장만 보인다 */
+.hsh-loader__ink {
+  display: none;
+  fill: none;
+  stroke: var(--hsh-line);
+  stroke-width: 4; /* viewBox 단위 — 화면에서 2px 남짓, 다가올 때 함께 굵어진다 */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1 1; /* pathLength="1" */
+}
+
+.hsh-loader:not(.is-wobbling) .hsh-loader__ink:first-child,
+.hsh-loader__ink.is-on {
   display: inline;
 }
 
@@ -265,6 +302,11 @@
 @media (prefers-reduced-motion: reduce) {
   .hsh-loader {
     --hsh-fade: 200ms;
+    transition: opacity var(--hsh-fade) ease;
+  }
+
+  .hsh-loader.is-leaving :is(.hsh-loader__house, .hsh-bg) {
+    scale: none;
   }
 
   .hsh-bell,

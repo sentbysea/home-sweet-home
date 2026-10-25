@@ -1,9 +1,10 @@
 // 로딩 화면 진행
-//   타이핑(처음 한 번) + 방문 단계 + 준비 완료 → 들어가기 안내 → 화면 누르기 → 종료
-//   집 위글과 타이핑 반복은 화면을 누를 때까지 계속된다.
+//   타이핑(한 번) + 방문 단계 + 준비 완료 → 들어가기 안내 + 집 덧그리기 → 집 누르기 → 집이 다가오며 종료
+//   타이핑은 방문 단계가 끝나는 때에 맞춰 마지막 글자를 쓴다. 집 위글은 들어갈 때까지 계속된다.
 
-import { loopTyping } from './typing.js';
-import { runVisitSteps, showEnterHint } from './status.js';
+import { typeLines } from './typing.js';
+import { runVisitSteps, showEnterHint, visitDuration } from './status.js';
+import { drawHouse } from './draw.js';
 import { waitForEnter } from './enter.js';
 import { exitLoader } from './exit.js';
 import { startWobble } from './wobble.js';
@@ -19,21 +20,22 @@ export const prefersReducedMotion = () =>
  */
 export async function runLoader(el, { ready, reduced = prefersReducedMotion(), typing, minStep } = {}) {
   const status = el.querySelector('.hsh-status');
+  const house = el.querySelector('.hsh-loader__house');
   const stop = new AbortController();
 
   el.classList.add('is-started');
-  let firstTyped;
-  const typed = new Promise((r) => { firstTyped = r; });
-  loopTyping(el, { ...typing, reduced, signal: stop.signal, onFirstTyped: firstTyped });
-
   const visited = runVisitSteps(status, { ready, reduced, minStep });
+  const typed = typeLines(el, {
+    ...typing, reduced, signal: stop.signal, duration: visitDuration({ minStep }), until: visited,
+  });
   if (!reduced) startWobble(el, { signal: stop.signal }); // 글자를 나눈 뒤에 시작
 
-  await Promise.all([typed, visited]);
+  await typed; // 마지막 글자는 방문 단계·준비가 끝난 뒤
 
   await showEnterHint(status, { reduced });
+  drawHouse(el, { reduced });
   el.classList.add('is-ready');
-  await waitForEnter(el);
+  await waitForEnter(house);
 
   await exitLoader(el);
   stop.abort();

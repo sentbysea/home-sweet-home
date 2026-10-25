@@ -1,5 +1,5 @@
 // 손그림 위글 — 필터 없이(iOS Safari 에서 SVG 필터가 검게 깜빡여서) 190ms 마다 한 프레임씩.
-//   · 집 윤곽: .hsh-loader__frame 4장 중 하나만 .is-on
+//   · 집 윤곽: .hsh-loader__frame 4장 중 하나만 .is-on(덧그린 굵은 선 .hsh-loader__ink 도 같은 장)
 //   · 집 안 글자(SVG tspan): rotate 속성으로 글자마다 살짝 기울임
 //   · 아래 작은 글(HTML span): transform 으로 살짝 기울이고 들썩임
 //   · 작은 글 옆 아이콘: 선·도형마다 transform 으로 살짝(아이콘 자체 움직임과 겹쳐진다)
@@ -16,6 +16,7 @@ function jitter(i, k, salt) {
 
 function paint(root, k) {
   root.querySelectorAll('.hsh-loader__frame').forEach((f, i) => f.classList.toggle('is-on', i === k));
+  root.querySelectorAll('.hsh-loader__ink').forEach((f, i) => f.classList.toggle('is-on', i === k));
 
   root.querySelectorAll('.hsh-loader__char').forEach((c, i) => {
     c.setAttribute('rotate', (jitter(i, k, 1) * 4).toFixed(1));
