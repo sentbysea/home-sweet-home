@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>loader demo</title>
+  <style>
+    /* 개발용 도구 — 실제 화면(index.html)에는 아무것도 더하지 않는다 */
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 13px/1.4 system-ui, sans-serif;
+      color: #333;
+      background: #eef0f2;
+    }
+    .bar {
+      position: sticky;
+      top: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+    .bar strong { margin-right: 4px; }
+    button, select, input { font: inherit; }
+    button {
+      padding: 6px 14px;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #f4f4f4; }
+    label { display: inline-flex; align-items: center; gap: 6px; }
+    input[type="number"] { width: 80px; }
+    .stage {
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+    iframe {
+      display: block;
+      max-width: 100%;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+    .log { color: #777; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <strong>loader demo</strong>
+    <button id="replay" type="button">▶ 다시 재생</button>
+    <label>화면
+      <select id="size">
+        <option value="390x844">모바일 390×844</option>
+        <option value="360x640">모바일 360×640</option>
+        <option value="844x390">모바일 가로 844×390</option>
+        <option value="1280x800">PC 1280×800</option>
+      </select>
+    </label>
+    <label>준비 완료(ms) <input id="ready" type="number" min="0" step="100" value="1200"></label>
+    <span class="log">모션 줄이기는 OS 설정 또는 DevTools › Rendering › prefers-reduced-motion 으로 확인</span>
+  </div>
+  <div class="stage"><iframe id="frame" title="loader preview"></iframe></div>
+
+  <script>
+    const frame = document.getElementById('frame');
+    const size = document.getElementById('size');
+    const ready = document.getElementById('ready');
+
+    function play() {
+      const [w, h] = size.value.split('x').map(Number);
+      frame.width = w;
+      frame.height = h;
+      frame.src = `index.html?ready=${Math.max(0, Number(ready.value) || 0)}&t=${Date.now()}`;
+    }
+
+    document.getElementById('replay').addEventListener('click', play);
+    size.addEventListener('change', play);
+    play();
+  </script>
+</body>
+</html>

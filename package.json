@@ -1,0 +1,14 @@
+{
+  "name": "home-sweet-home",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "home sweet home — loading screen (SVG + CSS, no dependencies)",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "wobble": "node tools/wobble.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

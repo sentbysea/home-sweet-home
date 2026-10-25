@@ -1,0 +1,22 @@
+@font-face {
+  font-family: "Nanum Gothic Coding";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../fonts/nanum-gothic-coding-latin.woff2") format("woff2");
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #fff;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}

@@ -1,0 +1,116 @@
+/* =========================================================
+   home sweet home — 로딩 화면
+   상태: (기본) → .is-typing → .is-leaving → 제거
+   ========================================================= */
+
+.hsh-loader {
+  --hsh-fill: #f1f8fb;
+  --hsh-line: #8f9497;
+  --hsh-ink: #2a2a2a;
+  --hsh-boil-frame: 190ms; /* 윤곽 한 장이 보이는 시간 */
+  --hsh-fade: 700ms;
+
+  position: fixed;
+  inset: 0; /* 주소창이 줄었다 늘어도 보이는 영역 가운데 */
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity var(--hsh-fade) ease;
+}
+
+.hsh-loader.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 첨부 비율 그대로: 집 폭 340 : 높이 318. 모바일 220~260px, 짧은 가로 화면에서는 높이에 맞춘다 */
+.hsh-loader__house {
+  display: block;
+  width: min(clamp(220px, 64vw, 260px), 62svh * 340 / 318);
+  height: auto;
+  aspect-ratio: 340 / 318;
+  overflow: visible;
+  translate: 0 -3%; /* 첨부처럼 가운데보다 아주 조금 위 */
+}
+
+@media (min-width: 768px) {
+  .hsh-loader__house {
+    width: min(300px, 62svh * 340 / 318);
+  }
+}
+
+/* ---------- 윤곽 위글 — 4장을 번갈아 한 장씩 ---------- */
+
+.hsh-loader__frame {
+  fill: var(--hsh-fill);
+  stroke: var(--hsh-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  animation: hsh-boil calc(var(--hsh-boil-frame) * 4) steps(1, end) infinite;
+}
+
+.hsh-loader__frame:nth-child(1) { animation-delay: 0s; }
+.hsh-loader__frame:nth-child(2) { animation-delay: calc(var(--hsh-boil-frame) * -3); }
+.hsh-loader__frame:nth-child(3) { animation-delay: calc(var(--hsh-boil-frame) * -2); }
+.hsh-loader__frame:nth-child(4) { animation-delay: calc(var(--hsh-boil-frame) * -1); }
+
+@keyframes hsh-boil {
+  0%   { opacity: 1; }
+  25%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* ---------- 글자 ---------- */
+
+.hsh-loader__text {
+  font-family: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 37px; /* viewBox 단위 — 집과 함께 줄고 는다 */
+  font-weight: 400;
+  fill: var(--hsh-ink);
+  letter-spacing: 0;
+  visibility: hidden; /* JS 가 글자를 나누기 전 깜빡임 방지 */
+}
+
+.hsh-loader.is-typing .hsh-loader__text,
+.hsh-loader.is-done .hsh-loader__text {
+  visibility: visible;
+}
+
+.hsh-loader__char {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.hsh-loader__char.is-shown {
+  opacity: 1;
+}
+
+/* ---------- 모션 줄이기 — 완성 상태 그대로 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hsh-loader {
+    --hsh-fade: 200ms;
+  }
+
+  .hsh-loader__frame {
+    animation: none;
+  }
+
+  .hsh-loader__frame:first-child {
+    opacity: 1;
+  }
+
+  .hsh-loader__text {
+    visibility: visible;
+  }
+
+  .hsh-loader__char {
+    opacity: 1;
+    transition: none;
+  }
+}
