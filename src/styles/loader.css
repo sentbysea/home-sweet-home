@@ -62,10 +62,10 @@
   translate: 0 -3%; /* 첨부처럼 가운데보다 아주 조금 위 */
 }
 
-/* 첨부 비율 그대로: 집 폭 340 : 높이 318. 모바일 179~212px, 짧은 가로 화면에서는 높이에 맞춘다 */
+/* 첨부 비율 그대로: 집 폭 340 : 높이 318. 모바일 161~191px, 짧은 가로 화면에서는 높이에 맞춘다 */
 .hsh-loader__house {
   display: block;
-  width: min(clamp(179px, 52vw, 212px), 50svh * 340 / 318);
+  width: min(clamp(161px, 47vw, 191px), 45svh * 340 / 318);
   height: auto;
   aspect-ratio: 340 / 318;
   overflow: visible;
@@ -73,7 +73,7 @@
 
 @media (min-width: 768px) {
   .hsh-loader__house {
-    width: min(244px, 50svh * 340 / 318);
+    width: min(220px, 45svh * 340 / 318);
   }
 }
 
@@ -97,7 +97,7 @@
 
 .hsh-loader__text {
   font-family: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 37px; /* viewBox 단위 — 집과 함께 줄고 는다 */
+  font-size: 41px; /* viewBox 단위. 집을 90%로 줄일 때 글자는 화면 크기를 지키려고 키웠다 */
   font-weight: 400;
   fill: var(--hsh-ink);
   letter-spacing: 0;
