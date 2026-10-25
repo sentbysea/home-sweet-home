@@ -138,15 +138,31 @@ function setupHint(el) {
     }
     node.replaceWith(frag);
   }
-  const shapes = [...el.querySelectorAll('.hsh-sticker__body')];
+  // 스티커마다 그릴 조각(외곽선 · 바탕 · 열쇠 구멍)의 class · d · fill 만 뽑아 둔다
+  const shapes = [...el.querySelectorAll('.hsh-sticker__body')].map((b) =>
+    [...b.querySelectorAll('path')].map((path) => ({
+      cls: path.getAttribute('class'),
+      d: path.getAttribute('d'),
+      fill: path.getAttribute('fill'),
+    })));
   const hint = { chars: [...p.querySelectorAll('.hsh-plan__hint-char')], icon, shapes, i: 0 };
   showHintIcon(hint);
   return hint;
 }
 
+// innerHTML 로 옮기면 iOS Safari 에서 SVG 로 읽히지 않을 수 있어 요소를 직접 만든다
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
 function showHintIcon(hint) {
-  const src = hint.shapes[hint.i % hint.shapes.length];
-  if (src) hint.icon.innerHTML = src.innerHTML;
+  const parts = hint.shapes[hint.i % hint.shapes.length];
+  if (!parts) return;
+  hint.icon.replaceChildren(...parts.map(({ cls, d, fill }) => {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('class', cls);
+    path.setAttribute('d', d);
+    if (fill) path.setAttribute('fill', fill);
+    return path;
+  }));
 }
 
 function cycleHintIcon(el, hint) {

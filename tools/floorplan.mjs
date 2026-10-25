@@ -581,7 +581,7 @@ ln(ellipse(717, 1291, 1.8, 1.8, 0), 'hsh-fine');
 
 // =========================================================
 // 방 스티커 버튼 — 방 이름이 있던 자리에 '일상 조각 스티커' 모양 하나씩.
-//   방 색보다 한 톤 진한 바탕 + 굵은 잉크 선 + 흰 칼선 테두리 + 옅은 그림자.
+//   방 색보다 한 톤 진한 단색 바탕 + 또렷한 잉크 외곽선(그림자 · 테두리 없음).
 //   모양은 가운데가 0,0(대략 ±26). 원 여러 개처럼 겹친 모양도 한 덩어리 윤곽으로 보이게
 //   잉크 선을 두 배 굵기로 먼저 깔고 그 위에 바탕을 덮는다(바깥 절반만 남는다).
 // =========================================================
@@ -615,8 +615,6 @@ const sticker = (roomId, name, shape, x, y, fill, tilt = 0) => {
   stickers.push(
     `<g class="hsh-sticker" data-room="${roomId}" data-shape="${shape}" role="button" tabindex="0" aria-label="${name}" transform="translate(${x} ${y}) rotate(${tilt}) scale(${STICKER_SCALE})">` +
     `<g class="hsh-sticker__body">` +
-    `<path class="hsh-sticker__shadow" d="${d}" transform="translate(2 3)"/>` +
-    `<path class="hsh-sticker__edge" d="${d}"/>` +
     `<path class="hsh-sticker__ink" d="${d}"/>` +
     `<path class="hsh-sticker__fill" d="${d}" fill="${fill}"/>${hole}` +
     `</g></g>`,
