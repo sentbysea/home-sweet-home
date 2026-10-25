@@ -394,7 +394,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   // 스크롤바 — 창 무늬에 맞춘 막대를 직접 그린다(모바일에서도 늘 보이게). 넘칠 때만 나온다
   const syncRail = () => {
     const { scrollHeight: h, clientHeight: c, scrollTop: t } = scroller;
-    rail.hidden = h - c < 2;
+    rail.hidden = h - c < 2 || !veBox.hidden; // about __VE 는 막대 없이 손으로 내려 읽기만
     if (rail.hidden) return;
     const track = rail.clientHeight;
     const size = Math.max(28, (track * c) / h);
