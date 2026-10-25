@@ -11,7 +11,7 @@
   --hsh-plan-line: #8f9497; /* 가구 · 스티커 윤곽도 같은 부드러운 중간 회색 */
   --hsh-plan-detail: #b4b9bc; /* 세면대 · 책 · 타일 같은 안쪽 묘사 — 더 얇고 연하게 */
   --hsh-plan-note: #7d8386; /* 하단 안내 — 로딩 방문 단계 글(--hsh-note)과 같은 색 */
-  --hsh-plan-stars: #c5d8dd; /* 바깥 여백 별 — 로딩 배경 별(--hsh-pattern)과 같은 색 */
+  --hsh-plan-stars: var(--hsh-tone-stars); /* 바깥 여백 별 — 로딩 배경 별(--hsh-pattern)과 같은 색 */
   --hsh-plan-gutter: 16px;
 
   position: fixed;

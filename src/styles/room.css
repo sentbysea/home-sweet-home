@@ -16,15 +16,19 @@
   /* 창 안쪽 글자(제목 · 이름표 · 내용) — 탭 · 주소창 줄은 로딩과 같은 글꼴 그대로 */
   --hsh-win-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
 
+  /* 창은 보이는 화면(모바일 주소창 · 툴바를 뺀 높이) 한가운데 — 위아래 여백도 같게 */
+  --hsh-win-gap-y: max(36px, calc(max(env(safe-area-inset-top), env(safe-area-inset-bottom)) + 20px));
   position: fixed;
-  inset: 0;
+  inset: 0 0 auto;
+  height: 100vh;
+  height: 100svh;
   z-index: 50;
   display: grid;
   place-items: center;
   padding:
-    max(28px, calc(env(safe-area-inset-top) + 16px))
+    var(--hsh-win-gap-y)
     max(20px, calc(env(safe-area-inset-right) + 16px))
-    max(24px, calc(env(safe-area-inset-bottom) + 16px))
+    var(--hsh-win-gap-y)
     max(20px, calc(env(safe-area-inset-left) + 16px));
 }
 
@@ -48,9 +52,9 @@
 .hsh-win__frame {
   position: relative;
   width: min(560px, 100%);
-  height: min(540px, 100%);
-  display: grid;
-  grid-template-rows: auto auto 1fr;
+  max-height: 100%; /* 높이는 안쪽 내용만큼, 넘치면 안쪽 칸이 스크롤 */
+  display: flex;
+  flex-direction: column;
   opacity: 0;
   scale: 0.92;
   transition: opacity 220ms ease-out, scale 220ms ease-out;
@@ -71,7 +75,8 @@
 /* 폴더 탭 — 왼쪽 위. 사이트 이름 + 오른쪽 끝(비스듬히 내려오는 곳 바로 앞)에 × */
 .hsh-win__tab {
   position: relative;
-  justify-self: start;
+  flex: none;
+  align-self: flex-start;
   width: 52%;
   height: 30px;
   display: flex;
@@ -189,9 +194,10 @@
 
 /* 몸통 */
 .hsh-win__body {
+  flex: 0 1 auto;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
   padding: 18px 18px 20px;
   background: var(--hsh-win-paper);
@@ -256,60 +262,111 @@
 .hsh-win__pill.is-link { cursor: pointer; }
 
 .hsh-win__page {
+  position: relative;
+  flex: 0 1 auto;
   min-height: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--hsh-win-line);
   border-radius: 12px;
+  overflow: hidden;
 }
 
+/* 안쪽 칸 — 기본 스크롤바는 숨기고 .hsh-win__rail 을 대신 그린다 */
+.hsh-win__scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.hsh-win__scroll::-webkit-scrollbar { display: none; }
+
 .hsh-win__empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
   margin: 0;
   font-family: var(--hsh-win-font);
   font-size: 13px;
   color: var(--hsh-win-note);
 }
 
-/* 공지 — 칸 안에서 위아래로 넘겨 읽는다(스크롤바는 숨김) */
-.hsh-win__page.is-note {
-  place-items: start center;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
+.hsh-win__empty[hidden],
+.hsh-win__note[hidden],
+.hsh-note__tabs[hidden],
+.hsh-note__sec[hidden],
+.hsh-win__rail[hidden] { display: none; }
+
+/* 스크롤바 — 얇은 회색 길 위에 창 머리 색 알약 */
+.hsh-win__rail {
+  position: absolute;
+  right: 5px;
+  top: 12px;
+  bottom: 12px;
+  width: 8px;
+  background: linear-gradient(var(--hsh-win-line), var(--hsh-win-line)) center / 1px 100% no-repeat;
 }
 
-.hsh-win__page.is-note::-webkit-scrollbar { display: none; }
+.hsh-win__knob {
+  position: absolute;
+  inset: 0 0 auto;
+  background: var(--hsh-win-tint);
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 999px;
+  touch-action: none;
+  cursor: grab;
+}
 
-.hsh-win__note[hidden] { display: none; }
+/* 공지 — 위쪽 탭(ABOUT · ME · NG), 누른 칸만 아래에 */
+.hsh-note__tabs {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  padding: 18px 18px 4px;
+}
+
+.hsh-note__tab {
+  padding: 2px 2px 4px;
+  border: 0;
+  background: none;
+  font-family: var(--hsh-win-font);
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--hsh-win-note);
+  text-decoration: underline 2px transparent;
+  text-underline-offset: 5px;
+  cursor: pointer;
+  transition: color 160ms ease, text-decoration-color 160ms ease;
+}
+
+.hsh-note__tab[aria-selected="true"] {
+  color: var(--hsh-win-text);
+  text-decoration-color: var(--hsh-win-ink);
+}
+
+.hsh-note__tab:focus-visible { outline: 1.5px solid var(--hsh-win-line); outline-offset: 2px; border-radius: 4px; }
 
 .hsh-note {
-  display: grid;
-  gap: 22px;
-  padding: 22px 18px 26px;
+  padding: 14px 22px 22px;
   font-family: var(--hsh-win-font);
   color: var(--hsh-win-text);
   text-align: center;
   word-break: keep-all;
 }
 
-.hsh-note__sec { display: grid; gap: 12px; }
+.hsh-note__sec { display: grid; gap: 15px; }
 
-.hsh-note__head {
-  justify-self: center;
-  margin: 0 0 2px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-decoration: underline 2px var(--hsh-win-ink);
-  text-underline-offset: 5px;
-}
-
-.hsh-note__item { display: grid; gap: 3px; margin: 0; }
+.hsh-note__item { display: grid; gap: 0; margin: 0; }
 
 .hsh-note__line {
   margin: 0;
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.38;
   letter-spacing: -0.01em;
 }
 
@@ -317,7 +374,7 @@
 
 .hsh-note__more {
   font-size: 12.5px;
-  line-height: 1.55;
+  line-height: 1.38;
   letter-spacing: -0.01em;
   color: var(--hsh-win-note);
 }

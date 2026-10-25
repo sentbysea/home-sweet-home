@@ -12,6 +12,14 @@
   box-sizing: border-box;
 }
 
+/* 집 색 — 불러올 때마다 넷 중 하나(index.html 인라인 스크립트가 고른다).
+   house: 집 · 상태 아이콘 바탕, door: 문틈, stars: 로딩 배경 별 · 홈 화면 여백 별(집보다 채도 · 명도를 낮춘 색) */
+:root,
+:root[data-hsh-tone="sky"] { --hsh-tone-house: #f1f8fb; --hsh-tone-door: #dfeaf0; --hsh-tone-stars: #c5d8dd; }
+:root[data-hsh-tone="green"] { --hsh-tone-house: #f2f9ea; --hsh-tone-door: #e1ecd4; --hsh-tone-stars: #cbd9bf; }
+:root[data-hsh-tone="yellow"] { --hsh-tone-house: #fdf8e2; --hsh-tone-door: #f1e8c9; --hsh-tone-stars: #ded5b4; }
+:root[data-hsh-tone="pink"] { --hsh-tone-house: #fcf0f4; --hsh-tone-door: #f1dde5; --hsh-tone-stars: #dfc6cf; }
+
 html,
 body {
   margin: 0;

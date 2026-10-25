@@ -4,12 +4,12 @@
    ========================================================= */
 
 .hsh-loader {
-  --hsh-fill: #f1f8fb;
+  --hsh-fill: var(--hsh-tone-house); /* 집 색 — base.css 의 [data-hsh-tone] */
   --hsh-line: #8f9497;
   --hsh-ink: #2a2a2a;
   --hsh-note: #7d8386;
   --hsh-paper: #fcfbf8; /* 순백이 아닌 아주 연한 아이보리 */
-  --hsh-pattern: #c5d8dd; /* 배경 별(별 사진의 회청색) */
+  --hsh-pattern: var(--hsh-tone-stars); /* 배경 별 — 집 색보다 채도 · 명도 낮게 */
   --hsh-fade: 900ms; /* 누른 뒤 사라질 때까지 — 집이 다가오는 시간 */
 
   position: fixed;
@@ -266,7 +266,7 @@
 
 /* 문 — 빼꼼 열렸다 닫힘 */
 .hsh-door__gap {
-  fill: #dfeaf0;
+  fill: var(--hsh-tone-door);
 }
 
 .hsh-door__panel {

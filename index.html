@@ -30,6 +30,11 @@
     <script>
       // 66px 칸마다 별 하나 — 칸 안 아무 데나, 기울기도 무작위. 첫 화면 전에 그리려고 인라인.
       // 가로·세로 중 긴 쪽 기준 정사각형으로 깔아 화면을 돌려도 빈 곳이 없다.
+      // 집 색도 불러올 때마다 무작위 — 하늘 · 연두 · 노랑 · 분홍(색은 base.css 의 [data-hsh-tone])
+      (function () {
+        var TONES = ["sky", "green", "yellow", "pink"];
+        document.documentElement.setAttribute("data-hsh-tone", TONES[Math.floor(Math.random() * TONES.length)]);
+      })();
       (function () {
         var CELL = 66, PAD = 10;
         var side = Math.max(innerWidth, innerHeight, screen.width, screen.height);

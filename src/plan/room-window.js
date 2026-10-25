@@ -185,15 +185,19 @@ const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>'
 const rich = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 const SUP = ['¹', '²', '³'];
 
+/** 위쪽 탭(ABOUT · ME · NG)과 칸마다 내용 — 첫 칸만 열어 둔다 */
 function noticeMarkup() {
-  return '<div class="hsh-note">' + NOTICE.map(([head, body]) => {
+  const tabs = NOTICE.map(([head], i) =>
+    `<button class="hsh-note__tab" type="button" role="tab" id="hsh-note-tab-${i}" aria-controls="hsh-note-sec-${i}" aria-selected="${i === 0}">${head}</button>`).join('');
+  const secs = NOTICE.map(([, body], i) => {
     const items = typeof body === 'string'
       ? `<p class="hsh-note__line">${rich(body)}</p>`
-      : body.map(([line, more], i) =>
-        `<p class="hsh-note__item"><span class="hsh-note__line"><sup>${SUP[i]}</sup> ${rich(line)}</span>` +
+      : body.map(([line, more], j) =>
+        `<p class="hsh-note__item"><span class="hsh-note__line"><sup>${SUP[j]}</sup> ${rich(line)}</span>` +
         `<span class="hsh-note__more">⇢ ${rich(more)}</span></p>`).join('');
-    return `<section class="hsh-note__sec"><h3 class="hsh-note__head">${head}</h3>${items}</section>`;
-  }).join('') + '</div>';
+    return `<section class="hsh-note__sec" role="tabpanel" id="hsh-note-sec-${i}" aria-labelledby="hsh-note-tab-${i}"${i ? ' hidden' : ''}>${items}</section>`;
+  }).join('');
+  return { tabs, secs };
 }
 
 const readLikes = () => {
@@ -235,13 +239,20 @@ function build() {
           </div>
         </header>
         <div class="hsh-win__page">
-          <p class="hsh-win__empty"></p>
-          <div class="hsh-win__note" hidden></div>
+          <div class="hsh-note__tabs" role="tablist" aria-label="공지" hidden></div>
+          <div class="hsh-win__scroll">
+            <p class="hsh-win__empty"></p>
+            <div class="hsh-win__note hsh-note" hidden></div>
+          </div>
+          <div class="hsh-win__rail" aria-hidden="true" hidden><span class="hsh-win__knob"></span></div>
         </div>
       </div>
     </section>`;
   // 썸네일 귀퉁이 하트 — 단색
   root.querySelector('.hsh-win__thumb').append(sticker({ shape: 'heart', kind: 'solid', color: '#f4a6c9' }, 'hsh-win__thumb-heart'));
+  const { tabs, secs } = noticeMarkup();
+  root.querySelector('.hsh-note__tabs').innerHTML = tabs;
+  root.querySelector('.hsh-win__note').innerHTML = secs;
   return root;
 }
 
@@ -259,7 +270,10 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const like = win.querySelector('.hsh-win__like');
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
-  const page = win.querySelector('.hsh-win__page');
+  const noteTabs = win.querySelector('.hsh-note__tabs');
+  const scroller = win.querySelector('.hsh-win__scroll');
+  const rail = win.querySelector('.hsh-win__rail');
+  const knob = win.querySelector('.hsh-win__knob');
   let pill = win.querySelector('.hsh-win__pill');
   let current = null;
   let back = null; // 닫으면 포커스를 돌려줄 버튼
@@ -285,14 +299,49 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     title.textContent = label;
     url.textContent = `${siteHost()} / ${label}`;
     empty.textContent = text;
-    // 공지면 내용을 채우고, 아니면 '곧 채워질' 안내
+    // 공지면 탭 + 내용(ABOUT 부터), 아니면 '곧 채워질' 안내
     const isNotice = label === 'notice';
-    if (isNotice && !note.childElementCount) note.innerHTML = noticeMarkup();
-    note.hidden = !isNotice;
+    note.hidden = noteTabs.hidden = !isNotice;
     empty.hidden = isNotice;
-    page.classList.toggle('is-note', isNotice);
-    page.scrollTop = 0;
+    if (isNotice) pickTab(0);
+    else scroller.scrollTop = 0;
+    syncRail();
   };
+
+  // 공지 탭 — 누른 칸만 보이고 밑줄이 옮겨 간다
+  const pickTab = (n) => {
+    noteTabs.querySelectorAll('.hsh-note__tab').forEach((t, i) => t.setAttribute('aria-selected', String(i === n)));
+    note.querySelectorAll('.hsh-note__sec').forEach((s, i) => { s.hidden = i !== n; });
+    scroller.scrollTop = 0;
+    syncRail();
+  };
+  noteTabs.addEventListener('click', (e) => {
+    const t = e.target.closest('.hsh-note__tab');
+    if (t) pickTab([...noteTabs.children].indexOf(t));
+  });
+
+  // 스크롤바 — 창 무늬에 맞춘 막대를 직접 그린다(모바일에서도 늘 보이게). 넘칠 때만 나온다
+  const syncRail = () => {
+    const { scrollHeight: h, clientHeight: c, scrollTop: t } = scroller;
+    rail.hidden = h - c < 2;
+    if (rail.hidden) return;
+    const track = rail.clientHeight;
+    const size = Math.max(28, (track * c) / h);
+    knob.style.height = `${size}px`;
+    knob.style.translate = `0 ${((track - size) * t) / (h - c)}px`;
+  };
+  scroller.addEventListener('scroll', syncRail, { passive: true });
+  new ResizeObserver(syncRail).observe(scroller);
+  knob.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    knob.setPointerCapture(e.pointerId);
+    const y0 = e.clientY;
+    const top0 = scroller.scrollTop;
+    const k = (scroller.scrollHeight - scroller.clientHeight) / (rail.clientHeight - knob.offsetHeight);
+    const move = (ev) => { scroller.scrollTop = top0 + (ev.clientY - y0) * k; };
+    knob.addEventListener('pointermove', move);
+    knob.addEventListener('lostpointercapture', () => knob.removeEventListener('pointermove', move), { once: true });
+  });
 
   // 배너 정보 자리 — 내용이 생기면 여기서 채운다
   const showBanner = () => {
