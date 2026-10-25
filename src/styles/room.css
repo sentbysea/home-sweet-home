@@ -270,6 +270,66 @@
   color: var(--hsh-win-note);
 }
 
+/* 공지 — 칸 안에서 위아래로 넘겨 읽는다(스크롤바는 숨김) */
+.hsh-win__page.is-note {
+  place-items: start center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.hsh-win__page.is-note::-webkit-scrollbar { display: none; }
+
+.hsh-win__note[hidden] { display: none; }
+
+.hsh-note {
+  display: grid;
+  gap: 22px;
+  padding: 22px 18px 26px;
+  font-family: var(--hsh-win-font);
+  color: var(--hsh-win-text);
+  text-align: center;
+  word-break: keep-all;
+}
+
+.hsh-note__sec { display: grid; gap: 12px; }
+
+.hsh-note__head {
+  justify-self: center;
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-decoration: underline 2px var(--hsh-win-ink);
+  text-underline-offset: 5px;
+}
+
+.hsh-note__item { display: grid; gap: 3px; margin: 0; }
+
+.hsh-note__line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+}
+
+.hsh-note__line sup { font-size: 0.8em; color: var(--hsh-win-note); }
+
+.hsh-note__more {
+  font-size: 12.5px;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  color: var(--hsh-win-note);
+}
+
+/* **강조** — 버튼 바탕색 형광펜 */
+.hsh-note strong {
+  font-weight: 600;
+  color: var(--hsh-win-text);
+  background: linear-gradient(transparent 55%, var(--hsh-win-tint) 55%);
+  padding: 0 2px;
+}
+
 /* ---------- 스티커 — 창 둘레에 무작위로 3~6개(자리 · 크기는 room-window.js) ---------- */
 
 .hsh-win__deco {

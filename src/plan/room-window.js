@@ -163,6 +163,39 @@ function punyDecode(input) {
   return String.fromCodePoint(...out);
 }
 
+// ---------- 공지(notice 버튼) ----------
+
+const NOTICE_TAG = '@3tatichearts · 수아'; // 공지 창의 검정 이름표
+// 칸마다 [제목, [[본문, 화살표 줄], …] 또는 한 줄] — **…** 는 강조
+const NOTICE = [
+  ['ABOUT', [
+    ['성인 여성, 일상과 덕질로 채워가는 계정', '**♡ ARCH Vibe 99%** + etc. 1%'],
+    ['좋아하는 것들이 많아 다양하게 언급합니다.', 'Nintendo · anime · novel · J-pop · idol'],
+    ['**CBC 오픈**, 드림 지우기X 외에 특별한 배려 요하지 않습니다.', '온리 성향 분은 메인 기준 1T1D, 겹드림 연결 ok♡'],
+  ]],
+  ['ME', [
+    ['AI 이미지 생성•소비합니다. (학습 X)', '뽑아드린 에셋은 편히 써주세요!'],
+    ['좋지 않은 이슈에 굳이 말 얹지 말자 주의입니다.', '그럴 수 있지 하고 넘기는 편. 팔안굽 성향 강합니다…'],
+    ['무던한 성향이라 수용 범위가 넓습니다.', '기존 트친분들은 대화할 때 제 신상 관련 언급만 피해주세요~'],
+  ]],
+  ['NG', '미성년자 · 남성 · 공계에서의 R18 전시'],
+];
+
+const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const rich = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+const SUP = ['¹', '²', '³'];
+
+function noticeMarkup() {
+  return '<div class="hsh-note">' + NOTICE.map(([head, body]) => {
+    const items = typeof body === 'string'
+      ? `<p class="hsh-note__line">${rich(body)}</p>`
+      : body.map(([line, more], i) =>
+        `<p class="hsh-note__item"><span class="hsh-note__line"><sup>${SUP[i]}</sup> ${rich(line)}</span>` +
+        `<span class="hsh-note__more">⇢ ${rich(more)}</span></p>`).join('');
+    return `<section class="hsh-note__sec"><h3 class="hsh-note__head">${head}</h3>${items}</section>`;
+  }).join('') + '</div>';
+}
+
 const readLikes = () => {
   try { return JSON.parse(localStorage.getItem(LIKE_KEY)) || {}; } catch { return {}; }
 };
@@ -203,6 +236,7 @@ function build() {
         </header>
         <div class="hsh-win__page">
           <p class="hsh-win__empty"></p>
+          <div class="hsh-win__note" hidden></div>
         </div>
       </div>
     </section>`;
@@ -224,6 +258,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const url = win.querySelector('.hsh-win__url');
   const like = win.querySelector('.hsh-win__like');
   const empty = win.querySelector('.hsh-win__empty');
+  const note = win.querySelector('.hsh-win__note');
+  const page = win.querySelector('.hsh-win__page');
   let pill = win.querySelector('.hsh-win__pill');
   let current = null;
   let back = null; // 닫으면 포커스를 돌려줄 버튼
@@ -249,6 +285,13 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     title.textContent = label;
     url.textContent = `${siteHost()} / ${label}`;
     empty.textContent = text;
+    // 공지면 내용을 채우고, 아니면 '곧 채워질' 안내
+    const isNotice = label === 'notice';
+    if (isNotice && !note.childElementCount) note.innerHTML = noticeMarkup();
+    note.hidden = !isNotice;
+    empty.hidden = isNotice;
+    page.classList.toggle('is-note', isNotice);
+    page.scrollTop = 0;
   };
 
   // 배너 정보 자리 — 내용이 생기면 여기서 채운다
@@ -271,7 +314,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.');
     scatter(frame);
-    setPill(room, name);
+    setPill(room, label === 'notice' ? NOTICE_TAG : name);
     paintLike();
     win.hidden = false;
     win.classList.remove('is-closing');

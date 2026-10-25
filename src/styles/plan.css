@@ -166,6 +166,7 @@
   font-family: "Varela Round", "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   font-size: 33px; /* 평면도 단위 — tools/floorplan.mjs 의 TAG.font 와 같다 */
   font-weight: 400;
+  font-style: italic;
   letter-spacing: 2px;
 }
 
