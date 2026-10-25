@@ -5,6 +5,7 @@
 //   .hsh-plan__color  채색 — 방 색 덩어리 · 가구 색 · 바탕색 가리개(.hsh-mask).
 //                     방([data-room]) 하나가 통째로 튀어나온다(plan/index.js).
 //   .hsh-plan__lines  선 — 벽 · 창 · 문 · 가구 윤곽. [data-stroke] 가 한 획.
+//   .hsh-plan__stickers 방 스티커 버튼 — 맨 위. 누르면 plan/index.js 가 hsh:room 을 보낸다.
 // 모든 가구는 바로 위에서 내려다본 모양(다리 · 정면 모습 없음).
 
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -578,6 +579,56 @@ shape(ellipse(717, 1291, 52, 52, 0.008), C.lilac);
 ln('M717 1291L700 1270M717 1291L736 1272M717 1291L742 1298M717 1291L724 1316M717 1291L694 1306', 'hsh-crease-pink');
 ln(ellipse(717, 1291, 1.8, 1.8, 0), 'hsh-fine');
 
+// =========================================================
+// 방 스티커 버튼 — 방 이름이 있던 자리에 '일상 조각 스티커' 모양 하나씩.
+//   방 색보다 한 톤 진한 바탕 + 굵은 잉크 선 + 흰 칼선 테두리 + 옅은 그림자.
+//   모양은 가운데가 0,0(대략 ±26). 원 여러 개처럼 겹친 모양도 한 덩어리 윤곽으로 보이게
+//   잉크 선을 두 배 굵기로 먼저 깔고 그 위에 바탕을 덮는다(바깥 절반만 남는다).
+// =========================================================
+const circle = (cx, cy, r) => `M${cx - r} ${cy}A${r} ${r} 0 1 0 ${cx + r} ${cy}A${r} ${r} 0 1 0 ${cx - r} ${cy}Z`;
+const starPath = (() => {
+  let d = '';
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 ? 12.5 : 27;
+    d += `${i ? 'L' : 'M'}${n(Math.cos(a) * r)} ${n(Math.sin(a) * r + 2)}`;
+  }
+  return d + 'Z';
+})();
+const STICKER = {
+  star: starPath,
+  bubbles: circle(-17, 2, 12) + circle(0, -1, 14) + circle(17, 2, 12),
+  mug: 'M-20 -14Q-20 -18 -16 -18L6 -18Q10 -18 10 -14L10 14Q10 18 6 18L-16 18Q-20 18 -20 14Z' +
+    'M9 -11C27 -11 27 13 9 13L9 6C18 6 18 -4 9 -4Z',
+  cloud: 'M-22 9C-31 9 -31 -4 -22 -5C-22 -15 -10 -19 -5 -11C-1 -21 14 -20 15 -9C24 -11 29 2 21 8' +
+    'C22 15 12 17 8 12C4 18 -8 18 -11 12C-15 16 -25 15 -22 9Z',
+  key: 'M-6.5 -3.5L25 -3.5L25 3.5L23 3.5L23 9L18.5 9L18.5 3.5L16 3.5L16 7.5L11.5 7.5L11.5 3.5L-6.5 3.5' +
+    'A10.5 10.5 0 1 1 -6.5 -3.5Z',
+  cat: 'M-22 -5L-21 -26L-8 -16Q0 -18 8 -16L21 -26L22 -5Q26 5 20 12Q10 20 0 20Q-10 20 -20 12Q-26 5 -22 -5Z',
+};
+// 폰에서 손가락으로 누를 만큼(화면에서 40px 남짓)
+const STICKER_SCALE = 1.7;
+const stickers = [];
+const sticker = (roomId, name, shape, x, y, fill, tilt = 0) => {
+  const d = STICKER[shape];
+  const hole = shape === 'key' ? `<path class="hsh-sticker__hole" d="${circle(-18, 0, 3.2)}"/>` : '';
+  stickers.push(
+    `<g class="hsh-sticker" data-room="${roomId}" data-shape="${shape}" role="button" tabindex="0" aria-label="${name}" transform="translate(${x} ${y}) rotate(${tilt}) scale(${STICKER_SCALE})">` +
+    `<g class="hsh-sticker__body">` +
+    `<path class="hsh-sticker__shadow" d="${d}" transform="translate(2 3)"/>` +
+    `<path class="hsh-sticker__edge" d="${d}"/>` +
+    `<path class="hsh-sticker__ink" d="${d}"/>` +
+    `<path class="hsh-sticker__fill" d="${d}" fill="${fill}"/>${hole}` +
+    `</g></g>`,
+  );
+};
+sticker('v', '지원 방', 'star', 347, 383, '#bcd3ee', -6);
+sticker('bath', '욕실', 'bubbles', 234, 782, '#c3daef', 4);
+sticker('kitchen', '주방', 'mug', 660, 462, '#bcdcae', 5);
+sticker('living', '거실', 'cloud', 590, 916, '#f5e1a0', -4);
+sticker('entry', '현관', 'key', 318, 1204, '#f5cfae', -8);
+sticker('e', '우연 방', 'cat', 712, 1180, '#f3bfd2', 6);
+
 // ---------- SVG ----------
 
 const byRoom = (list) =>
@@ -587,7 +638,7 @@ const byRoom = (list) =>
   }).filter(Boolean).join('\n');
 
 const svg = `<!-- tools/floorplan.mjs 로 만든다 — 직접 고치지 말 것 -->
-<svg class="hsh-plan__svg" xmlns="http://www.w3.org/2000/svg" viewBox="${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="집 평면도 — 지원 방, 욕실, 주방, 거실, 현관, 우연 방">
+<svg class="hsh-plan__svg" xmlns="http://www.w3.org/2000/svg" viewBox="${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}" preserveAspectRatio="xMidYMid meet" role="group" aria-label="집 평면도 — 지원 방, 욕실, 주방, 거실, 현관, 우연 방">
 <g transform="rotate(${TILT} ${CENTER.join(' ')})">
 <g class="hsh-plan__color">
 ${byRoom(color)}
@@ -595,10 +646,13 @@ ${byRoom(color)}
 <g class="hsh-plan__lines">
 ${byRoom(lines)}
 </g>
+<g class="hsh-plan__stickers">
+${stickers.map((m) => '  ' + m).join('\n')}
+</g>
 </g>
 </svg>
 `;
 
 mkdirSync(new URL('../src/plan/', import.meta.url), { recursive: true });
 writeFileSync(OUT, svg);
-console.log(`floorplan.svg — 선 ${lines.length}획, 채색 ${color.length}조각`);
+console.log(`floorplan.svg — 선 ${lines.length}획, 채색 ${color.length}조각, 스티커 ${stickers.length}개`);

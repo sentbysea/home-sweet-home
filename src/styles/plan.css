@@ -18,7 +18,7 @@
   padding:
     max(var(--hsh-plan-gutter), env(safe-area-inset-top))
     max(var(--hsh-plan-gutter), env(safe-area-inset-right))
-    max(var(--hsh-plan-gutter), env(safe-area-inset-bottom))
+    calc(max(var(--hsh-plan-gutter), env(safe-area-inset-bottom)) + 44px) /* 아래 안내(click the) 자리 */
     max(var(--hsh-plan-gutter), env(safe-area-inset-left));
   background: var(--hsh-plan-paper);
   overflow: hidden;
@@ -110,4 +110,60 @@
 .hsh-plan__color > [data-room] {
   transform-box: fill-box;
   transform-origin: 50% 50%; /* 방 가운데에서 튄다 */
+}
+
+/* ---------- 방 스티커 버튼 ---------- */
+
+.hsh-sticker {
+  cursor: pointer;
+  outline: none;
+}
+
+/* 위글 · 누름 · 등장은 안쪽 몸통이 맡는다(바깥 g 의 translate · rotate 속성을 덮지 않게) */
+.hsh-sticker__body {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transition: scale 120ms ease-out;
+}
+
+.hsh-sticker.is-pressed .hsh-sticker__body { scale: 0.9; }
+
+.hsh-sticker__shadow { fill: var(--hsh-plan-ink); opacity: 0.13; }
+.hsh-sticker__edge { fill: #fff; stroke: #fff; stroke-width: 9; stroke-linejoin: round; }
+.hsh-sticker__ink { fill: none; stroke: var(--hsh-plan-ink); stroke-width: 4.4; stroke-linejoin: round; }
+.hsh-sticker__hole { fill: #fff; stroke: var(--hsh-plan-ink); stroke-width: 1.8; }
+
+.hsh-sticker:focus-visible .hsh-sticker__edge { stroke: var(--hsh-plan-ink); stroke-width: 12; stroke-opacity: 0.25; }
+
+/* ---------- 하단 안내 — click the ( ) ---------- */
+
+.hsh-plan__hint {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px));
+  translate: -50% 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-family: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  color: var(--hsh-plan-ink);
+  white-space: pre;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms ease-out;
+}
+
+.hsh-plan.is-done .hsh-plan__hint { opacity: 1; }
+
+.hsh-plan__hint-char { display: inline-block; } /* plan/index.js 가 글자마다 살짝 기울인다 */
+
+.hsh-plan__hint-icon {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  margin: 0 3px;
+  overflow: visible;
 }
