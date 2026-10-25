@@ -1,8 +1,8 @@
-// 누른 채 끌 때만 평면도 판이 기울어진다(누르면 살짝 눌려 들어간다). 놓으면 CSS transition 으로 통통 제자리.
+// 누른 채 끌 때만 평면도 판이 기울어진다. 놓으면 CSS transition 으로 부드럽게 제자리(튕김 없음).
 //   올리기 · 그냥 움직이기에는 반응하지 않는다. 자이로 센서는 쓰지 않는다.
 //   끌었으면 그 뒤에 오는 click 은 막는다 — 나중에 방 누르기와 섞이지 않게.
 
-const MAX_TILT = 16; // deg
+const MAX_TILT = 10; // deg
 const MAX_SHIFT = 22; // px
 const REACH = 130; // 이만큼 끌면 거의 끝까지 기운다(px)
 const DRAG_SLOP = 6; // 이보다 덜 움직이면 클릭(px)

@@ -153,25 +153,27 @@ const shape = (d, fill, cls = '', extra = {}) => {
 const label = (x, y, text) =>
   lines.push([room, `<text class="hsh-plan__label" data-label x="${x}" y="${y}">${text}</text>`]);
 
-// 색
+// 색 — 맑고 쨍한 파스텔(별 스티커 · 말풍선 참고)
 const C = {
-  sky: '#d7edfc',
-  mint: '#dff3e5',
-  butter: '#fdf2cd',
-  pink: '#fbe1e4',
-  tile: '#f6fafd',
-  tileLine: '#dbe9f6',
-  shower: '#dceffc',
-  cream: '#fbf4e4',
-  wood: '#fcefd6',
-  blueBlanket: '#b6d6f2',
-  pinkBlanket: '#f9cdd3',
+  sky: '#c6efff',
+  mint: '#c4fbe2',
+  butter: '#fff5b4',
+  pink: '#ffd6ee',
+  tile: '#effcff',
+  tileLine: '#c4ecf7',
+  shower: '#a8f0ff',
+  cream: '#fffae4',
+  wood: '#ffe6bd',
+  blueBlanket: '#8ae4ff',
+  pinkBlanket: '#ffbadf',
   dark: '#505154',
-  grey: '#e5e5e5',
-  yellow: '#fde9a6',
-  leaf: '#7bbd59',
-  leafLine: '#4f8f3a',
-  pillowBlue: '#c3e0f7',
+  grey: '#e3e1f4',
+  yellow: '#fff3a0',
+  leaf: '#4cd97b',
+  leafLine: '#2c9d55',
+  pillowBlue: '#c6d2ff',
+  lilac: '#f7c4ff',
+  orange: '#ffb340',
 };
 
 // =========================================================
@@ -217,12 +219,12 @@ const windowH = (x0, x1, y0, y1) => {
 windowH(270, 425, 118, 138);
 windowH(551, 676, 262, 281);
 windowH(661, 832, 1392, 1413);
-// 동쪽 큰 창 — 시안처럼 아래로 갈수록 살짝 오른쪽
-ln('M820 658L833 928', 'hsh-thin');
-ln('M829 658L843 928', 'hsh-thin');
-ln('M824.5 660L838 926', 'hsh-hair');
-ln(rrect(820, 652, 10, 7, 1), 'hsh-fine');
-ln(rrect(834, 925, 11, 7, 1), 'hsh-fine');
+// 동쪽 큰 창 — 벽과 나란히 곧게 세로로
+ln(poly([[837, 658], [837, 925]], { amp: 0.3 }), 'hsh-thin');
+ln(poly([[847, 658], [847, 925]], { amp: 0.3 }), 'hsh-thin');
+ln(poly([[842, 660], [842, 923]], { amp: 0.2 }), 'hsh-hair');
+ln(rrect(836, 652, 12, 7, 1), 'hsh-fine');
+ln(rrect(836, 923, 12, 7, 1), 'hsh-fine');
 
 // 문 — 문짝 + 여닫는 호 + 문턱 가는 선
 const sill = (pts) => ln(poly(pts, { amp: 0.2 }), 'hsh-hair');
@@ -431,7 +433,7 @@ popGroup(
 ln(rrect(712, 727, 12, 128, 3));
 ln(rrect(723, 756, 12, 70, 2), 'hsh-fine');
 {
-  const cols = ['#8fc6ee', '#9fd2f2', '#f3a3ab', '#f7d580', '#cfe6f8', '#a6d9bd'];
+  const cols = ['#8ae4ff', '#a8f8ff', '#ffbadf', '#fff3a0', '#c6d2ff', '#a8fce0'];
   let g = '';
   cols.forEach((c, i) => {
     g += `<rect x="${706 + (i % 3) * 11.5}" y="${866 + Math.floor(i / 3) * 17}" width="10" height="14" rx="1.5" fill="${c}"/>`;
@@ -483,9 +485,9 @@ ln('M462 1317L466 1317M472 1317L476 1317', 'hsh-fine');
   popGroup(
     `<path d="${rrect(424, 1244, 64, 48, 3)}" fill="#d9b27a"/>` +
     `<path d="${rrect(430, 1250, 52, 36, 1)}" fill="#fff"/>` +
-    `<path d="${rrect(434, 1254, 44, 28, 1)}" fill="#bcdcf6"/>` +
-    `<path d="M434 1282L434 1274L446 1262L455 1271L462 1265L478 1279L478 1282Z" fill="#9fcf9a"/>` +
-    `<circle cx="469" cy="1261" r="3.6" fill="#f7d580"/>`,
+    `<path d="${rrect(434, 1254, 44, 28, 1)}" fill="#a8f0ff"/>` +
+    `<path d="M434 1282L434 1274L446 1262L455 1271L462 1265L478 1279L478 1282Z" fill="#a8fce0"/>` +
+    `<circle cx="469" cy="1261" r="3.6" fill="#fff3a0"/>`,
     t,
   );
   ln(rrect(424, 1244, 64, 48, 3), '', t);
@@ -504,24 +506,53 @@ shape(rrect(669, 1001, 111, 66, 3), C.cream);
 popGroup(
   `<path d="M690 1027Q703 1021 717 1027L717 1057Q703 1051 690 1057Z" fill="#fff"/>` +
   `<path d="M717 1027Q731 1021 744 1027L744 1057Q731 1051 717 1057Z" fill="#fff"/>` +
-  `<path d="M694 1032H712M694 1038H712M694 1044H710M721 1032H740M721 1038H740M721 1044H736M721 1050H738" stroke="#ec8f98" stroke-width="1.3" stroke-dasharray="3 1.5"/>`,
+  `<path d="M694 1032H712M694 1038H712M694 1044H710M721 1032H740M721 1038H740M721 1044H736M721 1050H738" stroke="#ff6ed0" stroke-width="1.3" stroke-dasharray="3 1.5"/>`,
 );
 ln('M690 1027Q703 1021 717 1027Q731 1021 744 1027L744 1057Q731 1051 717 1057Q703 1051 690 1057Z', 'hsh-fine');
 ln('M717 1027L717 1057', 'hsh-fine');
 ln('M752 1021L763 1055', 'hsh-pen');
 chairDown(725.5, 1068, 58, 32);
-// 침대
-shape(rrect(805, 1013, 150, 338, 4), C.cream);
-ln(rrect(810, 1018, 140, 328, 3, 0.3), 'hsh-frame');
-shape(rrect(827, 1032, 101, 69, 10), 'mask');
-shape('M805 1134Q880 1118 955 1134L955 1336Q955 1344 947 1344L813 1344Q805 1344 805 1336Z', C.pinkBlanket);
-ln('M868 1232Q890 1240 910 1252', 'hsh-crease-pink');
-ln('M884 1262Q904 1270 920 1284', 'hsh-crease-pink');
-// 옷장
-shape(rrect(554, 1143, 63, 222, 2), C.wood);
-ln(rrect(601, 1230, 5, 58, 2.5, 0.2), 'hsh-fine');
+// 침대 — 오른쪽 벽(안선 952) 안쪽에
+shape(rrect(799, 1013, 150, 338, 4), C.cream);
+ln(rrect(804, 1018, 140, 328, 3, 0.3), 'hsh-frame');
+shape(rrect(821, 1032, 101, 69, 10), 'mask');
+shape('M799 1134Q874 1118 949 1134L949 1336Q949 1344 941 1344L807 1344Q799 1344 799 1336Z', C.pinkBlanket);
+ln('M862 1232Q884 1240 904 1252', 'hsh-crease-pink');
+ln('M878 1262Q898 1270 914 1284', 'hsh-crease-pink');
+// 옷걸이 — 왼쪽 벽을 따라 세로 봉 + 빽빽이 걸린 옷(위에서)
+{
+  const cols = [C.blueBlanket, C.pinkBlanket, C.yellow, '#a8fce0', C.pillowBlue, C.orange, C.lilac, '#ffffff', C.leaf, '#a8f8ff'];
+  cols.forEach((c, i) => {
+    const y = 1152 + i * 11;
+    const w = i % 3 === 1 ? 46 : 52;
+    shape(rrect(584 - w / 2, y, w, 9, 4), c, 'hsh-fine', { transform: rot(i % 2 ? 3 : -3, 584, y + 4.5) });
+  });
+  ln(poly([[584, 1146], [584, 1262]], { amp: 0.2 }));
+  ln(ellipse(584, 1145, 3, 3, 0), 'hsh-fine');
+  ln(ellipse(584, 1263, 3, 3, 0), 'hsh-fine');
+}
+// 흰 베이스 기타 — 왼쪽 아래 구석에 비스듬히(위에서). 몸통 · 검은 픽가드 · 넥 · 헤드 · 4줄
+{
+  const t = { transform: 'translate(592 1348) rotate(20)' };
+  const body = 'M5 -20C10 -30 20 -38 23 -29C25 -19 18 -12 20 -2C24 10 26 26 10 30C3 32 -3 32 -10 30' +
+    'C-26 26 -26 10 -21 -2C-18 -12 -24 -20 -20 -27C-16 -32 -10 -26 -5 -20Z';
+  const head = 'M-4 -100L-6 -123Q-5 -129 1 -128L7 -122L4 -100Z';
+  popGroup(
+    `<path d="${body}" fill="#ffffff"/>` +
+    `<path d="M-4 -12C2 -16 12 -14 14 -6C16 2 12 12 4 14L-4 14C-12 12 -14 2 -12 -6C-10 -10 -8 -11 -4 -12Z" fill="${C.dark}"/>` +
+    `<path d="M-4 -100L4 -100L4 -18L-4 -18Z" fill="${C.wood}"/>` +
+    `<path d="${head}" fill="#ffffff"/>`,
+    t,
+  );
+  ln(body, '', t);
+  ln('M-4 -100L-4 -18M4 -100L4 -18', 'hsh-fine', t);
+  ln(head, 'hsh-fine', t);
+  ln(rrect(-6, 17, 12, 6, 1, 0.1), 'hsh-fine', t);
+  ln('M-2.4 -100L-2.4 18M-0.8 -100L-0.8 18M0.8 -100L0.8 18M2.4 -100L2.4 18', 'hsh-hair', t);
+  ln('M-6 -105L-9 -105M-6.5 -110L-9.5 -110M-7 -115L-10 -115M-7.5 -120L-10.5 -120', 'hsh-fine', t);
+}
 // 둥근 쿠션 의자(위에서 본 단추 주름)
-shape(ellipse(717, 1291, 52, 52, 0.008), '#fce4e6');
+shape(ellipse(717, 1291, 52, 52, 0.008), C.lilac);
 ln('M717 1291L700 1270M717 1291L736 1272M717 1291L742 1298M717 1291L724 1316M717 1291L694 1306', 'hsh-crease-pink');
 ln(ellipse(717, 1291, 1.8, 1.8, 0), 'hsh-fine');
 label(712, 1184, 'ROOM-E');
