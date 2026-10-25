@@ -1,4 +1,4 @@
-// 들어가기 — Enter 키 또는 화면 누르기(터치에는 Enter 가 없다).
+// 들어가기 — 화면 누르기(클릭·탭). 키보드 사용자를 위해 Enter 키도 받는다.
 
 /**
  * @param {HTMLElement} el  누르면 들어가는 영역(.hsh-loader)

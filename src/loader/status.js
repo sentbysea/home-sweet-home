@@ -43,8 +43,7 @@ export async function runVisitSteps(el, { ready, reduced = false, minStep = 1600
   await ready;
 }
 
-/** 들어가기 안내 — 터치 화면이면 '화면을 눌러', 아니면 'enter 키를 눌러' */
+/** 들어가기 안내 — 모바일·데스크톱 같은 문구 */
 export function showEnterHint(el, { reduced = false } = {}) {
-  const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-  return swap(el, touch ? 'tap' : 'enter', touch ? '화면을 눌러 들어가기' : 'enter 키를 눌러 들어가기', reduced);
+  return swap(el, 'tap', '화면을 눌러 들어가기', reduced);
 }

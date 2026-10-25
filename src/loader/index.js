@@ -1,6 +1,6 @@
 // 로딩 화면 진행
-//   타이핑(처음 한 번) + 방문 단계 + 준비 완료 → 들어가기 안내 → Enter → 종료
-//   집 위글과 타이핑 반복은 Enter 를 누를 때까지 계속된다.
+//   타이핑(처음 한 번) + 방문 단계 + 준비 완료 → 들어가기 안내 → 화면 누르기 → 종료
+//   집 위글과 타이핑 반복은 화면을 누를 때까지 계속된다.
 
 import { loopTyping } from './typing.js';
 import { runVisitSteps, showEnterHint } from './status.js';
