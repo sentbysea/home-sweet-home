@@ -7,6 +7,8 @@
 //   주소창: 지금 사이트 주소 / 방 이름. 하트: 누르면 채워지고 이 브라우저에 기억한다(방마다).
 //   neighbor 방의 칩은 '배너교환은 여기에서' 버튼 — 누르면 hsh:banner 이벤트, 지금은 배너 정보 자리로 바꿔 보여 준다.
 
+import { mountNeighbor } from './neighbor.js';
+
 const NS = 'http://www.w3.org/2000/svg';
 const LIKE_KEY = 'hsh:liked';
 
@@ -201,6 +203,31 @@ function noticeMarkup() {
   return { tabs, secs };
 }
 
+// ---------- 내 배너(neighbor 의 '배너교환은 여기에서') ----------
+
+const BANNER = {
+  site: 'https://hongjiwon.love',
+  siteLabel: 'hongjiwon.love',
+  image: 'https://iokdgqzfprtggsnrusez.supabase.co/storage/v1/object/public/user-banners/cfe0dc66-7fa2-450e-8817-44073a4a5aab/banner', // 3000×600
+};
+
+/** 클립보드에 — 안 되는 브라우저(오래된 iOS · http)는 숨긴 textarea 로 */
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch { /* 아래로 */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+  document.body.append(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  try { document.execCommand('copy'); } catch { /* 복사 못 해도 조용히 */ }
+  ta.remove();
+}
+
 const readLikes = () => {
   try { return JSON.parse(localStorage.getItem(LIKE_KEY)) || {}; } catch { return {}; }
 };
@@ -244,6 +271,20 @@ function build() {
           <div class="hsh-win__scroll">
             <p class="hsh-win__empty"></p>
             <div class="hsh-win__note hsh-note" hidden></div>
+            <div class="hsh-nb" hidden></div>
+            <div class="hsh-banner" hidden>
+              <img class="hsh-banner__img" src="${BANNER.image}" alt="hongjiwon.love 배너" width="3000" height="600" loading="lazy" decoding="async">
+              <dl class="hsh-banner__rows">
+                <div class="hsh-banner__row">
+                  <dt>url</dt>
+                  <dd><span class="hsh-banner__val">${BANNER.siteLabel}</span><button class="hsh-banner__copy" type="button" data-copy="${BANNER.site}">복사</button></dd>
+                </div>
+                <div class="hsh-banner__row">
+                  <dt>image</dt>
+                  <dd><span class="hsh-banner__val">${BANNER.image}</span><button class="hsh-banner__copy" type="button" data-copy="${BANNER.image}">복사</button></dd>
+                </div>
+              </dl>
+            </div>
           </div>
           <div class="hsh-win__rail" aria-hidden="true" hidden><span class="hsh-win__knob"></span></div>
         </div>
@@ -271,6 +312,9 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const like = win.querySelector('.hsh-win__like');
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
+  const banner = win.querySelector('.hsh-banner');
+  const nbBox = win.querySelector('.hsh-nb');
+  const neighbor = mountNeighbor(nbBox, () => syncRail());
   const thumb = win.querySelector('.hsh-win__thumb');
   const noteTabs = win.querySelector('.hsh-note__tabs');
   const scroller = win.querySelector('.hsh-win__scroll');
@@ -304,7 +348,12 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     // 공지면 탭 + 내용(ABOUT 부터), 아니면 '곧 채워질' 안내
     const isNotice = label === 'notice';
     note.hidden = noteTabs.hidden = !isNotice;
-    empty.hidden = isNotice;
+    // neighbor 면 친구 배너 모음(neighbor.js)
+    const isNeighbor = label === 'neighbor';
+    nbBox.hidden = !isNeighbor;
+    if (isNeighbor) neighbor.show();
+    empty.hidden = isNotice || isNeighbor;
+    banner.hidden = true;
     if (isNotice) pickTab(0);
     else scroller.scrollTop = 0;
     syncRail();
@@ -345,11 +394,23 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     knob.addEventListener('lostpointercapture', () => knob.removeEventListener('pointermove', move), { once: true });
   });
 
-  // 배너 정보 자리 — 내용이 생기면 여기서 채운다
+  // 배너 정보 — 배너 그림 + 사이트 주소 · 배너 이미지 주소(각각 복사 버튼)
   const showBanner = () => {
-    show('my banner', '곧 채워질 배너 정보예요.');
+    show('my banner', '');
+    empty.hidden = true;
+    banner.hidden = false;
+    syncRail();
     win.dispatchEvent(new CustomEvent('hsh:banner', { bubbles: true }));
   };
+  banner.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    await copyText(btn.dataset.copy);
+    btn.textContent = '복사됨 ♡';
+    btn.classList.add('is-done');
+    clearTimeout(btn.timer);
+    btn.timer = setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('is-done'); }, 1400);
+  });
 
   const paintLike = () => {
     const on = Boolean(current && readLikes()[current]);

@@ -390,6 +390,211 @@
   padding: 0 2px;
 }
 
+/* 내 배너 — 배너 그림(너무 크지 않게) + 주소 두 줄과 복사 버튼 */
+.hsh-banner {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 26px 22px 24px;
+  font-family: var(--hsh-win-font);
+}
+
+.hsh-banner[hidden] { display: none; }
+
+.hsh-banner__img {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 4px;
+  background: #f1f1ef;
+}
+
+.hsh-banner__rows {
+  width: min(100%, 360px);
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.hsh-banner__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.hsh-banner__row dt {
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--hsh-win-note);
+}
+
+.hsh-banner__row dd {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 3px 3px 3px 10px;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 999px;
+}
+
+.hsh-banner__val {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--hsh-win-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hsh-banner__copy {
+  flex: none;
+  min-width: 52px;
+  padding: 3px 10px 4px;
+  border: 0;
+  border-radius: 999px;
+  background: #262628; /* 이름표와 같은 검정 알약 */
+  color: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.hsh-banner__copy.is-done { background: var(--hsh-win-ink); }
+.hsh-banner__copy:focus-visible { outline: 1.5px solid var(--hsh-win-line); outline-offset: 2px; }
+
+/* neighbor — 친구 배너 모음(neighbor.js). 배너는 한 줄에 하나, 너무 크지 않게 */
+.hsh-nb {
+  display: grid;
+  gap: 14px;
+  padding: 22px 22px 16px;
+  font-family: var(--hsh-win-font);
+}
+
+.hsh-nb[hidden],
+.hsh-nb [hidden] { display: none; }
+
+.hsh-nb__grid {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hsh-nb__card { position: relative; width: min(100%, 300px); }
+.hsh-nb__card a { display: block; }
+
+.hsh-nb__card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 4px;
+  background: #f1f1ef;
+}
+
+.hsh-nb__del {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 50%;
+  background: var(--hsh-win-paper);
+  color: var(--hsh-win-text);
+  font: 14px/1 var(--hsh-win-font);
+  cursor: pointer;
+}
+
+.hsh-nb__msg,
+.hsh-nb__form-msg {
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--hsh-win-note);
+}
+
+.hsh-nb__form {
+  justify-self: center;
+  width: min(100%, 300px);
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--hsh-win-line);
+  border-radius: 10px;
+}
+
+.hsh-nb__field {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.hsh-nb__field span,
+.hsh-nb__file span {
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--hsh-win-note);
+}
+
+.hsh-nb__field input {
+  min-width: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--hsh-win-text);
+  font: 12px var(--hsh-win-font);
+}
+
+.hsh-nb__file { justify-self: start; margin-left: 52px; cursor: pointer; }
+.hsh-nb__file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.hsh-nb__file span { text-decoration: underline 1px; text-underline-offset: 3px; }
+
+.hsh-nb__preview { width: 100%; height: auto; border: 1px solid var(--hsh-win-line); border-radius: 4px; }
+
+.hsh-nb__actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+.hsh-nb__btn {
+  padding: 4px 14px 5px;
+  border: 0;
+  border-radius: 999px;
+  background: #262628;
+  color: #fff;
+  font: 12px var(--hsh-win-font);
+  cursor: pointer;
+}
+
+.hsh-nb__btn.is-ghost { background: none; color: var(--hsh-win-note); }
+.hsh-nb__btn:disabled { opacity: 0.5; }
+
+.hsh-nb__foot { display: flex; justify-content: center; gap: 16px; }
+
+.hsh-nb__link {
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  font: italic 600 11px var(--hsh-win-font);
+  letter-spacing: 0.1em;
+  color: var(--hsh-win-note);
+  cursor: pointer;
+}
+
+.hsh-nb__link:hover { color: var(--hsh-win-text); }
+
 /* ---------- 스티커 — 창 둘레에 무작위로 3~6개(자리 · 크기는 room-window.js) ---------- */
 
 .hsh-win__deco {
