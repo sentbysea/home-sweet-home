@@ -160,6 +160,11 @@
   height: 0;
 }
 
+.hsh-status__icon :is(path, circle, rect) {
+  transform-box: fill-box; /* wobble.js 의 손떨림이 도형 가운데를 축으로 */
+  transform-origin: center;
+}
+
 .hsh-icon { display: none; }
 .hsh-status[data-step="bell"] .hsh-icon--bell,
 .hsh-status[data-step="run"] .hsh-icon--run,
