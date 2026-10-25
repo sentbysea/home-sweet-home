@@ -249,9 +249,9 @@ function build() {
         </button>
       </div>
       <div class="hsh-win__bar">
-        <span class="hsh-win__nav" aria-hidden="true">
-          <svg viewBox="0 0 12 12"><path d="M8 2L4 6L8 10"/></svg>
-          <svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg>
+        <span class="hsh-win__nav">
+          <button type="button" data-nav="back" aria-label="뒤로"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M8 2L4 6L8 10"/></svg></button>
+          <button type="button" data-nav="forward" aria-label="앞으로"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2L8 6L4 10"/></svg></button>
         </span>
         <span class="hsh-win__url"></span>
         <button class="hsh-win__like" type="button" aria-pressed="false" aria-label="이 방 좋아요">
@@ -333,7 +333,11 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
       next.type = 'button';
       next.classList.add('is-link');
       next.textContent = '배너교환은 여기에서 <';
-      next.addEventListener('click', () => showBanner());
+      next.addEventListener('click', () => {
+        if (steps[at]?.page === 'banner') return;
+        showBanner();
+        step({ detail: steps[at].detail, page: 'banner' });
+      });
     } else {
       next.textContent = name;
     }
@@ -417,7 +421,65 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     like.setAttribute('aria-pressed', String(on));
   };
 
-  const open = ({ room, label, name, bg, fg }, from) => {
+  // ---------- 뒤로 · 앞으로 — 브라우저 기록과 같이 간다 ----------
+  //   방을 열거나 창 안에서 다른 쪽(my banner)으로 가면 기록을 한 칸 쌓는다.
+  //   < > · 휴대폰 뒤로 가기 · 브라우저 버튼이 모두 같은 기록을 오간다. 처음 칸에서 뒤로 가면 창이 닫힌다.
+  let steps = []; // 이번 창에서 거친 화면 [{ detail, page: 'room' | 'banner' }]
+  let at = -1; // 지금 steps 의 몇 번째(-1 = 창 닫힘)
+  const navBack = win.querySelector('[data-nav="back"]');
+  const navFwd = win.querySelector('[data-nav="forward"]');
+
+  const paintNav = () => {
+    navFwd.disabled = at < 0 || at >= steps.length - 1;
+  };
+
+  const step = (view) => {
+    at += 1;
+    steps.length = at;
+    steps.push(view);
+    history.pushState({ hshWin: at }, '');
+    paintNav();
+  };
+
+  const showStep = (view) => {
+    if (win.hidden || win.classList.contains('is-closing')) openWindow(view.detail, back);
+    else show(view.detail.label, '곧 채워질 방이에요.');
+    if (view.page === 'banner') showBanner();
+    paintNav();
+  };
+
+  navBack.addEventListener('click', () => { if (at >= 0) history.back(); });
+  navFwd.addEventListener('click', () => { if (at < steps.length - 1) history.forward(); });
+
+  window.addEventListener('popstate', (e) => {
+    const i = e.state?.hshWin;
+    if (typeof i !== 'number' || !steps[i]) {
+      // 창보다 앞(홈)으로 돌아왔다 — 열려 있으면 닫는다
+      if (at >= 0) { at = -1; closeWindow(); }
+      return;
+    }
+    at = i;
+    showStep(steps[i]);
+  });
+
+  const open = (detail, from) => {
+    steps = [];
+    at = -1;
+    openWindow(detail, from);
+    step({ detail, page: 'room' });
+  };
+
+  // ×  · 덮개 · Esc — 쌓아 둔 기록을 한꺼번에 되돌리고 닫는다
+  const close = () => {
+    if (at >= 0) {
+      const n = at + 1;
+      at = -1;
+      history.go(-n);
+    }
+    closeWindow();
+  };
+
+  const openWindow = ({ room, label, name, bg, fg }, from) => {
     clearTimeout(closing);
     back = from ?? null;
     current = room;
@@ -436,7 +498,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.querySelector('.hsh-win__x').focus({ preventScroll: true });
   };
 
-  const close = () => {
+  const closeWindow = () => {
     if (win.hidden || win.classList.contains('is-closing')) return;
     win.classList.remove('is-open');
     win.classList.add('is-closing');
