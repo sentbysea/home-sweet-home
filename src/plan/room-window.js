@@ -5,8 +5,10 @@
 //   선은 모두 로딩 화면 집 윤곽과 같은 얇은 회색.
 //   뒤의 홈 화면은 반투명 덮개로 살짝 가린다. 닫기: ×, 덮개 누르기, Esc.
 //   주소창: 지금 사이트 주소 / 방 이름. 하트: 누르면 채워지고 이 브라우저에 기억한다(방마다).
+//   about __VE 방은 Vibe · Echo 카드 두 장(about.js).
 //   neighbor 방의 칩은 '배너교환은 여기에서' 버튼 — 누르면 hsh:banner 이벤트, 지금은 배너 정보 자리로 바꿔 보여 준다.
 
+import { mountAbout } from './about.js';
 import { mountNeighbor } from './neighbor.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -278,6 +280,7 @@ function build() {
           <div class="hsh-win__scroll">
             <p class="hsh-win__empty"></p>
             <div class="hsh-win__note hsh-note" hidden></div>
+            <div class="hsh-ve" hidden></div>
             <div class="hsh-nb" hidden></div>
             <div class="hsh-banner" hidden>
               <img class="hsh-banner__img" src="${BANNER.image}" alt="hongjiwon.love 배너" width="3000" height="600" loading="lazy" decoding="async">
@@ -322,6 +325,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const banner = win.querySelector('.hsh-banner');
   const nbBox = win.querySelector('.hsh-nb');
   const neighbor = mountNeighbor(nbBox, () => syncRail());
+  const veBox = win.querySelector('.hsh-ve');
+  const about = mountAbout(veBox, () => syncRail(), win.querySelector('.hsh-win__scroll'));
   const thumb = win.querySelector('.hsh-win__thumb');
   const noteTabs = win.querySelector('.hsh-note__tabs');
   const scroller = win.querySelector('.hsh-win__scroll');
@@ -363,7 +368,11 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     const isNeighbor = label === 'neighbor';
     nbBox.hidden = !isNeighbor;
     if (isNeighbor) neighbor.show();
-    empty.hidden = isNotice || isNeighbor;
+    // about __VE 면 Vibe · Echo 카드(about.js)
+    const isAbout = label === 'about __VE';
+    veBox.hidden = !isAbout;
+    if (isAbout) about.reset();
+    empty.hidden = isNotice || isNeighbor || isAbout;
     banner.hidden = true;
     if (isNotice) pickTab(0);
     else scroller.scrollTop = 0;
