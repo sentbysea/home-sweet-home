@@ -2,7 +2,7 @@
 //   12시 home / 3시 sweet / 6시 home, 나머지는 숫자. 세로로 조금 긴 타원에 놓는다.
 //   늘 한국 시간(Asia/Seoul). 한국은 1988년 뒤로 서머타임이 없어 UTC+9 고정으로 계산한다.
 //   글자만 손그림 위글(로딩처럼 190ms · 4프레임) — 자리 · 크기는 그대로, 획만 조금씩. 바늘은 위글 없음.
-//   모션 줄이기면 위글 없이 1초마다 째깍.
+//   초침은 1초마다 딸깍. 모션 줄이기면 위글만 끈다.
 
 const NS = 'http://www.w3.org/2000/svg';
 const KST_OFFSET = 9 * 3600 * 1000;
@@ -101,8 +101,7 @@ export function mountClock(host, { reduced = false } = {}) {
   let lastLabel = '';
   const paint = () => {
     const { hr, min, sec } = seoulNow();
-    const s = reduced ? Math.floor(sec) : sec; // 모션 줄이기면 째깍, 아니면 부드럽게
-    c.second.setAttribute('transform', `rotate(${(s * 6).toFixed(2)})`);
+    c.second.setAttribute('transform', `rotate(${Math.floor(sec) * 6})`); // 초침은 1초마다 딸깍
     c.minute.setAttribute('transform', `rotate(${(min * 6).toFixed(2)})`); // 분침도 초에 따라 조금씩
     c.hour.setAttribute('transform', `rotate(${(hr * 30).toFixed(2)})`); // 시침도 분 · 초에 따라 조금씩
     // 읽어 주는 이름은 분이 바뀔 때만
@@ -112,13 +111,14 @@ export function mountClock(host, { reduced = false } = {}) {
     if (text !== lastLabel) host.setAttribute('aria-label', (lastLabel = text));
   };
 
-  paint();
-  if (reduced) {
-    setInterval(paint, 1000);
-  } else {
-    const loop = () => { paint(); requestAnimationFrame(loop); };
-    requestAnimationFrame(loop);
+  // 초가 바뀌는 순간에 맞춰 1초마다 다시 그린다(밀리지 않게 매번 다음 초 경계까지 남은 시간을 잰다)
+  const tick = () => {
+    paint();
+    setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
+  };
+  tick();
 
+  if (!reduced) {
     let k = 0;
     setInterval(() => {
       if (document.hidden) return;
@@ -130,6 +130,6 @@ export function mountClock(host, { reduced = false } = {}) {
       });
     }, WOBBLE_FRAME);
   }
-  // 탭에 돌아오면 바로 지금 시각으로(멈춰 있던 rAF · 타이머를 기다리지 않는다)
+  // 탭에 돌아오면 바로 지금 시각으로(멈춰 있던 타이머를 기다리지 않는다)
   document.addEventListener('visibilitychange', () => { if (!document.hidden) paint(); });
 }

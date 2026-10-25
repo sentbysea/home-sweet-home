@@ -38,7 +38,7 @@
 
 /* 시계 자리 — 세로 화면은 위를, 가로 화면은 양옆을 시계 크기만큼 비워 집(방 · 스티커)과 겹치지 않게 */
 .hsh-plan {
-  --hsh-clock-h: 84px;
+  --hsh-clock-h: 126px;
   --hsh-clock-w: calc(var(--hsh-clock-h) * 244 / 268); /* clock.js 의 viewBox 비율 */
   --hsh-clock-gap: 12px;
   --hsh-clock-top: max(var(--hsh-clock-gap), env(safe-area-inset-top));
@@ -47,7 +47,7 @@
 }
 
 @media (min-width: 768px) and (min-height: 600px) {
-  .hsh-plan { --hsh-clock-h: 120px; }
+  .hsh-plan { --hsh-clock-h: 180px; }
 }
 
 @media (min-aspect-ratio: 1/1) {
