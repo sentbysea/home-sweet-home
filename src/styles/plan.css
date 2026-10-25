@@ -269,6 +269,9 @@
   letter-spacing: -0.01em;
   color: var(--hsh-plan-ink);
   white-space: nowrap;
+  padding: 0 6px;
+  background: #fff; /* 평면도 위에서도 잘 읽히게 글자 높이만큼 흰 바탕 */
+  border-radius: 3px;
   visibility: hidden;
   opacity: 0;
   transition: opacity 500ms ease;
@@ -306,7 +309,8 @@
   right: var(--hsh-clock-right);
   width: var(--hsh-clock-w);
   height: var(--hsh-clock-h);
-  pointer-events: none; /* 장식 · 시간 표시만 — 누르기 · 끌기는 판으로 */
+  z-index: 3; /* 평면도 판보다 위 — 단어 버튼(.hsh-clock__hit)이 판에 가려지지 않게 */
+  pointer-events: none; /* 그림은 장식 — 단어 버튼만 누르고, 나머지 누르기 · 끌기는 판으로 */
   opacity: 0;
   transition: opacity 500ms ease-out;
 }
