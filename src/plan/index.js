@@ -3,6 +3,7 @@
 //   스티커를 누르면 hsh:room 이벤트(detail.room = 'v' | 'bath' | 'kitchen' | 'living' | 'entry' | 'e')가 올라간다.
 
 import { enableTilt } from './tilt.js';
+import { mountClock } from './clock.js';
 
 const SVG_URL = new URL('./floorplan.svg', import.meta.url);
 
@@ -37,6 +38,7 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   card.innerHTML = svgText;
   el.hidden = false;
 
+  mountClock(el.querySelector('.hsh-clock'), { reduced }); // 판 밖 화면 고정 — 기울여도 그대로
   enableStickers(el);
   const hint = setupHint(el);
   if (!reduced) {

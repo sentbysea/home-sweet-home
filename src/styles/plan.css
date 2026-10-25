@@ -32,6 +32,28 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 시계 자리 — 세로 화면은 위를, 가로 화면은 양옆을 시계 크기만큼 비워 집(방 · 스티커)과 겹치지 않게 */
+.hsh-plan {
+  --hsh-clock-h: 84px;
+  --hsh-clock-w: calc(var(--hsh-clock-h) * 244 / 268); /* clock.js 의 viewBox 비율 */
+  --hsh-clock-gap: 12px;
+  --hsh-clock-top: max(var(--hsh-clock-gap), env(safe-area-inset-top));
+  --hsh-clock-right: max(var(--hsh-clock-gap), env(safe-area-inset-right));
+  padding-top: calc(var(--hsh-clock-top) + var(--hsh-clock-h) + 8px);
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  .hsh-plan { --hsh-clock-h: 120px; }
+}
+
+@media (min-aspect-ratio: 1/1) {
+  .hsh-plan {
+    padding-top: max(var(--hsh-plan-gutter), env(safe-area-inset-top));
+    padding-right: calc(var(--hsh-clock-right) + var(--hsh-clock-w) + 8px);
+    padding-left: calc(var(--hsh-clock-right) + var(--hsh-clock-w) + 8px); /* 집은 가운데에 그대로 */
+  }
+}
+
 .hsh-plan[hidden] {
   display: none;
 }
@@ -165,3 +187,45 @@
   margin: 0 3px;
   overflow: visible;
 }
+
+/* ---------- 시계(오른쪽 위, 화면 고정 — clock.js) ---------- */
+
+.hsh-clock {
+  position: absolute;
+  top: var(--hsh-clock-top);
+  right: var(--hsh-clock-right);
+  width: var(--hsh-clock-w);
+  height: var(--hsh-clock-h);
+  pointer-events: none; /* 장식 · 시간 표시만 — 누르기 · 끌기는 판으로 */
+  opacity: 0;
+  transition: opacity 500ms ease-out;
+}
+
+.hsh-plan:is(.is-playing, .is-done) .hsh-clock { opacity: 1; }
+
+.hsh-clock__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hsh-clock__face text {
+  font-family: "Helvetica Neue", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-weight: 300;
+  letter-spacing: -0.04em;
+  fill: #7fb1e4;
+  stroke: #7fb1e4; /* 위글이 획 굵기만 살짝 바꾼다 */
+  stroke-width: 0.4;
+  stroke-linejoin: round;
+}
+
+.hsh-clock__num { font-size: 24px; }
+.hsh-clock__word { font-size: 37px; letter-spacing: -0.06em; }
+.hsh-clock__tick { stroke: #a9cbee; stroke-width: 1.6; stroke-linecap: round; }
+
+.hsh-clock__hand line { stroke-linecap: round; }
+.hsh-clock__hour line { stroke: #46474b; stroke-width: 5; }
+.hsh-clock__minute line { stroke: #46474b; stroke-width: 4; }
+.hsh-clock__second line { stroke: #f3a2b2; stroke-width: 1.3; }
+.hsh-clock__pin { fill: #f3a2b2; }
