@@ -532,29 +532,29 @@ ln('M878 1262Q898 1270 914 1284', 'hsh-crease-pink');
 // 왼쪽 벽 — 위에서부터 전신거울 → 옷걸이 → 구석 베이스
 // 전신거울 — 벽에 비스듬히 기대 세워 둠(위에서 보면 거울면이 눌려 보인다). 나무 테 + 거울 + 반짝 선
 {
-  shape(rrect(553, 1128, 18, 80, 2), C.wood);
-  shape(rrect(556, 1132, 12, 72, 1.5), C.shower, 'hsh-fine');
-  ln('M559 1146L565 1138M559 1158L565 1150M559 1188L565 1180', 'hsh-hair');
+  shape(rrect(553, 1120, 18, 80, 2), C.wood);
+  shape(rrect(556, 1124, 12, 72, 1.5), C.shower, 'hsh-fine');
+  ln('M559 1138L565 1130M559 1150L565 1142M559 1180L565 1172', 'hsh-hair');
 }
 // 옷걸이 — 왼쪽 벽을 따라 세로 봉 + 빽빽이 걸린 옷(위에서)
 {
   const cols = [C.blueBlanket, C.pinkBlanket, C.yellow, C.mint, C.pillowBlue, C.orange, C.lilac, '#ffffff'];
   cols.forEach((c, i) => {
-    const y = 1224 + i * 10;
+    const y = 1214 + i * 10;
     const w = i % 3 === 1 ? 46 : 52;
     shape(rrect(584 - w / 2, y, w, 9, 4), c, 'hsh-fine', { transform: rot(i % 2 ? 3 : -3, 584, y + 4.5) });
   });
-  ln(poly([[584, 1218], [584, 1308]], { amp: 0.2 }));
-  ln(ellipse(584, 1217, 3, 3, 0), 'hsh-fine');
-  ln(ellipse(584, 1309, 3, 3, 0), 'hsh-fine');
+  ln(poly([[584, 1208], [584, 1298]], { amp: 0.2 }));
+  ln(ellipse(584, 1207, 3, 3, 0), 'hsh-fine');
+  ln(ellipse(584, 1299, 3, 3, 0), 'hsh-fine');
 }
-// 흰 베이스 기타 — 왼쪽 아래 구석, 스탠드에 세워 왼쪽 벽에 비스듬히 기대 둔 것을 위에서.
-//   기대어 누운 만큼 앞면이 길이 방향으로 눌려 보인다(scale y 0.6). 헤드는 벽에 닿고 몸통은 방 쪽 스탠드 위.
+// 흰 베이스 기타 — 왼쪽 아래 구석에 대각선으로, 스탠드에 세워 구석에 기대 둔 것을 위에서.
+//   기대어 누운 만큼 앞면이 길이 방향으로 눌려 보인다(scale y 0.6). 헤드는 구석에 닿고 몸통은 방 쪽 스탠드 위. 선은 가늘게.
 //   (안쪽 좌표: 위쪽 = 벽) 앞면 그대로 — 뿔 둘 달린 몸통 · 픽가드 · 픽업 · 브리지 · 넥 · 4줄 · 한쪽 줄감개 넷
 {
-  const t = { transform: 'translate(629 1354) rotate(-90) scale(1 0.6)', 'vector-effect': 'non-scaling-stroke' };
+  const t = { transform: 'translate(610 1332) rotate(-135) scale(1 0.6)', 'vector-effect': 'non-scaling-stroke' };
   // 스탠드 다리 — 바닥이라 눌리지 않는다
-  ln('M641 1337L657 1325M641 1371L657 1383M657 1325L660 1321M657 1383L660 1387', 'hsh-fine');
+  ln('M629 1324L646 1321M618 1313L621 1296M646 1321L650 1320M621 1296L622 1292', 'hsh-hair-dark');
   const body = 'M5 -20C10 -30 20 -38 23 -29C25 -19 18 -12 20 -2C24 10 26 26 10 30C3 32 -3 32 -10 30' +
     'C-26 26 -26 10 -21 -2C-18 -12 -24 -20 -20 -27C-16 -32 -10 -26 -5 -20Z';
   const guard = 'M-4 -14C2 -18 12 -16 14 -8C16 0 12 10 4 12L-4 12C-12 10 -14 0 -12 -8C-10 -12 -8 -13 -4 -14Z';
@@ -564,14 +564,14 @@ ln('M878 1262Q898 1270 914 1284', 'hsh-crease-pink');
     `<path d="${body}" fill="#ffffff"/><path d="${neck}" fill="#ffffff"/><path d="${head}" fill="#ffffff"/>`,
     t,
   );
-  ln(body, '', t);
-  ln(guard, 'hsh-fine', t);
-  ln(neck, 'hsh-fine', t);
-  ln(head, 'hsh-fine', t);
-  ln(rrect(-7, -6, 14, 5, 1.5, 0.1), 'hsh-fine', t); // 픽업
-  ln(rrect(-6, 18, 12, 6, 1, 0.1), 'hsh-fine', t); // 브리지
+  ln(body, 'hsh-fine', t);
+  ln(guard, 'hsh-hair-dark', t);
+  ln(neck, 'hsh-hair-dark', t);
+  ln(head, 'hsh-hair-dark', t);
+  ln(rrect(-7, -6, 14, 5, 1.5, 0.1), 'hsh-hair-dark', t); // 픽업
+  ln(rrect(-6, 18, 12, 6, 1, 0.1), 'hsh-hair-dark', t); // 브리지
   ln('M-2.4 -100L-2.4 20M-0.8 -100L-0.8 20M0.8 -100L0.8 20M2.4 -100L2.4 20', 'hsh-hair', t);
-  ln('M-5 -104L-10 -104M-5.3 -109L-10.3 -109M-5.6 -114L-10.6 -114M-5.9 -119L-10.9 -119', 'hsh-fine', t);
+  ln('M-5 -104L-10 -104M-5.3 -109L-10.3 -109M-5.6 -114L-10.6 -114M-5.9 -119L-10.9 -119', 'hsh-hair-dark', t);
 }
 // 둥근 쿠션 의자(위에서 본 단추 주름)
 shape(ellipse(717, 1291, 52, 52, 0.008), C.lilac);
