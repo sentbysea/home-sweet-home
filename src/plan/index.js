@@ -5,6 +5,7 @@
 
 import { enableTilt } from './tilt.js';
 import { mountClock } from './clock.js';
+import { mountDday } from './dday.js';
 import { enableRoomWindow } from './room-window.js';
 
 const SVG_URL = new URL('./floorplan.svg', import.meta.url);
@@ -43,6 +44,7 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   halftoneColors(el);
 
   mountClock(el.querySelector('.hsh-clock')); // 판 밖 화면 고정 — 기울여도 그대로
+  mountDday(el, el.querySelector('.hsh-clock'), { reduced }); // 시계 sweet → 디데이 풍선
   enableStickers(el);
   enableRoomWindow(el.parentElement, el, { reduced });
   const hint = setupHint(el);

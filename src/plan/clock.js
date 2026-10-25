@@ -10,7 +10,8 @@ const KST_OFFSET = 9 * 3600 * 1000;
 const RX = 90; // 숫자 타원 가로 반지름
 const RY = 50; // 세로 반지름 — 위아래로 납작한 타원
 // 12 · 3 · 6 은 단어 — 숫자처럼 그 자리(11 · 1 / 2 · 4 / 5 · 7 사이)에 놓고 가로만 좁힌다
-const WORDS = { 12: ['home', 0, -RY], 3: ['sweet', RX + 4, 0], 6: ['home', 0, RY] };
+//   sweet 은 소문자뿐이라 눈으로는 아래로 처져 보여서 조금 올려 2 · 4 사이 한가운데에 보이게 한다
+const WORDS = { 12: ['home', 0, -RY], 3: ['sweet', RX + 4, -4], 6: ['home', 0, RY] };
 const WORD_SQUEEZE = 0.78; // 단어 장평
 const VIEW = { x: -104, y: -66, w: 228, h: 132 };
 const HANDS = { hour: 22, minute: 34, second: 40, tail: 7 }; // 12 · 6 자리 home 에 닿지 않게 짧게
@@ -31,7 +32,8 @@ function build() {
   const svg = el('svg', {
     class: 'hsh-clock__svg',
     viewBox: `${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`,
-    'aria-hidden': 'true',
+    role: 'img', // 이름(한국 시각 …)은 mountClock 이 분마다 단다. 겉 칸에는 sweet 버튼이 따로 있다
+    'aria-label': '한국 시각',
   });
 
   const face = el('g', { class: 'hsh-clock__face' });
@@ -50,9 +52,11 @@ function build() {
     const word = WORDS[h];
     if (word) {
       const [text, x, y] = word;
-      const t = label(text, 0, 0, 'hsh-clock__word');
+      const t = label(text, 0, 0, h === 3 ? 'hsh-clock__word is-sweet' : 'hsh-clock__word');
       t.setAttribute('transform', `translate(${x} ${y}) scale(${WORD_SQUEEZE} 1)`); // 0,0 에서 좁힌 뒤 자리로
       face.append(t);
+      // sweet — 이탤릭 + 손으로 그은 듯한 분홍 밑줄(누르면 디데이, dday.js)
+      if (h === 3) face.append(el('path', { class: 'hsh-clock__underline', d: `M${x - 24} ${y + 15}Q${x - 6} ${y + 17.5} ${x + 8} ${y + 15.5}T${x + 26} ${y + 15}` }));
     } else {
       face.append(label(String(h), (sx * RX).toFixed(1), (cy * RY).toFixed(1), 'hsh-clock__num'));
     }
@@ -98,7 +102,7 @@ export function mountClock(host) {
     const h = Math.floor(hr) || 12;
     const m = Math.floor(min);
     const text = `한국 시각 ${h}시 ${m}분`;
-    if (text !== lastLabel) host.setAttribute('aria-label', (lastLabel = text));
+    if (text !== lastLabel) c.svg.setAttribute('aria-label', (lastLabel = text));
   };
 
   // 초가 바뀌는 순간에 맞춰 1초마다 다시 그린다(밀리지 않게 매번 다음 초 경계까지 남은 시간을 잰다)

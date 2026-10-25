@@ -279,6 +279,100 @@
 .hsh-clock__num { font-size: 22px; }
 .hsh-clock__word { font-size: 30px; letter-spacing: -0.1em; } /* 12 · 3 · 6 자리 단어 — 촘촘하게, 장평은 clock.js 가 줄인다 */
 .hsh-clock__tick { stroke: #a9cbee; stroke-width: 1.6; stroke-linecap: round; }
+.hsh-clock__word.is-sweet { font-style: italic; }
+.hsh-clock__underline { fill: none; stroke: #f3a2b2; stroke-width: 1.5; stroke-linecap: round; }
+
+/* sweet 자리 — 시계 그림 위에 얹은 투명 버튼(dday.js). 시계의 나머지는 그대로 누름이 판으로 간다 */
+.hsh-clock__sweet {
+  position: absolute;
+  left: 72%;
+  top: 28%;
+  width: 28%;
+  height: 46%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hsh-clock__sweet:focus-visible { outline: 1.5px solid #a9cbee; outline-offset: 2px; }
+
+/* ---------- 디데이 생각 풍선(왼쪽 위, dday.js) — 끌어 옮길 수 있다 ---------- */
+
+.hsh-dday {
+  position: absolute;
+  top: var(--hsh-clock-top);
+  left: max(var(--hsh-clock-gap), env(safe-area-inset-left));
+  z-index: 5;
+  width: clamp(190px, 46vw, 250px);
+  aspect-ratio: 240 / 160;
+  transform-origin: 8% 92%; /* 꼬리(작은 동그라미) 쪽에서 부풀어 오른다 */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.hsh-dday[hidden] { display: none; }
+.hsh-dday.is-dragging { cursor: grabbing; }
+
+.hsh-dday__art { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.hsh-dday__cloud {
+  fill: var(--hsh-plan-paper);
+  stroke: var(--hsh-plan-line);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 글자 — 구름 몸통(viewBox 32..224 × 24..116) 한가운데 */
+.hsh-dday__text {
+  position: absolute;
+  left: 14%;
+  right: 7%;
+  top: 15%;
+  height: 58%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: "Helvetica Neue", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif; /* 시계 글자와 같게 */
+  font-weight: 300;
+  color: #7fb1e4;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.hsh-dday__since { font-size: 11px; font-style: italic; letter-spacing: 0.06em; color: #a9cbee; }
+.hsh-dday__count { font-size: clamp(22px, 6.4vw, 28px); letter-spacing: -0.02em; }
+.hsh-dday__count b { font-weight: 400; }
+.hsh-dday__deco { color: #7fb1e4; }
+.hsh-dday__heart { color: #f3a2b2; }
+
+.hsh-dday__x {
+  position: absolute;
+  top: 6%;
+  right: 4%;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--hsh-plan-line);
+  border-radius: 50%;
+  background: var(--hsh-plan-paper);
+  color: var(--hsh-plan-line);
+  cursor: pointer;
+}
+
+.hsh-dday__x svg { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
+.hsh-dday__x:focus-visible { outline: 1.5px solid #a9cbee; outline-offset: 2px; }
 
 .hsh-clock__hand line { stroke-linecap: round; }
 .hsh-clock__hour line { stroke: #46474b; stroke-width: 5; }
