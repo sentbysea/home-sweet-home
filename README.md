@@ -15,7 +15,6 @@ npm run dev        # node scripts/serve.mjs — 설치할 것 없음
 - 데모 도구 — http://localhost:5173/demo.html (다시 재생 · 화면 크기 · 준비 완료 시점)
 
 `?ready=ms` 로 준비 완료 시점을 늦출 수 있다(기본 1200ms).
-`?bg=dots|stars|paws` 로 배경 패턴(도트 · 별 · 강아지 발바닥)을 고정한다(없으면 불러올 때마다 무작위).
 
 ## 구조
 
@@ -56,7 +55,7 @@ ready.resolve();
 
 - 윤곽: 조금씩 다른 4장을 190ms 씩 번갈아(`wobble.js`). 집 크기·위치는 움직이지 않는다.
 - SVG 필터는 쓰지 않는다 — iOS Safari 에서 필터 영역이 검게 깜빡였다.
-- 배경: 아이보리(`--hsh-paper`) 위에 도트 · 별 · 강아지 발바닥 중 무작위 하나.
+- 배경: 아이보리(`--hsh-paper`) 위에 회청색 별(`--hsh-pattern`). 새로고침마다 66px 칸마다 하나씩 무작위 위치·기울기.
 - 방문 단계 글은 `status.js` 의 `VISIT_STEPS`. 글을 바꾸면 한글 서브셋 폰트도 다시 받아야 한다(아래).
 - `prefers-reduced-motion: reduce` — 위글·타이핑·아이콘 모션 없이 완성 상태. 단계 글은 바뀌고 눌러서 들어간다.
 
