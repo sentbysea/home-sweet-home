@@ -206,8 +206,8 @@ function noticeMarkup() {
 // ---------- 내 배너(neighbor 의 '배너교환은 여기에서') ----------
 
 const BANNER = {
-  site: 'https://hongjiwon.love',
-  siteLabel: 'hongjiwon.love',
+  site: 'https://xn--9g3b29an0p.me', // 바이브.me — 한글 주소를 못 받는 곳도 있어서 퓨니코드로
+  siteLabel: 'xn--9g3b29an0p.me',
   image: 'https://iokdgqzfprtggsnrusez.supabase.co/storage/v1/object/public/user-banners/cfe0dc66-7fa2-450e-8817-44073a4a5aab/banner', // 3000×600
 };
 
