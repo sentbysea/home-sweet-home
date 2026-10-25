@@ -85,6 +85,7 @@
   font-weight: 400;
   fill: var(--hsh-ink);
   letter-spacing: 0;
+  filter: url(#hsh-wobble); /* 손그림 위글 — index.html 의 #hsh-wobble */
   visibility: hidden; /* JS 가 글자를 나누기 전 깜빡임 방지 */
 }
 
@@ -115,7 +116,6 @@
   line-height: 1;
   color: var(--hsh-note);
   white-space: nowrap;
-  filter: url(#hsh-wobble);
   transition: opacity 220ms ease;
 }
 
@@ -291,11 +291,11 @@
   }
 
   .hsh-status {
-    filter: none;
     transition: none;
   }
 
   .hsh-loader__text {
+    filter: none;
     visibility: visible;
   }
 

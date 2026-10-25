@@ -74,13 +74,13 @@
       </p>
     </div>
 
-    <!-- 글·아이콘 손그림 위글 — 노이즈 seed 를 190ms 마다 바꾼다 -->
+    <!-- home sweet home 손그림 위글 — 노이즈 seed 를 190ms 마다 바꾼다(집 viewBox 단위) -->
     <svg class="hsh-defs" aria-hidden="true" focusable="false">
       <filter id="hsh-wobble" x="-10%" y="-40%" width="120%" height="180%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="1" seed="1" result="noise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="1" seed="1" result="noise">
           <animate attributeName="seed" values="1;5;9;13" dur="0.76s" calcMode="discrete" repeatCount="indefinite"/>
         </feTurbulence>
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
     </svg>
   </div>
