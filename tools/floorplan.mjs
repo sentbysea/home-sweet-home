@@ -418,6 +418,7 @@ shape(rrect(392, 702, 27, 229, 13), 'mask');
 shape(rrect(413, 697, 79, 27, 12), 'mask');
 shape(rrect(419, 903, 77, 29, 13), 'mask');
 shape(rrect(423, 848, 50, 52, 7), C.pillowBlue, '', { transform: rot(-12, 448, 874) });
+shape(rrect(427, 742, 46, 48, 7), C.pinkBlanket, '', { transform: rot(9, 450, 766) });
 shape(ellipse(582, 820, 58, 58, 0.006), C.cream);
 shape(rrect(549, 790, 44, 40, 4), C.dark, '', { transform: rot(35, 571, 810) });
 shape(ellipse(603, 838, 8.5, 8.5, 0), 'mask');
