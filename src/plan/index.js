@@ -37,7 +37,7 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   const card = el.querySelector('.hsh-plan__card');
   card.innerHTML = svgText;
   el.hidden = false;
-  roughenColors(el);
+  halftoneColors(el);
 
   mountClock(el.querySelector('.hsh-clock'), { reduced }); // 판 밖 화면 고정 — 기울여도 그대로
   enableStickers(el);
@@ -89,49 +89,55 @@ function startWobble(el, hint) {
   }, FRAME_MS);
 }
 
-// ---------- 색칠 질감 ----------
-//   마커로 칠한 듯 — 색 조각마다 가장자리를 따라 점을 찍고 바깥 · 안쪽으로 조금씩 밀어 울퉁불퉁한 면으로 다시 그린다.
-//   필터는 쓰지 않는다(iOS Safari 에서 깜빡임). 바탕색 가리개(.hsh-mask)와 스티커는 그대로.
-//   방 바닥 색 면은 크게, 가구 색은 작게 출렁인다. 선과 살짝 어긋나게 칠한 느낌도 조금.
+// ---------- 색칠 질감 — 망점 + 번짐 ----------
+//   색 조각마다 45° 기운 점 무늬로 채우고, 같은 색 테두리를 굵기 · 투명도를 달리해 몇 겹 아래에 깔아
+//   가장자리가 부옇게 번진 것처럼 보이게 한다. 흐림 필터는 쓰지 않는다(iOS Safari 에서 검게 깜빡임).
+//   바탕색 가리개(.hsh-mask)와 스티커는 그대로.
 
-const ROUGH_STEP = 3; // 점 간격(평면도 단위)
+const DOT_GAP = 6; // 점 간격(평면도 단위)
+const DOT_R = 2.2;
+const HALO = [[11, 0.1], [7, 0.16], [3.5, 0.24]]; // [테두리 굵기, 투명도] — 바깥부터
 
-function roughenColors(el) {
-  const paths = [...el.querySelectorAll('.hsh-plan__color path[fill]')]
-    .filter((p) => p.getAttribute('fill') !== 'none');
-  paths.forEach((p, i) => {
-    const len = p.getTotalLength();
-    if (!(len > 20)) return;
-    const blob = p.parentElement?.matches('[data-room]') && len > 600; // 방 바닥 색 면
-    const amp = blob ? 2.6 : Math.min(1.1, len / 90);
-    const n = Math.max(16, Math.round(len / ROUGH_STEP));
-    const pts = [];
-    for (let k = 0; k < n; k++) pts.push(p.getPointAtLength((k / n) * len));
-    const ph1 = jitter(i, 0, 11) * Math.PI;
-    const ph2 = jitter(i, 0, 12) * Math.PI;
-    const waves = Math.max(2, Math.round(len / (blob ? 160 : 60)));
-    const out = pts.map((q, k) => {
-      const a = pts[(k - 1 + n) % n];
-      const b = pts[(k + 1) % n];
-      let nx = -(b.y - a.y);
-      let ny = b.x - a.x;
-      const m = Math.hypot(nx, ny) || 1;
-      nx /= m;
-      ny /= m;
-      const t = k / n;
-      const d = amp * (0.6 * Math.sin(t * Math.PI * 2 * waves + ph1)
-        + 0.3 * Math.sin(t * Math.PI * 2 * waves * 3.7 + ph2)
-        + 0.25 * jitter(i, k, 13));
-      return [q.x + nx * d, q.y + ny * d];
-    });
-    p.setAttribute('d', 'M' + out.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L') + 'Z');
-    // 선과 살짝 어긋나게
-    if (!blob) {
-      const ox = (jitter(i, 1, 14) * 0.7).toFixed(2);
-      const oy = (jitter(i, 1, 15) * 0.7).toFixed(2);
-      const t0 = p.getAttribute('transform');
-      p.setAttribute('transform', `${t0 ? t0 + ' ' : ''}translate(${ox} ${oy})`);
+function halftoneColors(el) {
+  const svg = el.querySelector('.hsh-plan__svg');
+  if (!svg) return;
+  const defs = document.createElementNS(SVG_NS, 'defs');
+  svg.prepend(defs);
+  const made = new Map();
+  const patternFor = (color) => {
+    if (made.has(color)) return made.get(color);
+    const id = `hsh-dots-${made.size}`;
+    const pt = document.createElementNS(SVG_NS, 'pattern');
+    pt.id = id;
+    pt.setAttribute('width', DOT_GAP);
+    pt.setAttribute('height', DOT_GAP);
+    pt.setAttribute('patternUnits', 'userSpaceOnUse');
+    pt.setAttribute('patternTransform', 'rotate(45)');
+    const dot = document.createElementNS(SVG_NS, 'circle');
+    dot.setAttribute('cx', DOT_GAP / 2);
+    dot.setAttribute('cy', DOT_GAP / 2);
+    dot.setAttribute('r', DOT_R);
+    dot.setAttribute('fill', color);
+    pt.append(dot);
+    defs.append(pt);
+    made.set(color, id);
+    return id;
+  };
+  svg.querySelectorAll('.hsh-plan__color path[fill]').forEach((path) => {
+    const color = path.getAttribute('fill');
+    if (!color || color === 'none' || color.startsWith('url(')) return;
+    for (const [w, o] of HALO) {
+      const halo = path.cloneNode();
+      halo.removeAttribute('class');
+      halo.setAttribute('fill', color);
+      halo.setAttribute('fill-opacity', '0.18');
+      halo.setAttribute('stroke', color);
+      halo.setAttribute('stroke-width', w);
+      halo.setAttribute('stroke-opacity', o);
+      halo.setAttribute('stroke-linejoin', 'round');
+      path.before(halo);
     }
+    path.setAttribute('fill', `url(#${patternFor(color)})`);
   });
 }
 
