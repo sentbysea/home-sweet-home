@@ -1,0 +1,112 @@
+/* =========================================================
+   home sweet home — 평면도(로딩 다음 화면)
+   상태: [hidden] → .is-playing(선 → 색 등장 중) → .is-done
+   ========================================================= */
+
+.hsh-plan {
+  --hsh-plan-paper: #fff; /* 사이트 바탕(body)과 같다 */
+  --hsh-plan-ink: #262628;
+  --hsh-plan-soft: #9a9ea2;
+  --hsh-plan-gutter: 16px;
+
+  position: fixed;
+  inset: 0; /* 주소창이 줄었다 늘어도 보이는 영역에 맞춘다 */
+  display: grid;
+  place-items: center;
+  /* 노치 · 홈 막대를 피하고, 남은 칸에 집을 가로·세로 중 좁은 쪽에 맞춰 넣는다 */
+  padding:
+    max(var(--hsh-plan-gutter), env(safe-area-inset-top))
+    max(var(--hsh-plan-gutter), env(safe-area-inset-right))
+    max(var(--hsh-plan-gutter), env(safe-area-inset-bottom))
+    max(var(--hsh-plan-gutter), env(safe-area-inset-left));
+  background: var(--hsh-plan-paper);
+  overflow: hidden;
+  perspective: 1100px;
+  /* 누른 채 끄는 것은 기울이기에만 — 스크롤 · 당겨서 새로고침 · 확대 없음 */
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hsh-plan[hidden] {
+  display: none;
+}
+
+/* 기울어지는 카드 — 집 그림 자체는 2D 그대로, 판 전체만 살짝 */
+.hsh-plan__card {
+  --rx: 0deg;
+  --ry: 0deg;
+  --tx: 0px;
+  --ty: 0px;
+
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  transform: translate3d(var(--tx), var(--ty), 0) rotateX(var(--rx)) rotateY(var(--ry));
+  transform-origin: 50% 50%;
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1); /* 놓으면 부드럽게 제자리 */
+  will-change: transform;
+}
+
+.hsh-plan__card.is-pressed {
+  transition: none; /* 끄는 동안에는 JS 가 프레임마다 따라간다 */
+}
+
+.hsh-plan__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* 등장 준비 전 — 선 · 색 모두 숨김(JS 가 획마다 대시를 걸고 나면 .is-playing) */
+.hsh-plan:not(.is-playing):not(.is-done) .hsh-plan__svg {
+  visibility: hidden;
+}
+
+/* ---------- 선 ---------- */
+
+.hsh-plan__lines {
+  fill: none;
+  stroke: var(--hsh-plan-ink);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hsh-plan__lines .hsh-wall { stroke-width: 3.2; }
+.hsh-plan__lines .hsh-door { stroke-width: 1.4; }
+.hsh-plan__lines .hsh-thin { stroke-width: 1.1; }
+.hsh-plan__lines .hsh-fine { stroke-width: 1.1; }
+.hsh-plan__lines .hsh-hair { stroke-width: 0.8; stroke: var(--hsh-plan-soft); }
+.hsh-plan__lines .hsh-hair-dark { stroke-width: 0.9; }
+.hsh-plan__lines .hsh-frame { stroke-width: 1; stroke: #d8c896; }
+.hsh-plan__lines .hsh-crease-blue { stroke-width: 0.9; stroke: #7ea7cc; }
+.hsh-plan__lines .hsh-crease-pink { stroke-width: 0.9; stroke: #d99aa5; }
+.hsh-plan__lines .hsh-pencil { stroke-width: 1.6; stroke: #b88d4e; }
+.hsh-plan__lines .hsh-stem { stroke-width: 0.9; stroke: #4f8f3a; }
+.hsh-plan__lines .hsh-pen { stroke-width: 2.6; }
+
+.hsh-plan__label {
+  font-family: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 19px; /* viewBox 단위 */
+  letter-spacing: 3.5px;
+  text-anchor: middle;
+  fill: var(--hsh-plan-ink);
+  stroke: none;
+}
+
+/* ---------- 채색 ---------- */
+
+.hsh-plan__color .hsh-mask {
+  fill: var(--hsh-plan-paper);
+}
+
+.hsh-plan__color .hsh-pop {
+  transform-box: fill-box;
+  transform-origin: 50% 50%; /* 자기 중심에서 튄다 */
+}

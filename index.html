@@ -9,6 +9,7 @@
   <link rel="preload" href="src/fonts/nanum-gothic-coding-status.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="src/styles/base.css">
   <link rel="stylesheet" href="src/styles/loader.css">
+  <link rel="stylesheet" href="src/styles/plan.css">
   <noscript><style>.hsh-loader__text { visibility: visible; }</style></noscript>
 </head>
 <body>
@@ -100,8 +101,12 @@
     </div>
   </div>
 
-  <!-- 로딩이 끝나면 보일 자리(지금은 빈 흰 화면) -->
-  <main id="app" hidden></main>
+  <!-- 로딩 다음 — 평면도. SVG 는 src/plan/floorplan.svg 를 넣는다 -->
+  <main id="app" hidden>
+    <div class="hsh-plan" hidden>
+      <div class="hsh-plan__card"></div>
+    </div>
+  </main>
 
   <script type="module" src="src/main.js"></script>
 </body>
