@@ -64,7 +64,7 @@
       </select>
     </label>
     <label>준비 완료(ms) <input id="ready" type="number" min="0" step="100" value="1200"></label>
-    <span class="log">모션 줄이기는 OS 설정 또는 DevTools › Rendering › prefers-reduced-motion 으로 확인</span>
+    <span class="log">들어가기: 미리보기에서 Enter 또는 클릭 · 모션 줄이기는 OS 설정 또는 DevTools › Rendering › prefers-reduced-motion 으로 확인</span>
   </div>
   <div class="stage"><iframe id="frame" title="loader preview"></iframe></div>
 
@@ -79,6 +79,9 @@
       frame.height = h;
       frame.src = `index.html?ready=${Math.max(0, Number(ready.value) || 0)}&t=${Date.now()}`;
     }
+
+    // Enter 가 미리보기로 가도록 포커스
+    frame.addEventListener('load', () => frame.contentWindow.focus());
 
     document.getElementById('replay').addEventListener('click', play);
     size.addEventListener('change', play);

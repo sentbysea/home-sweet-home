@@ -21,10 +21,12 @@ npm run dev        # node scripts/serve.mjs — 설치할 것 없음
 ```
 index.html              로딩 화면 마크업(SVG 집 + 글자)
 src/styles/loader.css   모양 · 위글 · 페이드 · 모션 줄이기
-src/loader/typing.js    타이핑 — 글자 opacity 만 바꿔 위치 고정
+src/loader/typing.js    타이핑 · 지우기 · 반복 — 글자 opacity 만 바꿔 위치 고정
+src/loader/status.js    방문 단계(초인종 → 문 → 신발) · 들어가기 안내
+src/loader/enter.js     Enter 키 또는 화면 누르기
 src/loader/ready.js     준비 완료 신호(createReadySignal / demoReady)
 src/loader/exit.js      페이드 아웃 후 DOM 제거
-src/loader/index.js     runLoader — 타이핑 완료 + 준비 완료 → 종료
+src/loader/index.js     runLoader — 타이핑 + 방문 단계 + 준비 완료 → 안내 → Enter → 종료
 src/main.js             연결(지금은 데모 신호)
 tools/wobble.mjs        윤곽 변형 4장 생성기
 ```
@@ -41,14 +43,20 @@ runLoader(document.querySelector('.hsh-loader'), { ready: ready.promise });
 ready.resolve();
 ```
 
-끝나면 `document` 에 `hsh:loader-done` 이벤트가 온다.
+Enter 로 들어가 로더가 사라지면 `document` 에 `hsh:loader-done` 이벤트가 온다.
 
-## 모션
+## 흐름
+
+1. 집이 위글거리고 home → sweet → home → `...` 를 타이핑한다. 다 쓰면 잠시 머물렀다 지우고 다시 쓴다(Enter 까지 반복).
+2. 집 아래에 방문 단계가 차례로 뜬다 — 초인종 누르는 중 → 문 열리는 중 → 신발 벗는 중. 글·아이콘에 손그림 위글(SVG 필터).
+3. 첫 타이핑 · 세 단계 · 준비 완료가 모두 끝나면 `enter 키를 눌러 들어가기`(터치 화면은 `화면을 눌러 들어가기`).
+4. Enter 또는 화면을 누르면 서서히 사라지고 빈 흰 화면.
 
 - 윤곽: 조금씩 다른 4장을 190ms 씩 번갈아(`--hsh-boil-frame`). 집 크기·위치는 움직이지 않는다.
-- 글자: home → sweet → home → `...` 순서로 한 글자씩.
-- `prefers-reduced-motion: reduce` — 위글·타이핑 없이 완성 상태, 준비되면 바로 종료.
+- 방문 단계 글은 `status.js` 의 `VISIT_STEPS`. 글을 바꾸면 한글 서브셋 폰트도 다시 받아야 한다(아래).
+- `prefers-reduced-motion: reduce` — 위글·타이핑·아이콘 모션 없이 완성 상태. 단계 글은 바뀌고 Enter 로 들어간다.
 
 ## 폰트
 
-Nanum Gothic Coding (SIL Open Font License 1.1) 라틴 서브셋을 `src/fonts/` 에 담았다.
+Nanum Gothic Coding (SIL Open Font License 1.1). `src/fonts/` 에 라틴 서브셋과, 방문 단계 글에 쓰는 한글만 담은 서브셋이 있다.
+한글 서브셋은 Google Fonts `css2?family=Nanum+Gothic+Coding&text=<쓰는 글자>` 의 woff2 를 받아 `nanum-gothic-coding-status.woff2` 로 바꾼다.

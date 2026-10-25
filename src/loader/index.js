@@ -1,6 +1,10 @@
-// 로딩 화면 진행 — 타이핑 완료 + 준비 완료를 모두 받으면 종료한다.
+// 로딩 화면 진행
+//   타이핑(처음 한 번) + 방문 단계 + 준비 완료 → 들어가기 안내 → Enter → 종료
+//   집 위글과 타이핑 반복은 Enter 를 누를 때까지 계속된다.
 
-import { typeLines } from './typing.js';
+import { loopTyping } from './typing.js';
+import { runVisitSteps, showEnterHint } from './status.js';
+import { waitForEnter } from './enter.js';
 import { exitLoader } from './exit.js';
 
 export const prefersReducedMotion = () =>
@@ -8,21 +12,26 @@ export const prefersReducedMotion = () =>
 
 /**
  * @param {HTMLElement} el  .hsh-loader
- * @param {{ ready: Promise<unknown>, reduced?: boolean, holdAfter?: number, typing?: object }} opts
- *   ready      준비 완료 신호
- *   holdAfter  둘 다 끝난 뒤 완성된 화면을 잠깐 보여 주는 시간(ms)
+ * @param {{ ready: Promise<unknown>, reduced?: boolean, typing?: object, minStep?: number }} opts
+ *   ready    준비 완료 신호
  * @returns {Promise<void>} 로더가 사라진 뒤. document 에 'hsh:loader-done' 도 보낸다.
  */
-export async function runLoader(el, { ready, reduced = prefersReducedMotion(), holdAfter = 500, typing } = {}) {
-  el.classList.add('is-typing');
-  const typed = typeLines(el, { ...typing, reduced }).then(() => {
-    el.classList.remove('is-typing');
-    el.classList.add('is-done');
-  });
+export async function runLoader(el, { ready, reduced = prefersReducedMotion(), typing, minStep } = {}) {
+  const status = el.querySelector('.hsh-status');
+  const stop = new AbortController();
 
-  await Promise.all([typed, ready]);
-  if (!reduced) await new Promise((r) => setTimeout(r, holdAfter));
+  el.classList.add('is-started');
+  let firstTyped;
+  const typed = new Promise((r) => { firstTyped = r; });
+  loopTyping(el, { ...typing, reduced, signal: stop.signal, onFirstTyped: firstTyped });
+
+  await Promise.all([typed, runVisitSteps(status, { ready, reduced, minStep })]);
+
+  await showEnterHint(status, { reduced });
+  el.classList.add('is-ready');
+  await waitForEnter(el);
 
   await exitLoader(el);
+  stop.abort();
   document.dispatchEvent(new CustomEvent('hsh:loader-done'));
 }

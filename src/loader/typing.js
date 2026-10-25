@@ -6,6 +6,9 @@ export const TYPING_DEFAULTS = {
   charDelay: 150,  // 글자 사이
   linePause: 420,  // 줄(단어) 사이
   slowDelay: 380,  // data-type-slow 줄(점 3개)의 글자 사이
+  hold: 1800,      // 반복: 다 쓴 뒤 머무는 시간
+  eraseDelay: 60,  // 반복: 지울 때 글자 사이
+  restPause: 600,  // 반복: 다 지운 뒤 다시 쓰기 전
 };
 
 const wait = (ms, signal) =>
@@ -61,5 +64,35 @@ export async function typeLines(root, opts = {}) {
       if (j > 0) await wait(slow ? o.slowDelay : o.charDelay, o.signal);
       chars[j].classList.add('is-shown');
     }
+  }
+}
+
+/** 뒤에서부터 한 글자씩 지운다. */
+export async function eraseLines(root, opts = {}) {
+  const o = { ...TYPING_DEFAULTS, ...opts };
+  const chars = splitLines(root).flatMap((l) => l.chars).reverse();
+  for (const c of chars) {
+    c.classList.remove('is-shown');
+    await wait(o.eraseDelay, o.signal);
+  }
+}
+
+/**
+ * 쓰기 → 머물기 → 지우기 → 다시 쓰기를 signal 이 abort 될 때까지 반복한다.
+ * onFirstTyped 는 처음 다 쓴 순간 한 번 불린다. 모션 줄이기면 완성 상태로 두고 끝.
+ */
+export async function loopTyping(root, { onFirstTyped, signal, reduced, ...opts } = {}) {
+  const o = { ...TYPING_DEFAULTS, ...opts };
+  try {
+    await typeLines(root, { ...o, reduced, signal });
+    onFirstTyped?.();
+    if (reduced) return;
+    for (;;) {
+      await wait(o.hold, signal);
+      await eraseLines(root, { ...o, signal });
+      await typeLines(root, { ...o, startDelay: o.restPause, signal });
+    }
+  } catch (err) {
+    if (!signal?.aborted) throw err;
   }
 }

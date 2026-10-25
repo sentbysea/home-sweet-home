@@ -8,6 +8,7 @@ const readyMs = Number(new URLSearchParams(location.search).get('ready')) || 120
 const loader = document.querySelector('.hsh-loader');
 const app = document.getElementById('app');
 
+// 준비가 끝나면 'enter 키를 눌러 들어가기' 안내가 뜨고, Enter·탭으로 들어간다.
 runLoader(loader, { ready: demoReady(readyMs) }).then(() => {
   app.hidden = false; // 빈 흰 화면 — 다음 단계(평면도)가 들어올 자리
 });

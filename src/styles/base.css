@@ -20,3 +20,13 @@ body {
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
 }
+
+/* 방문 단계 글에 쓰는 한글만 담은 서브셋(라틴은 위 파일) */
+@font-face {
+  font-family: "Nanum Gothic Coding";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../fonts/nanum-gothic-coding-status.woff2") format("woff2");
+  unicode-range: U+AC00-D7A3;
+}
