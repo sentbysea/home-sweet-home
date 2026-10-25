@@ -9,6 +9,7 @@
   --hsh-ink: #2a2a2a;
   --hsh-note: #7d8386;
   --hsh-paper: #fcfbf8; /* 순백이 아닌 아주 연한 아이보리 */
+  --hsh-pattern: #c5d8dd; /* 배경 패턴(별 사진의 회청색) */
   --hsh-fade: 700ms;
 
   position: fixed;
@@ -42,9 +43,11 @@
   pointer-events: none;
 }
 
-.hsh-bg__dots { fill: #d6e8f8; }
-.hsh-bg__stars { fill: #c5d8dd; }
-.hsh-bg__paws { fill: #d5def0; }
+.hsh-bg__dots,
+.hsh-bg__stars,
+.hsh-bg__paws {
+  fill: var(--hsh-pattern); /* 세 패턴 모두 별 색 */
+}
 
 .hsh-bg__fill { display: none; }
 .hsh-bg[data-bg="dots"] .hsh-bg__fill--dots,
