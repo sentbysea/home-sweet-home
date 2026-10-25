@@ -39,7 +39,7 @@
 /* 시계 자리 — 시계는 집 오른쪽 위(주방 위) 빈 곳에 들어가는 것이 먼저.
    그래도 집과 겹칠 때만 index.js 가 --hsh-clock-room 만큼(세로 화면은 위, 가로 화면은 양옆) 비운다 */
 .hsh-plan {
-  --hsh-clock-h: 62px; /* 납작한 시계 — 폭은 약 107px */
+  --hsh-clock-h: 93px; /* 납작한 시계 — 폭은 약 161px */
   --hsh-clock-w: calc(var(--hsh-clock-h) * 228 / 132); /* clock.js 의 viewBox 비율 */
   --hsh-clock-gap: 12px;
   --hsh-clock-top: max(var(--hsh-clock-gap), env(safe-area-inset-top));
@@ -49,7 +49,7 @@
 }
 
 @media (min-width: 768px) and (min-height: 600px) {
-  .hsh-plan { --hsh-clock-h: 88px; }
+  .hsh-plan { --hsh-clock-h: 132px; }
 }
 
 @media (min-aspect-ratio: 1/1) {
