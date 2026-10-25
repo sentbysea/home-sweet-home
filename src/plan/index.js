@@ -16,7 +16,7 @@ const POP_MS = 460;
 const ROOM_ORDER = ['v', 'kitchen', 'bath', 'living', 'entry', 'e'];
 const STICKER_GAP = 90; // 스티커가 하나씩 붙는 간격
 const STICKER_MS = 420;
-const ICON_MS = 1100; // 하단 안내 괄호 속 스티커 모양이 바뀌는 간격
+const ICON_MS = 1400; // 하단 안내 괄호 속 버튼 이름이 바뀌는 간격
 const DRAG_SLOP = 6; // tilt.js 와 같다 — 이보다 많이 끌었으면 누름이 아니다
 
 /** SVG 를 받아 둔다(로딩 화면이 떠 있는 동안). */
@@ -37,9 +37,10 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   const card = el.querySelector('.hsh-plan__card');
   card.innerHTML = svgText;
   el.hidden = false;
+  fitTags(el);
   halftoneColors(el);
 
-  mountClock(el.querySelector('.hsh-clock'), { reduced }); // 판 밖 화면 고정 — 기울여도 그대로
+  mountClock(el.querySelector('.hsh-clock')); // 판 밖 화면 고정 — 기울여도 그대로
   enableStickers(el);
   const hint = setupHint(el);
   fitAroundClock(el);
@@ -245,12 +246,26 @@ function activate(s) {
   s.dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room: s.dataset.room } }));
 }
 
+// 방 버튼 네모 폭을 글자에 맞춘다(글꼴마다 글자 폭이 달라서 화면에서 잰다)
+const TAG_PAD_X = 14;
+
+function fitTags(el) {
+  el.querySelectorAll('.hsh-tag').forEach((g) => {
+    const text = g.querySelector('.hsh-tag__text');
+    const bg = g.querySelector('.hsh-tag__bg');
+    const w = text.getComputedTextLength() + TAG_PAD_X * 2;
+    if (!(w > TAG_PAD_X * 2)) return;
+    bg.setAttribute('x', (-w / 2).toFixed(1));
+    bg.setAttribute('width', w.toFixed(1));
+  });
+}
+
 // ---------- 하단 안내 — click the ( ) ----------
-//   글자는 하나씩 span 으로(위글), 괄호 속에는 스티커 모양을 돌아가며 그려 넣는다.
+//   글자는 하나씩 span 으로(위글), 괄호 속에는 평면도 버튼을 작게 줄인 색 네모가 이름을 바꿔 가며 들어간다.
 
 function setupHint(el) {
   const p = el.querySelector('.hsh-plan__hint');
-  const icon = p.querySelector('.hsh-plan__hint-icon');
+  const chip = p.querySelector('.hsh-plan__hint-chip');
   for (const node of [...p.childNodes]) {
     if (node.nodeType !== Node.TEXT_NODE) continue;
     const frag = document.createDocumentFragment();
@@ -262,31 +277,20 @@ function setupHint(el) {
     }
     node.replaceWith(frag);
   }
-  // 스티커마다 그릴 조각(외곽선 · 바탕 · 열쇠 구멍)의 class · d · fill 만 뽑아 둔다
-  const shapes = [...el.querySelectorAll('.hsh-sticker__body')].map((b) =>
-    [...b.querySelectorAll('path')].map((path) => ({
-      cls: path.getAttribute('class'),
-      d: path.getAttribute('d'),
-      fill: path.getAttribute('fill'),
-    })));
-  const hint = { chars: [...p.querySelectorAll('.hsh-plan__hint-char')], icon, shapes, i: 0 };
+  const tags = [...el.querySelectorAll('.hsh-tag')].map((g) => g.dataset);
+  const hint = { chars: [...p.querySelectorAll('.hsh-plan__hint-char')], chip, tags, i: 0 };
   showHintIcon(hint);
   return hint;
 }
 
-// innerHTML 로 옮기면 iOS Safari 에서 SVG 로 읽히지 않을 수 있어 요소를 직접 만든다
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function showHintIcon(hint) {
-  const parts = hint.shapes[hint.i % hint.shapes.length];
-  if (!parts) return;
-  hint.icon.replaceChildren(...parts.map(({ cls, d, fill }) => {
-    const path = document.createElementNS(SVG_NS, 'path');
-    path.setAttribute('class', cls);
-    path.setAttribute('d', d);
-    if (fill) path.setAttribute('fill', fill);
-    return path;
-  }));
+  const t = hint.tags[hint.i % hint.tags.length];
+  if (!t) return;
+  hint.chip.textContent = t.label;
+  hint.chip.style.backgroundColor = t.bg;
+  hint.chip.style.color = t.fg;
 }
 
 function cycleHintIcon(el, hint) {

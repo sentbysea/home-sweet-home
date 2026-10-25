@@ -1,8 +1,7 @@
 // 홈 화면 오른쪽 위 아날로그 시계 — 시안 A. 테두리 · 배경판 없이 글자와 바늘만.
 //   12시 home / 3시 sweet / 6시 home, 나머지는 숫자. 위아래로 납작한 타원에 놓는다.
 //   늘 한국 시간(Asia/Seoul). 한국은 1988년 뒤로 서머타임이 없어 UTC+9 고정으로 계산한다.
-//   글자만 손그림 위글(로딩처럼 190ms · 4프레임) — 자리 · 크기는 그대로, 획만 조금씩. 바늘은 위글 없음.
-//   초침은 1초마다 딸깍. 모션 줄이기면 위글만 끈다.
+//   위글 없이 또렷하게. 초침은 1초마다 딸깍.
 
 const NS = 'http://www.w3.org/2000/svg';
 const KST_OFFSET = 9 * 3600 * 1000;
@@ -16,29 +15,15 @@ const WORD_SQUEEZE = 0.78; // 단어 장평
 const VIEW = { x: -104, y: -66, w: 228, h: 132 };
 const HANDS = { hour: 22, minute: 34, second: 40, tail: 7 }; // 12 · 6 자리 home 에 닿지 않게 짧게
 
-const WOBBLE_FRAME = 190;
-const FRAMES = 4;
-
-// 글자 i, 프레임 k 마다 고정된 작은 값(-1..1) — loader/wobble.js 와 같은 식
-function jitter(i, k, salt) {
-  const s = Math.sin(i * 12.9898 + k * 78.233 + salt * 37.719) * 43758.5453;
-  return (s - Math.floor(s)) * 2 - 1;
-}
-
 const el = (name, attrs = {}) => {
   const node = document.createElementNS(NS, name);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
   return node;
 };
 
-/** 글자를 한 자씩 tspan 으로 — 위글이 글자마다 따로 흔든다 */
-function label(text, x, y, cls, anchor = 'middle') {
-  const t = el('text', { x, y, class: cls, 'text-anchor': anchor, 'dominant-baseline': 'central' });
-  for (const ch of text) {
-    const s = el('tspan');
-    s.textContent = ch;
-    t.append(s);
-  }
+function label(text, x, y, cls) {
+  const t = el('text', { x, y, class: cls, 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+  t.textContent = text;
   return t;
 }
 
@@ -84,7 +69,7 @@ function build() {
   const pin = el('circle', { class: 'hsh-clock__pin', r: 4.6 });
 
   svg.append(face, hour, minute, second, pin);
-  return { svg, hour, minute, second, chars: [...face.querySelectorAll('tspan')] };
+  return { svg, hour, minute, second };
 }
 
 /** 지금 한국 시각 — 시 · 분 · 초(소수 포함) */
@@ -98,9 +83,8 @@ function seoulNow() {
 
 /**
  * @param {HTMLElement} host  .hsh-clock
- * @param {{ reduced?: boolean }} opts
  */
-export function mountClock(host, { reduced = false } = {}) {
+export function mountClock(host) {
   const c = build();
   host.replaceChildren(c.svg);
 
@@ -124,18 +108,6 @@ export function mountClock(host, { reduced = false } = {}) {
   };
   tick();
 
-  if (!reduced) {
-    let k = 0;
-    setInterval(() => {
-      if (document.hidden) return;
-      k = (k + 1) % FRAMES;
-      // 자리 · 크기는 그대로 — 글자마다 아주 조금 기울이고 획 굵기만 살짝 바꾼다
-      c.chars.forEach((s, i) => {
-        s.setAttribute('rotate', (jitter(i, k, 1) * 1.6).toFixed(2));
-        s.style.strokeWidth = (0.25 + (jitter(i, k, 2) + 1) * 0.3).toFixed(2);
-      });
-    }, WOBBLE_FRAME);
-  }
   // 탭에 돌아오면 바로 지금 시각으로(멈춰 있던 타이머를 기다리지 않는다)
   document.addEventListener('visibilitychange', () => { if (!document.hidden) paint(); });
 }
