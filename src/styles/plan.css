@@ -39,7 +39,7 @@
 /* 시계 자리 — 세로 화면은 위를, 가로 화면은 양옆을 시계 크기만큼 비워 집(방 · 스티커)과 겹치지 않게 */
 .hsh-plan {
   --hsh-clock-h: 126px;
-  --hsh-clock-w: calc(var(--hsh-clock-h) * 244 / 268); /* clock.js 의 viewBox 비율 */
+  --hsh-clock-w: calc(var(--hsh-clock-h) * 280 / 268); /* clock.js 의 viewBox 비율 */
   --hsh-clock-gap: 12px;
   --hsh-clock-top: max(var(--hsh-clock-gap), env(safe-area-inset-top));
   --hsh-clock-right: max(var(--hsh-clock-gap), env(safe-area-inset-right));
@@ -247,6 +247,7 @@
 
 .hsh-clock__num { font-size: 24px; }
 .hsh-clock__word { font-size: 37px; letter-spacing: -0.06em; }
+.hsh-clock__home { letter-spacing: -0.13em; } /* 위 · 아래 home 은 촘촘하게 — 시계 테두리처럼 짧게 */
 .hsh-clock__tick { stroke: #a9cbee; stroke-width: 1.6; stroke-linecap: round; }
 
 .hsh-clock__hand line { stroke-linecap: round; }

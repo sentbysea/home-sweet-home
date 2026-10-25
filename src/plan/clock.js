@@ -1,5 +1,5 @@
 // 홈 화면 오른쪽 위 아날로그 시계 — 시안 A. 테두리 · 배경판 없이 글자와 바늘만.
-//   12시 home / 3시 sweet / 6시 home, 나머지는 숫자. 세로로 조금 긴 타원에 놓는다.
+//   12시 home / 3시 sweet / 6시 home, 나머지는 숫자. 가로로 조금 통통한 타원에 놓는다.
 //   늘 한국 시간(Asia/Seoul). 한국은 1988년 뒤로 서머타임이 없어 UTC+9 고정으로 계산한다.
 //   글자만 손그림 위글(로딩처럼 190ms · 4프레임) — 자리 · 크기는 그대로, 획만 조금씩. 바늘은 위글 없음.
 //   초침은 1초마다 딸깍. 모션 줄이기면 위글만 끈다.
@@ -8,12 +8,12 @@ const NS = 'http://www.w3.org/2000/svg';
 const KST_OFFSET = 9 * 3600 * 1000;
 
 // 좌표(viewBox 단위) — 가운데 0,0. 'sweet' 가 오른쪽으로 길게 나가서 viewBox 가 오른쪽으로 넓다.
-const RX = 70; // 숫자 타원 가로 반지름
-const RY = 84; // 세로 반지름(조금 길게)
+const RX = 90; // 숫자 타원 가로 반지름 — 세로보다 조금 넓게(통통한 시계)
+const RY = 84; // 세로 반지름
 const WORD_Y = 112; // 위 · 아래 'home' — 11 · 1 · 5 · 7 과 겹치지 않게 숫자 타원보다 바깥
-const SWEET_X = 66; // 'sweet' 왼쪽 끝 — 분침 끝(56)보다 바깥
-const VIEW = { x: -88, y: -134, w: 244, h: 268 };
-const HANDS = { hour: 38, minute: 56, second: 62, tail: 10 };
+const SWEET_X = 86; // 'sweet' 왼쪽 끝 — 분침 끝(62)보다 바깥
+const VIEW = { x: -106, y: -134, w: 280, h: 268 };
+const HANDS = { hour: 42, minute: 62, second: 70, tail: 10 };
 
 const WOBBLE_FRAME = 190;
 const FRAMES = 4;
@@ -61,8 +61,8 @@ function build() {
         x2: (sx * RX * 0.8).toFixed(1), y2: (cy * RY * 0.8).toFixed(1),
       }));
     }
-    if (h === 12) face.append(label('home', 0, -WORD_Y, 'hsh-clock__word'));
-    else if (h === 6) face.append(label('home', 0, WORD_Y, 'hsh-clock__word'));
+    if (h === 12) face.append(label('home', 0, -WORD_Y, 'hsh-clock__word hsh-clock__home'));
+    else if (h === 6) face.append(label('home', 0, WORD_Y, 'hsh-clock__word hsh-clock__home'));
     else if (h === 3) face.append(label('sweet', SWEET_X, 0, 'hsh-clock__word', 'start'));
     else face.append(label(String(h), (sx * RX).toFixed(1), (cy * RY).toFixed(1), 'hsh-clock__num'));
   }
