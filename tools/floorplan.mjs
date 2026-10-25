@@ -153,27 +153,27 @@ const shape = (d, fill, cls = '', extra = {}) => {
 const label = (x, y, text) =>
   lines.push([room, `<text class="hsh-plan__label" data-label x="${x}" y="${y}">${text}</text>`]);
 
-// 색 — 밝고 쨍한 파스텔(별 스티커 · 말풍선 참고)
+// 색 — 하얗게 날린 연한 파스텔(로딩 화면 집 색 #f1f8fb 정도로 — 별 스티커 색을 흰색에 많이 섞음)
 const C = {
-  sky: '#a3e7ff',
-  mint: '#a6fcd6',
-  butter: '#fff29a',
-  pink: '#ffc2e5',
-  tile: '#dff8ff',
-  tileLine: '#a4e3f4',
-  shower: '#86e3ff',
-  cream: '#fff7d2',
-  wood: '#ffd79c',
-  blueBlanket: '#6cd6ff',
-  pinkBlanket: '#ff9fd3',
+  sky: '#ebfaff',
+  mint: '#ebfff6',
+  butter: '#fffce9',
+  pink: '#fff2f9',
+  tile: '#f8feff',
+  tileLine: '#ebf9fd',
+  shower: '#e4f9ff',
+  cream: '#fffdf5',
+  wood: '#fff6e9',
+  blueBlanket: '#def6ff',
+  pinkBlanket: '#ffeaf5',
   dark: '#505154',
-  grey: '#d2d0fa',
-  yellow: '#fff078',
-  leaf: '#3ed67a',
-  leafLine: '#24a356',
-  pillowBlue: '#b2beff',
-  lilac: '#f2a8ff',
-  orange: '#ffb340',
+  grey: '#f5f5fe',
+  yellow: '#fffce1',
+  leaf: '#d4f6e1',
+  leafLine: '#6fbf8c',
+  pillowBlue: '#eef1ff',
+  lilac: '#fcecff',
+  orange: '#ffeed4',
 };
 
 // =========================================================
@@ -433,7 +433,7 @@ popGroup(
 ln(rrect(712, 727, 12, 128, 3));
 ln(rrect(723, 756, 12, 70, 2), 'hsh-fine');
 {
-  const cols = ['#6cd6ff', '#86f4ff', '#ff9fd3', '#fff078', '#b2beff', '#86f7c8'];
+  const cols = ['#def6ff', '#e4fdff', '#ffeaf5', '#fffce1', '#eef1ff', '#e4fdf3'];
   let g = '';
   cols.forEach((c, i) => {
     g += `<rect x="${706 + (i % 3) * 11.5}" y="${866 + Math.floor(i / 3) * 17}" width="10" height="14" rx="1.5" fill="${c}"/>`;
@@ -485,9 +485,9 @@ ln('M462 1317L466 1317M472 1317L476 1317', 'hsh-fine');
   popGroup(
     `<path d="${rrect(424, 1244, 64, 48, 3)}" fill="#d9b27a"/>` +
     `<path d="${rrect(430, 1250, 52, 36, 1)}" fill="#fff"/>` +
-    `<path d="${rrect(434, 1254, 44, 28, 1)}" fill="#a8f0ff"/>` +
-    `<path d="M434 1282L434 1274L446 1262L455 1271L462 1265L478 1279L478 1282Z" fill="#a8fce0"/>` +
-    `<circle cx="469" cy="1261" r="3.6" fill="#fff3a0"/>`,
+    `<path d="${rrect(434, 1254, 44, 28, 1)}" fill="#dcf8ff"/>` +
+    `<path d="M434 1282L434 1274L446 1262L455 1271L462 1265L478 1279L478 1282Z" fill="#dcfdef"/>` +
+    `<circle cx="469" cy="1261" r="3.6" fill="#fff6c4"/>`,
     t,
   );
   ln(rrect(424, 1244, 64, 48, 3), '', t);
@@ -506,7 +506,7 @@ shape(rrect(669, 1001, 111, 66, 3), C.cream);
 popGroup(
   `<path d="M690 1027Q703 1021 717 1027L717 1057Q703 1051 690 1057Z" fill="#fff"/>` +
   `<path d="M717 1027Q731 1021 744 1027L744 1057Q731 1051 717 1057Z" fill="#fff"/>` +
-  `<path d="M694 1032H712M694 1038H712M694 1044H710M721 1032H740M721 1038H740M721 1044H736M721 1050H738" stroke="#ff6ed0" stroke-width="1.3" stroke-dasharray="3 1.5"/>`,
+  `<path d="M694 1032H712M694 1038H712M694 1044H710M721 1032H740M721 1038H740M721 1044H736M721 1050H738" stroke="#f3a6cf" stroke-width="1.3" stroke-dasharray="3 1.5"/>`,
 );
 ln('M690 1027Q703 1021 717 1027Q731 1021 744 1027L744 1057Q731 1051 717 1057Q703 1051 690 1057Z', 'hsh-fine');
 ln('M717 1027L717 1057', 'hsh-fine');
