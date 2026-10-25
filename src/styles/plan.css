@@ -85,11 +85,11 @@
 .hsh-plan__lines .hsh-fine { stroke-width: 1.1; }
 .hsh-plan__lines .hsh-hair { stroke-width: 0.8; stroke: var(--hsh-plan-soft); }
 .hsh-plan__lines .hsh-hair-dark { stroke-width: 0.9; }
-.hsh-plan__lines .hsh-frame { stroke-width: 1; stroke: var(--hsh-plan-soft); }
-.hsh-plan__lines .hsh-crease-blue { stroke-width: 0.9; stroke: var(--hsh-plan-soft); }
-.hsh-plan__lines .hsh-crease-pink { stroke-width: 0.9; stroke: var(--hsh-plan-soft); }
-.hsh-plan__lines .hsh-pencil { stroke-width: 1.6; stroke: var(--hsh-plan-soft); }
-.hsh-plan__lines .hsh-stem { stroke-width: 0.9; stroke: var(--hsh-plan-soft); }
+.hsh-plan__lines .hsh-frame { stroke-width: 1; stroke: #d8c896; }
+.hsh-plan__lines .hsh-crease-blue { stroke-width: 0.9; stroke: #97b5d6; }
+.hsh-plan__lines .hsh-crease-pink { stroke-width: 0.9; stroke: #dca3b6; }
+.hsh-plan__lines .hsh-pencil { stroke-width: 1.6; stroke: #b88d4e; }
+.hsh-plan__lines .hsh-stem { stroke-width: 0.9; stroke: #7ea466; }
 .hsh-plan__lines .hsh-pen { stroke-width: 2.6; }
 
 .hsh-plan__label {

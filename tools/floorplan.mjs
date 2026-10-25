@@ -131,20 +131,22 @@ const attr = (o) => Object.entries(o).filter(([, v]) => v != null).map(([k, v]) 
 /** 선 한 획 */
 const ln = (d, cls = '', extra = {}) =>
   lines.push([room, `<path data-stroke${attr({ class: cls || null, d, ...extra })}/>`]);
-/** 방 색 — 방마다 색 덩어리 하나(욕실은 타일 격자)만 색을 가진다 */
+/** 방 색 덩어리 · 욕실 타일 */
 const tint = (d, fill) => color.push([room, `<path class="hsh-pop"${attr({ d, fill })}/>`]);
 const tintGroup = (inner) => color.push([room, `<g class="hsh-pop">${inner}</g>`]);
 /** 흰 가리개 — 움직이지 않는다 */
 const mask = (d, extra = {}) => color.push([room, `<path class="hsh-mask"${attr({ d, ...extra })}/>`]);
-/** 가구 바탕 — 색은 빼고 바탕색으로 가린다(fill 인자는 예전 색 기록으로만 남긴다) */
-const pop = (d, _fill, extra = {}) => mask(d, extra);
-/** 여러 조각 가구 바탕 — 칠은 바탕색 가리개로, 색 선은 흐린 회색으로 */
-const popGroup = (inner, extra = {}) => {
-  const plain = inner
-    .replace(/ fill="#[0-9a-fA-F]{3,6}"/g, ' class="hsh-mask"')
-    .replace(/ stroke="#[0-9a-fA-F]{3,6}"/g, ' stroke="#9a9ea2"');
-  color.push([room, extra.transform ? `<g${attr(extra)}>${plain}</g>` : `<g>${plain}</g>`]);
-};
+/** 가구 색 */
+//   기울인 조각은 겉 <g> 가 튀고 안쪽이 기울기를 가진다(튀는 transform 이 회전을 덮지 않게)
+const pop = (d, fill, extra = {}) =>
+  color.push([room, extra.transform
+    ? `<g class="hsh-pop"><path${attr({ d, fill, ...extra })}/></g>`
+    : `<path class="hsh-pop"${attr({ d, fill, ...extra })}/>`]);
+/** 여러 조각 가구 색을 한 덩어리로 */
+const popGroup = (inner, extra = {}) =>
+  color.push([room, extra.transform
+    ? `<g class="hsh-pop"><g${attr(extra)}>${inner}</g></g>`
+    : `<g class="hsh-pop">${inner}</g>`]);
 /** 윤곽 + 바탕 */
 const shape = (d, fill, cls = '', extra = {}) => {
   if (fill === 'mask') mask(d, extra);
@@ -154,27 +156,27 @@ const shape = (d, fill, cls = '', extra = {}) => {
 const label = (x, y, text) =>
   lines.push([room, `<text class="hsh-plan__label" data-label x="${x}" y="${y}">${text}</text>`]);
 
-// 색 — 하얗게 날린 연한 파스텔(로딩 화면 집 색 #f1f8fb 정도로 — 별 스티커 색을 흰색에 많이 섞음)
+// 색 — 차분한 파스텔(일상 조각 스티커 바탕색 참고)
 const C = {
-  sky: '#ebfaff',
-  mint: '#ebfff6',
-  butter: '#fffce9',
-  pink: '#fff2f9',
-  tile: '#f8feff',
-  tileLine: '#ebf9fd',
-  shower: '#e4f9ff',
-  cream: '#fffdf5',
-  wood: '#fff6e9',
-  blueBlanket: '#def6ff',
-  pinkBlanket: '#ffeaf5',
-  dark: '#505154',
-  grey: '#f5f5fe',
-  yellow: '#fffce1',
-  leaf: '#d4f6e1',
-  leafLine: '#6fbf8c',
-  pillowBlue: '#eef1ff',
-  lilac: '#fcecff',
-  orange: '#ffeed4',
+  sky: '#dbe8f6',
+  mint: '#d8ebd0',
+  butter: '#fbf0cc',
+  pink: '#fbdfe8',
+  tile: '#e8f1f7',
+  tileLine: '#d0e0ed',
+  shower: '#d3e3f3',
+  cream: '#fdf6e2',
+  wood: '#eedcc2',
+  blueBlanket: '#c6daef',
+  pinkBlanket: '#f5c9d7',
+  dark: '#626368',
+  grey: '#e1e3ea',
+  yellow: '#f7e6ad',
+  leaf: '#b2d39e',
+  leafLine: '#7ea466',
+  pillowBlue: '#cfd9ef',
+  lilac: '#ead6ee',
+  orange: '#f7d3b4',
 };
 
 // =========================================================
@@ -428,13 +430,13 @@ shape(ellipse(603, 838, 8.5, 8.5, 0), 'mask');
 ln('M611 834Q618 836 616 843Q614 847 609 844', 'hsh-fine');
 shape(rrect(696, 714, 55, 197, 2), C.wood);
 popGroup(
-  `<path d="${rrect(712, 727, 12, 128, 3)}" fill="#38383b"/>` +
-  `<path d="${rrect(723, 756, 12, 70, 2)}" fill="#5a5a5e"/>`,
+  `<path d="${rrect(712, 727, 12, 128, 3)}" fill="#4e4f53"/>` +
+  `<path d="${rrect(723, 756, 12, 70, 2)}" fill="#6c6d72"/>`,
 );
 ln(rrect(712, 727, 12, 128, 3));
 ln(rrect(723, 756, 12, 70, 2), 'hsh-fine');
 {
-  const cols = ['#def6ff', '#e4fdff', '#ffeaf5', '#fffce1', '#eef1ff', '#e4fdf3'];
+  const cols = ['#c6daef', '#d6e9f0', '#f5c9d7', '#f7e6ad', '#cfd9ef', '#cfe5c4'];
   let g = '';
   cols.forEach((c, i) => {
     g += `<rect x="${706 + (i % 3) * 11.5}" y="${866 + Math.floor(i / 3) * 17}" width="10" height="14" rx="1.5" fill="${c}"/>`;
@@ -486,9 +488,9 @@ ln('M462 1317L466 1317M472 1317L476 1317', 'hsh-fine');
   popGroup(
     `<path d="${rrect(424, 1244, 64, 48, 3)}" fill="#d9b27a"/>` +
     `<path d="${rrect(430, 1250, 52, 36, 1)}" fill="#fff"/>` +
-    `<path d="${rrect(434, 1254, 44, 28, 1)}" fill="#dcf8ff"/>` +
-    `<path d="M434 1282L434 1274L446 1262L455 1271L462 1265L478 1279L478 1282Z" fill="#dcfdef"/>` +
-    `<circle cx="469" cy="1261" r="3.6" fill="#fff6c4"/>`,
+    `<path d="${rrect(434, 1254, 44, 28, 1)}" fill="#d3e3f3"/>` +
+    `<path d="M434 1282L434 1274L446 1262L455 1271L462 1265L478 1279L478 1282Z" fill="#cfe5c4"/>` +
+    `<circle cx="469" cy="1261" r="3.6" fill="#f7e6ad"/>`,
     t,
   );
   ln(rrect(424, 1244, 64, 48, 3), '', t);
@@ -507,7 +509,7 @@ shape(rrect(669, 1001, 111, 66, 3), C.cream);
 popGroup(
   `<path d="M690 1027Q703 1021 717 1027L717 1057Q703 1051 690 1057Z" fill="#fff"/>` +
   `<path d="M717 1027Q731 1021 744 1027L744 1057Q731 1051 717 1057Z" fill="#fff"/>` +
-  `<path d="M694 1032H712M694 1038H712M694 1044H710M721 1032H740M721 1038H740M721 1044H736M721 1050H738" stroke="#f3a6cf" stroke-width="1.3" stroke-dasharray="3 1.5"/>`,
+  `<path d="M694 1032H712M694 1038H712M694 1044H710M721 1032H740M721 1038H740M721 1044H736M721 1050H738" stroke="#e09ab3" stroke-width="1.3" stroke-dasharray="3 1.5"/>`,
 );
 ln('M690 1027Q703 1021 717 1027Q731 1021 744 1027L744 1057Q731 1051 717 1057Q703 1051 690 1057Z', 'hsh-fine');
 ln('M717 1027L717 1057', 'hsh-fine');
@@ -520,37 +522,49 @@ shape(rrect(821, 1032, 101, 69, 10), 'mask');
 shape('M799 1134Q874 1118 949 1134L949 1336Q949 1344 941 1344L807 1344Q799 1344 799 1336Z', C.pinkBlanket);
 ln('M862 1232Q884 1240 904 1252', 'hsh-crease-pink');
 ln('M878 1262Q898 1270 914 1284', 'hsh-crease-pink');
+// 왼쪽 벽 — 위에서부터 전신거울 → 옷걸이 → 구석 베이스
+// 전신거울 — 벽에 비스듬히 기대 세워 둠(위에서 보면 거울면이 눌려 보인다). 나무 테 + 거울 + 반짝 선
+{
+  shape(rrect(553, 1128, 18, 80, 2), C.wood);
+  shape(rrect(556, 1132, 12, 72, 1.5), C.shower, 'hsh-fine');
+  ln('M559 1146L565 1138M559 1158L565 1150M559 1188L565 1180', 'hsh-hair');
+}
 // 옷걸이 — 왼쪽 벽을 따라 세로 봉 + 빽빽이 걸린 옷(위에서)
 {
   const cols = [C.blueBlanket, C.pinkBlanket, C.yellow, C.mint, C.pillowBlue, C.orange, C.lilac, '#ffffff'];
   cols.forEach((c, i) => {
-    const y = 1152 + i * 10;
+    const y = 1224 + i * 10;
     const w = i % 3 === 1 ? 46 : 52;
     shape(rrect(584 - w / 2, y, w, 9, 4), c, 'hsh-fine', { transform: rot(i % 2 ? 3 : -3, 584, y + 4.5) });
   });
-  ln(poly([[584, 1146], [584, 1236]], { amp: 0.2 }));
-  ln(ellipse(584, 1145, 3, 3, 0), 'hsh-fine');
-  ln(ellipse(584, 1237, 3, 3, 0), 'hsh-fine');
+  ln(poly([[584, 1218], [584, 1308]], { amp: 0.2 }));
+  ln(ellipse(584, 1217, 3, 3, 0), 'hsh-fine');
+  ln(ellipse(584, 1309, 3, 3, 0), 'hsh-fine');
 }
-// 흰 베이스 기타 — 왼쪽 아래 구석, 스탠드에 세워 왼쪽 벽에 기대 둔 것을 바로 위에서.
-//   (안쪽 좌표: 위쪽 = 벽) 벽에 닿은 헤드 + 줄감개 → 짧게 보이는 넥 → 몸통 윗면(얇은 단면, 앞에 검은 픽가드 테두리) → 바닥에 벌린 스탠드 다리
+// 흰 베이스 기타 — 왼쪽 아래 구석, 스탠드에 세워 왼쪽 벽에 비스듬히 기대 둔 것을 위에서.
+//   기대어 누운 만큼 앞면이 길이 방향으로 눌려 보인다(scale y 0.6). 헤드는 벽에 닿고 몸통은 방 쪽 스탠드 위.
+//   (안쪽 좌표: 위쪽 = 벽) 앞면 그대로 — 뿔 둘 달린 몸통 · 픽가드 · 픽업 · 브리지 · 넥 · 4줄 · 한쪽 줄감개 넷
 {
-  const t = { transform: 'translate(602 1345) rotate(-90) scale(1.2)' };
-  ln('M-7 18.5L-21 29M7 18.5L21 29M-21 29L-25 31M21 29L25 31', 'hsh-fine', t);
-  const body = 'M-25 10Q-25 3 -18 3Q-10 5 -4 4L4 4Q10 5 18 3Q25 3 25 10Q25 17 18 17Q0 19.5 -18 17Q-25 17 -25 10Z';
-  const head = 'M-5 -40Q-5 -43 -2 -43L2 -43Q5 -43 5 -40L5 -30L-5 -30Z';
+  const t = { transform: 'translate(629 1354) rotate(-90) scale(1 0.6)', 'vector-effect': 'non-scaling-stroke' };
+  // 스탠드 다리 — 바닥이라 눌리지 않는다
+  ln('M641 1337L657 1325M641 1371L657 1383M657 1325L660 1321M657 1383L660 1387', 'hsh-fine');
+  const body = 'M5 -20C10 -30 20 -38 23 -29C25 -19 18 -12 20 -2C24 10 26 26 10 30C3 32 -3 32 -10 30' +
+    'C-26 26 -26 10 -21 -2C-18 -12 -24 -20 -20 -27C-16 -32 -10 -26 -5 -20Z';
+  const guard = 'M-4 -14C2 -18 12 -16 14 -8C16 0 12 10 4 12L-4 12C-12 10 -14 0 -12 -8C-10 -12 -8 -13 -4 -14Z';
+  const neck = 'M-4 -100L4 -100L4 -18L-4 -18Z';
+  const head = 'M-4 -100L-6 -123Q-5 -129 1 -128L7 -122L4 -100Z';
   popGroup(
-    `<path d="M-3.5 -30L3.5 -30L3.5 4L-3.5 4Z" fill="${C.wood}"/>` +
-    `<path d="${head}" fill="#ffffff"/>` +
-    `<path d="${body}" fill="#ffffff"/>` +
-    `<path d="M-16 15.6Q0 18 16 15.6L15 17.4Q0 19.6 -15 17.4Z" fill="${C.dark}"/>`,
+    `<path d="${body}" fill="#ffffff"/><path d="${neck}" fill="#ffffff"/><path d="${head}" fill="#ffffff"/>`,
     t,
   );
-  ln('M-3.5 -30L-3.5 4M3.5 -30L3.5 4', 'hsh-fine', t);
-  ln(head, 'hsh-fine', t);
-  ln('M5 -40L8 -40M5 -37L8 -37M5 -34L8 -34M5 -31L8 -31', 'hsh-fine', t);
-  ln('M-1.8 -30L-1.8 4M-0.6 -30L-0.6 4M0.6 -30L0.6 4M1.8 -30L1.8 4', 'hsh-hair', t);
   ln(body, '', t);
+  ln(guard, 'hsh-fine', t);
+  ln(neck, 'hsh-fine', t);
+  ln(head, 'hsh-fine', t);
+  ln(rrect(-7, -6, 14, 5, 1.5, 0.1), 'hsh-fine', t); // 픽업
+  ln(rrect(-6, 18, 12, 6, 1, 0.1), 'hsh-fine', t); // 브리지
+  ln('M-2.4 -100L-2.4 20M-0.8 -100L-0.8 20M0.8 -100L0.8 20M2.4 -100L2.4 20', 'hsh-hair', t);
+  ln('M-5 -104L-10 -104M-5.3 -109L-10.3 -109M-5.6 -114L-10.6 -114M-5.9 -119L-10.9 -119', 'hsh-fine', t);
 }
 // 둥근 쿠션 의자(위에서 본 단추 주름)
 shape(ellipse(717, 1291, 52, 52, 0.008), C.lilac);
