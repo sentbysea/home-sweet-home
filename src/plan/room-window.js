@@ -168,6 +168,13 @@ function punyDecode(input) {
 // ---------- 공지(notice 버튼) ----------
 
 const NOTICE_TAG = '@3tatichearts · 수아'; // 공지 창의 검정 이름표
+// 방 버튼(data-label)마다 검정 이름표 글자 — 없으면 버튼 이름(aria-label)
+const PILLS = {
+  'about __VE': 'Vibe X Echo',
+  'teatime?': '홍차라도 한 잔?',
+  notice: NOTICE_TAG,
+  archive: '홍차아카이브',
+};
 const NOTICE_THUMB = 'src/images/notice-thumb.jpg'; // 공지 창 썸네일 사진
 // 칸마다 [제목, [[본문, 화살표 줄], …] 또는 한 줄] — **…** 는 강조
 const NOTICE = [
@@ -488,7 +495,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.');
     scatter(frame);
-    setPill(room, label === 'notice' ? NOTICE_TAG : name);
+    setPill(room, PILLS[label] ?? name);
     thumb.style.backgroundImage = label === 'notice' ? `url("${NOTICE_THUMB}")` : '';
     paintLike();
     win.hidden = false;
