@@ -14,17 +14,39 @@ const loader = document.querySelector('.hsh-loader');
 const app = document.getElementById('app');
 const plan = app.querySelector('.hsh-plan');
 
+// 로딩 배경 별을 같은 자리 그대로 평면도 뒤에 옮겨 둔다 — 로딩이 바래는 동안 별은 그대로 있고 집만 사라진다
+copyStars(loader.querySelector('.hsh-bg'), plan);
+
 // 평면도 SVG 는 로딩 화면이 떠 있는 동안 받아 둔다(준비 완료에 포함).
 const svg = loadPlan();
 const ready = Promise.all([demoReady(readyMs), svg.catch(() => {})]); // 못 받아도 로딩은 끝난다
+
+let shown = false;
+const showPlan = async () => {
+  if (shown) return;
+  shown = true;
+  app.hidden = false;
+  const view = mountPlan(plan, await svg, { reduced });
+  window.hshPlan = view; // 데모 도구가 '평면도만 다시 재생' 에 쓴다
+};
+
+// 집이 다가오기 시작하고 조금 뒤 — 로딩이 바래는 동안 그 아래에서 평면도가 그려진다(밖에서 기다리다 집 안으로)
+document.addEventListener('hsh:loader-leaving', () => setTimeout(showPlan, reduced ? 0 : 380), { once: true });
 
 const entered = planOnly
   ? (loader.remove(), Promise.resolve())
   // 준비가 끝나면 '집을 눌러 들어가기' 안내가 뜨고, 집을 누르면 집이 다가오며 로딩이 사라진다.
   : runLoader(loader, { ready, reduced });
 
-entered.then(async () => {
-  app.hidden = false;
-  const view = mountPlan(plan, await svg, { reduced });
-  window.hshPlan = view; // 데모 도구가 '평면도만 다시 재생' 에 쓴다
-});
+entered.then(showPlan);
+
+function copyStars(bg, host) {
+  const copy = bg.cloneNode(true);
+  copy.setAttribute('class', 'hsh-plan__stars');
+  // id 가 겹치지 않게
+  copy.querySelector('#hsh-star').id = 'hsh-plan-star';
+  copy.removeAttribute('id');
+  copy.querySelector('#hsh-stars')?.removeAttribute('id');
+  copy.querySelectorAll('use').forEach((u) => u.setAttribute('href', '#hsh-plan-star'));
+  host.prepend(copy);
+}

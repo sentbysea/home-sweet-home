@@ -36,8 +36,7 @@
 
 /* ---------- 들어가기 — 글자는 먼저 숨고, 집이 사용자 쪽으로 다가온다 ---------- */
 
-.hsh-loader__house,
-.hsh-bg {
+.hsh-loader__house {
   transition: scale var(--hsh-fade) cubic-bezier(0.6, 0, 0.85, 0.3); /* 점점 빠르게 */
 }
 
@@ -45,9 +44,7 @@
   scale: 9;
 }
 
-.hsh-loader.is-leaving .hsh-bg {
-  scale: 1.12; /* 배경은 조금만 — 깊이감 */
-}
+/* 배경 별은 그대로 — 평면도 뒤에 같은 자리로 옮겨 둔 별(plan.css)과 이어진다 */
 
 .hsh-loader.is-leaving :is(.hsh-loader__text, .hsh-status) {
   opacity: 0;
@@ -305,7 +302,7 @@
     transition: opacity var(--hsh-fade) ease;
   }
 
-  .hsh-loader.is-leaving :is(.hsh-loader__house, .hsh-bg) {
+  .hsh-loader.is-leaving .hsh-loader__house {
     scale: none;
   }
 

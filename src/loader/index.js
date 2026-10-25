@@ -16,7 +16,7 @@ export const prefersReducedMotion = () =>
  * @param {HTMLElement} el  .hsh-loader
  * @param {{ ready: Promise<unknown>, reduced?: boolean, typing?: object, minStep?: number }} opts
  *   ready    준비 완료 신호
- * @returns {Promise<void>} 로더가 사라진 뒤. document 에 'hsh:loader-done' 도 보낸다.
+ * @returns {Promise<void>} 로더가 사라진 뒤. document 에 'hsh:loader-leaving'(집이 다가오기 시작) · 'hsh:loader-done' 도 보낸다.
  */
 export async function runLoader(el, { ready, reduced = prefersReducedMotion(), typing, minStep } = {}) {
   const status = el.querySelector('.hsh-status');
@@ -37,6 +37,7 @@ export async function runLoader(el, { ready, reduced = prefersReducedMotion(), t
   el.classList.add('is-ready');
   await waitForEnter(house);
 
+  document.dispatchEvent(new CustomEvent('hsh:loader-leaving')); // 다음 화면이 아래에서 먼저 시작할 수 있게
   await exitLoader(el);
   stop.abort();
   document.dispatchEvent(new CustomEvent('hsh:loader-done'));

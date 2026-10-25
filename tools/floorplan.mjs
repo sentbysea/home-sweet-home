@@ -155,20 +155,20 @@ const shape = (d, fill, cls = '', extra = {}) => {
   ln(d, cls, extra);
 };
 
-// 색 — 차분한 파스텔(일상 조각 스티커 바탕색 참고)
+// 색 — 차분한 파스텔(일상 조각 스티커 바탕색 참고). 방 바닥 색 면은 한 단계 옅게, 이불 · 작은 물건에 색을 남긴다
 const C = {
-  sky: '#dbe8f6',
-  mint: '#d8ebd0',
-  butter: '#fbf0cc',
-  pink: '#fbdfe8',
-  tile: '#e8f1f7',
-  tileLine: '#d0e0ed',
+  sky: '#e7eff9',
+  mint: '#e5f1df',
+  butter: '#fcf5dc',
+  pink: '#fcebf1',
+  tile: '#eff5fa',
+  tileLine: '#dce7f0',
   shower: '#d3e3f3',
   cream: '#fdf6e2',
   wood: '#eedcc2',
   blueBlanket: '#c6daef',
   pinkBlanket: '#f5c9d7',
-  dark: '#626368',
+  dark: '#7e8085',
   grey: '#e1e3ea',
   yellow: '#f7e6ad',
   leaf: '#b2d39e',
@@ -387,8 +387,8 @@ ln('M624 305L624 324M617 305L631 305', '');
 ln(ellipse(624, 337, 1.6, 1.6, 0), 'hsh-fine');
 popGroup(
   `<path d="${rrect(724, 314, 63, 38, 4)}" fill="${C.dark}"/>` +
-  `<circle cx="741" cy="333" r="9.5" fill="none" stroke="#a9a9ad" stroke-width="1.6"/>` +
-  `<circle cx="769" cy="333" r="9.5" fill="none" stroke="#a9a9ad" stroke-width="1.6"/>`,
+  `<circle cx="741" cy="333" r="9.5" fill="none" stroke="#c6c7cb" stroke-width="1.6"/>` +
+  `<circle cx="769" cy="333" r="9.5" fill="none" stroke="#c6c7cb" stroke-width="1.6"/>`,
 );
 ln(rrect(724, 314, 63, 38, 4));
 shape(rrect(797, 420, 65, 77, 3), C.grey);
@@ -440,8 +440,8 @@ shape(ellipse(603, 838, 8.5, 8.5, 0), 'mask');
 ln('M611 834Q618 836 616 843Q614 847 609 844', 'hsh-fine');
 shape(rrect(696, 714, 55, 197, 2), C.wood);
 popGroup(
-  `<path d="${rrect(712, 727, 12, 128, 3)}" fill="#4e4f53"/>` +
-  `<path d="${rrect(723, 756, 12, 70, 2)}" fill="#6c6d72"/>`,
+  `<path d="${rrect(712, 727, 12, 128, 3)}" fill="#76787d"/>` +
+  `<path d="${rrect(723, 756, 12, 70, 2)}" fill="#9a9ca1"/>`,
 );
 ln(rrect(712, 727, 12, 128, 3));
 ln(rrect(723, 756, 12, 70, 2), 'hsh-fine');

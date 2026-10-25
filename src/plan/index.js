@@ -41,6 +41,12 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   mountClock(el.querySelector('.hsh-clock'), { reduced }); // 판 밖 화면 고정 — 기울여도 그대로
   enableStickers(el);
   const hint = setupHint(el);
+  thinStars(el);
+  let resizing = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizing);
+    resizing = setTimeout(() => thinStars(el), 200);
+  });
   if (!reduced) {
     enableTilt(el, card);
     startWobble(el, hint);
@@ -73,12 +79,33 @@ function startWobble(el, hint) {
     el.dataset.wallFrame = k;
     if (!on) return;
     bodies.forEach((b, i) => {
-      b.style.transform = `translate(${(jitter(i, k, 1) * 0.8).toFixed(2)}px, ${(jitter(i, k, 2) * 0.8).toFixed(2)}px) rotate(${(jitter(i, k, 3) * 4).toFixed(1)}deg)`;
+      b.style.transform = `translate(${(jitter(i, k, 1) * 0.8).toFixed(2)}px, ${(jitter(i, k, 2) * 0.8).toFixed(2)}px) rotate(${(jitter(i, k, 3) * 2).toFixed(1)}deg)`;
     });
     hint.chars.forEach((c, i) => {
       c.style.transform = `translateY(${(jitter(i, k, 4) * 0.7).toFixed(2)}px) rotate(${(jitter(i, k, 5) * 5).toFixed(1)}deg)`;
     });
   }, FRAME_MS);
+}
+
+// ---------- 바깥 여백 별 ----------
+//   집 · 시계 · 하단 안내와 겹치거나 가까운 별은 지우고, 남은 여백 별도 몇 개만(약 25%) 옅게 남긴다.
+
+const STAR_KEEP = 0.25;
+const STAR_CLEAR = 14; // 집 · 시계 · 안내 둘레로 이만큼은 비운다(px)
+
+function thinStars(el) {
+  const grow = (r) => ({ l: r.left - STAR_CLEAR, t: r.top - STAR_CLEAR, r: r.right + STAR_CLEAR, b: r.bottom + STAR_CLEAR });
+  const keepOut = ['.hsh-plan__svg > g', '.hsh-clock', '.hsh-plan__hint']
+    .map((q) => el.querySelector(q))
+    .filter(Boolean)
+    .map((n) => grow(n.getBoundingClientRect()));
+  el.querySelectorAll('.hsh-plan__stars use').forEach((u, i) => {
+    const r = u.getBoundingClientRect();
+    const hit = keepOut.some((k) => r.right > k.l && r.left < k.r && r.bottom > k.t && r.top < k.b);
+    const keep = !hit && (jitter(i, 0, 9) + 1) / 2 < STAR_KEEP;
+    u.classList.toggle('is-away', !keep);
+    u.classList.toggle('is-faint', keep);
+  });
 }
 
 // ---------- 방 스티커 버튼 ----------
