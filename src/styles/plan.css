@@ -39,8 +39,8 @@
 /* 시계 자리 — 시계는 집 오른쪽 위(주방 위) 빈 곳에 들어가는 것이 먼저.
    그래도 집과 겹칠 때만 index.js 가 --hsh-clock-room 만큼(세로 화면은 위, 가로 화면은 양옆) 비운다 */
 .hsh-plan {
-  --hsh-clock-h: 94px; /* 납작한 시계 — 폭은 약 131px */
-  --hsh-clock-w: calc(var(--hsh-clock-h) * 280 / 200); /* clock.js 의 viewBox 비율 */
+  --hsh-clock-h: 62px; /* 납작한 시계 — 폭은 약 131px */
+  --hsh-clock-w: calc(var(--hsh-clock-h) * 280 / 132); /* clock.js 의 viewBox 비율 */
   --hsh-clock-gap: 12px;
   --hsh-clock-top: max(var(--hsh-clock-gap), env(safe-area-inset-top));
   --hsh-clock-right: max(var(--hsh-clock-gap), env(safe-area-inset-right));
@@ -49,7 +49,7 @@
 }
 
 @media (min-width: 768px) and (min-height: 600px) {
-  .hsh-plan { --hsh-clock-h: 134px; }
+  .hsh-plan { --hsh-clock-h: 88px; }
 }
 
 @media (min-aspect-ratio: 1/1) {
@@ -247,9 +247,9 @@
   stroke-linejoin: round;
 }
 
-.hsh-clock__num { font-size: 24px; }
+.hsh-clock__num { font-size: 22px; }
 .hsh-clock__word { font-size: 37px; letter-spacing: -0.06em; }
-.hsh-clock__home { letter-spacing: -0.13em; } /* 위 · 아래 home 은 촘촘하게 — 시계 테두리처럼 짧게 */
+.hsh-clock__home { font-size: 30px; letter-spacing: -0.1em; } /* 12 · 6 자리 home — 촘촘하게, 장평은 clock.js 가 줄인다 */
 .hsh-clock__tick { stroke: #a9cbee; stroke-width: 1.6; stroke-linecap: round; }
 
 .hsh-clock__hand line { stroke-linecap: round; }

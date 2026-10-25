@@ -9,11 +9,12 @@ const KST_OFFSET = 9 * 3600 * 1000;
 
 // 좌표(viewBox 단위) — 가운데 0,0. 'sweet' 가 오른쪽으로 길게 나가서 viewBox 가 오른쪽으로 넓다.
 const RX = 90; // 숫자 타원 가로 반지름
-const RY = 58; // 세로 반지름 — 위아래로 납작한 타원
-const WORD_Y = 84; // 위 · 아래 'home' — 11 · 1 · 5 · 7 과 겹치지 않게 숫자 타원보다 바깥
+const RY = 50; // 세로 반지름 — 위아래로 납작한 타원
+const WORD_Y = 50; // 위 · 아래 'home' — 숫자처럼 12 · 6 자리, 11 · 1 / 5 · 7 사이에
+const HOME_SQUEEZE = 0.78; // home 장평 — 11 과 1 사이에 들어가게 가로로 좁힌다
 const SWEET_X = 86; // 'sweet' 왼쪽 끝 — 3시 자리, 2 · 4 와 위아래로 비켜서
-const VIEW = { x: -106, y: -100, w: 280, h: 200 };
-const HANDS = { hour: 30, minute: 44, second: 50, tail: 8 }; // 좁은 쪽(RY)에 맞춰 숫자 · 단어에 닿지 않게
+const VIEW = { x: -106, y: -66, w: 280, h: 132 };
+const HANDS = { hour: 22, minute: 34, second: 40, tail: 7 }; // 12 · 6 자리 home 에 닿지 않게 짧게
 
 const WOBBLE_FRAME = 190;
 const FRAMES = 4;
@@ -53,18 +54,21 @@ function build() {
     const a = (h / 12) * Math.PI * 2;
     const sx = Math.sin(a);
     const cy = -Math.cos(a);
-    // 눈금 — 글자 안쪽에 짧게. 단어(12 · 3)가 있는 쪽은 비운다
-    if (h !== 12 && h !== 3) {
+    // 눈금 — 글자 안쪽에 짧게. 단어(12 · 3 · 6)가 있는 쪽은 비운다
+    if (h !== 12 && h !== 3 && h !== 6) {
       face.append(el('line', {
         class: 'hsh-clock__tick',
         x1: (sx * RX * 0.74).toFixed(1), y1: (cy * RY * 0.74).toFixed(1),
         x2: (sx * RX * 0.8).toFixed(1), y2: (cy * RY * 0.8).toFixed(1),
       }));
     }
-    if (h === 12) face.append(label('home', 0, -WORD_Y, 'hsh-clock__word hsh-clock__home'));
-    else if (h === 6) face.append(label('home', 0, WORD_Y, 'hsh-clock__word hsh-clock__home'));
-    else if (h === 3) face.append(label('sweet', SWEET_X, 0, 'hsh-clock__word', 'start'));
-    else face.append(label(String(h), (sx * RX).toFixed(1), (cy * RY).toFixed(1), 'hsh-clock__num'));
+    if (h === 12 || h === 6) {
+      const home = label('home', 0, h === 12 ? -WORD_Y : WORD_Y, 'hsh-clock__word hsh-clock__home');
+      home.setAttribute('transform', `scale(${HOME_SQUEEZE} 1)`); // x 가 0 이라 자리는 그대로, 가로만 좁아진다
+      face.append(home);
+    }
+    if (h === 3) face.append(label('sweet', SWEET_X, 0, 'hsh-clock__word', 'start'));
+    else if (h !== 12 && h !== 6) face.append(label(String(h), (sx * RX).toFixed(1), (cy * RY).toFixed(1), 'hsh-clock__num'));
   }
 
   const hand = (cls, len, tail = 0) => {
