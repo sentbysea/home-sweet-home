@@ -15,6 +15,7 @@ npm run dev        # node scripts/serve.mjs — 설치할 것 없음
 - 데모 도구 — http://localhost:5173/demo.html (다시 재생 · 화면 크기 · 준비 완료 시점)
 
 `?ready=ms` 로 준비 완료 시점을 늦출 수 있다(기본 1200ms).
+`?bg=spiral|dots|stripes|gingham` 로 배경 패턴을 고정한다(없으면 불러올 때마다 무작위).
 
 ## 구조
 
@@ -29,6 +30,7 @@ src/loader/exit.js      페이드 아웃 후 DOM 제거
 src/loader/index.js     runLoader — 타이핑 + 방문 단계 + 준비 완료 → 안내 → 누르기 → 종료
 src/main.js             연결(지금은 데모 신호)
 tools/wobble.mjs        윤곽 변형 4장 생성기
+tools/spiral.mjs        배경 소용돌이 경로 생성기
 ```
 
 ## 실제 준비 신호로 바꾸기

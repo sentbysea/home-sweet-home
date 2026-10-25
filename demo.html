@@ -63,6 +63,15 @@
         <option value="1280x800">PC 1280×800</option>
       </select>
     </label>
+    <label>배경
+      <select id="bg">
+        <option value="">무작위</option>
+        <option value="spiral">소용돌이</option>
+        <option value="dots">물방울</option>
+        <option value="stripes">줄무늬</option>
+        <option value="gingham">깅엄</option>
+      </select>
+    </label>
     <label>준비 완료(ms) <input id="ready" type="number" min="0" step="100" value="1200"></label>
     <span class="log">들어가기: 미리보기를 클릭 · 모션 줄이기는 OS 설정 또는 DevTools › Rendering › prefers-reduced-motion 으로 확인</span>
   </div>
@@ -72,12 +81,13 @@
     const frame = document.getElementById('frame');
     const size = document.getElementById('size');
     const ready = document.getElementById('ready');
+    const bg = document.getElementById('bg');
 
     function play() {
       const [w, h] = size.value.split('x').map(Number);
       frame.width = w;
       frame.height = h;
-      frame.src = `index.html?ready=${Math.max(0, Number(ready.value) || 0)}&t=${Date.now()}`;
+      frame.src = `index.html?ready=${Math.max(0, Number(ready.value) || 0)}${bg.value ? `&bg=${bg.value}` : ''}&t=${Date.now()}`;
     }
 
     // Enter 가 미리보기로 가도록 포커스
@@ -85,6 +95,7 @@
 
     document.getElementById('replay').addEventListener('click', play);
     size.addEventListener('change', play);
+    bg.addEventListener('change', play);
     play();
   </script>
 </body>

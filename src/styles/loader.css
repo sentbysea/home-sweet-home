@@ -8,6 +8,7 @@
   --hsh-line: #8f9497;
   --hsh-ink: #2a2a2a;
   --hsh-note: #7d8386;
+  --hsh-pattern: #d6e8f8; /* 배경 패턴 하늘색 */
   --hsh-boil-frame: 190ms; /* 윤곽 한 장이 보이는 시간 */
   --hsh-fade: 700ms;
 
@@ -32,7 +33,35 @@
   pointer-events: none;
 }
 
+/* ---------- 배경 패턴 ---------- */
+
+.hsh-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hsh-bg pattern * {
+  fill: var(--hsh-pattern);
+}
+
+.hsh-bg__spiral {
+  fill: none;
+  stroke: var(--hsh-pattern);
+  stroke-width: 11;
+  stroke-linecap: round;
+}
+
+.hsh-bg__fill { display: none; }
+.hsh-bg[data-bg="spiral"] .hsh-bg__fill--spiral,
+.hsh-bg[data-bg="dots"] .hsh-bg__fill--dots,
+.hsh-bg[data-bg="stripes"] .hsh-bg__fill--stripes,
+.hsh-bg[data-bg="gingham"] .hsh-bg__fill--gingham { display: inline; }
+
 .hsh-loader__stage {
+  position: relative; /* 배경 위 */
   display: flex;
   flex-direction: column;
   align-items: center;
