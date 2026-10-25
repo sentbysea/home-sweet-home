@@ -6,6 +6,7 @@ import { loopTyping } from './typing.js';
 import { runVisitSteps, showEnterHint } from './status.js';
 import { waitForEnter } from './enter.js';
 import { exitLoader } from './exit.js';
+import { startWobble } from './wobble.js';
 
 export const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,7 +26,10 @@ export async function runLoader(el, { ready, reduced = prefersReducedMotion(), t
   const typed = new Promise((r) => { firstTyped = r; });
   loopTyping(el, { ...typing, reduced, signal: stop.signal, onFirstTyped: firstTyped });
 
-  await Promise.all([typed, runVisitSteps(status, { ready, reduced, minStep })]);
+  const visited = runVisitSteps(status, { ready, reduced, minStep });
+  if (!reduced) startWobble(el, { signal: stop.signal }); // 글자를 나눈 뒤에 시작
+
+  await Promise.all([typed, visited]);
 
   await showEnterHint(status, { reduced });
   el.classList.add('is-ready');

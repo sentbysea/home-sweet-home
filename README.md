@@ -15,7 +15,7 @@ npm run dev        # node scripts/serve.mjs — 설치할 것 없음
 - 데모 도구 — http://localhost:5173/demo.html (다시 재생 · 화면 크기 · 준비 완료 시점)
 
 `?ready=ms` 로 준비 완료 시점을 늦출 수 있다(기본 1200ms).
-`?bg=spiral|dots|stripes|gingham` 로 배경 패턴을 고정한다(없으면 불러올 때마다 무작위).
+`?bg=dots|stars|paws` 로 배경 패턴(도트 · 별 · 강아지 발바닥)을 고정한다(없으면 불러올 때마다 무작위).
 
 ## 구조
 
@@ -27,10 +27,10 @@ src/loader/status.js    방문 단계(초인종 → 달려나옴 → 문) · 들
 src/loader/enter.js     화면 누르기(키보드 Enter 도 받음)
 src/loader/ready.js     준비 완료 신호(createReadySignal / demoReady)
 src/loader/exit.js      페이드 아웃 후 DOM 제거
+src/loader/wobble.js    손그림 위글 — 윤곽 4장 · 글자 기울임을 190ms 마다(필터 없음)
 src/loader/index.js     runLoader — 타이핑 + 방문 단계 + 준비 완료 → 안내 → 누르기 → 종료
 src/main.js             연결(지금은 데모 신호)
 tools/wobble.mjs        윤곽 변형 4장 생성기
-tools/spiral.mjs        배경 소용돌이 경로 생성기
 ```
 
 ## 실제 준비 신호로 바꾸기
@@ -49,12 +49,14 @@ ready.resolve();
 
 ## 흐름
 
-1. 집과 글자가 위글거리고 home → sweet → home → `...` 를 타이핑한다(글자 위글은 SVG 필터 `#hsh-wobble`). 다 쓰면 잠시 머물렀다 지우고 다시 쓴다(들어갈 때까지 반복).
-2. 집 아래에 방문 단계가 차례로 뜬다 — 초인종 누르는 중 → (차우연이 · 홍지원이 중 랜덤) 달려나오는 중 → 문 열리는 중. 작은 글에도 같은 손그림 위글.
+1. 집과 글자가 위글거리고 home → sweet → home → `...` 를 타이핑한다(글자는 하나씩 살짝 기울어 흔들린다). 다 쓰면 잠시 머물렀다 지우고 다시 쓴다(들어갈 때까지 반복).
+2. 집 아래에 방문 단계가 차례로 뜬다 — 초인종 누르는 중 → (차우연이 · 홍지원이 중 랜덤) 달려나오는 중 → 문 열리는 중. 작은 글도 같은 방식으로 흔들린다.
 3. 첫 타이핑 · 세 단계 · 준비 완료가 모두 끝나면 `화면을 눌러 들어가기`(모바일·데스크톱 같은 문구).
 4. 화면을 누르면(키보드 Enter 도 됨) 서서히 사라지고 빈 흰 화면.
 
-- 윤곽: 조금씩 다른 4장을 190ms 씩 번갈아(`--hsh-boil-frame`). 집 크기·위치는 움직이지 않는다.
+- 윤곽: 조금씩 다른 4장을 190ms 씩 번갈아(`wobble.js`). 집 크기·위치는 움직이지 않는다.
+- SVG 필터는 쓰지 않는다 — iOS Safari 에서 필터 영역이 검게 깜빡였다.
+- 배경: 아이보리(`--hsh-paper`) 위에 도트 · 별 · 강아지 발바닥 중 무작위 하나.
 - 방문 단계 글은 `status.js` 의 `VISIT_STEPS`. 글을 바꾸면 한글 서브셋 폰트도 다시 받아야 한다(아래).
 - `prefers-reduced-motion: reduce` — 위글·타이핑·아이콘 모션 없이 완성 상태. 단계 글은 바뀌고 눌러서 들어간다.
 

@@ -8,16 +8,28 @@ const host = HOSTS[Math.floor(Math.random() * HOSTS.length)]; // 불러올 때�
 export const VISIT_STEPS = [
   { key: 'bell', text: '초인종 누르는 중' },
   { key: 'run', text: `${host} 달려나오는 중` },
-  { key: 'door', text: '문 열리는 중' },
+  { key: 'door', text: '문 열리는 중' },
 ];
 
 const SWAP = 220; // 글 바꿀 때 페이드(ms) — loader.css 의 .hsh-status 전환과 같다
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** 글자마다 span 으로 나눠 위글(wobble.js)이 하나씩 흔들 수 있게 한다. 띄어쓰기는 그대로. */
 function show(el, key, text) {
   el.dataset.step = key;
-  el.querySelector('.hsh-status__text').textContent = text;
+  const box = el.querySelector('.hsh-status__text');
+  box.setAttribute('aria-label', text);
+  box.replaceChildren(
+    ...[...text].map((ch) => {
+      if (ch === ' ') return document.createTextNode(' ');
+      const span = document.createElement('span');
+      span.className = 'hsh-status__char';
+      span.setAttribute('aria-hidden', 'true');
+      span.textContent = ch;
+      return span;
+    }),
+  );
 }
 
 async function swap(el, key, text, reduced) {

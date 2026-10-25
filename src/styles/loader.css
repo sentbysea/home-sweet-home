@@ -8,8 +8,7 @@
   --hsh-line: #8f9497;
   --hsh-ink: #2a2a2a;
   --hsh-note: #7d8386;
-  --hsh-pattern: #d6e8f8; /* 배경 패턴 하늘색 */
-  --hsh-boil-frame: 190ms; /* 윤곽 한 장이 보이는 시간 */
+  --hsh-paper: #fcfbf8; /* 순백이 아닌 아주 연한 아이보리 */
   --hsh-fade: 700ms;
 
   position: fixed;
@@ -17,7 +16,7 @@
   z-index: 1000;
   display: grid;
   place-items: center;
-  background: #fff;
+  background: var(--hsh-paper);
   overflow: hidden;
   opacity: 1;
   transition: opacity var(--hsh-fade) ease;
@@ -43,22 +42,14 @@
   pointer-events: none;
 }
 
-.hsh-bg pattern * {
-  fill: var(--hsh-pattern);
-}
-
-.hsh-bg__spiral {
-  fill: none;
-  stroke: var(--hsh-pattern);
-  stroke-width: 11;
-  stroke-linecap: round;
-}
+.hsh-bg__dots { fill: #d6e8f8; }
+.hsh-bg__stars { fill: #c5d8dd; }
+.hsh-bg__paws { fill: #d5def0; }
 
 .hsh-bg__fill { display: none; }
-.hsh-bg[data-bg="spiral"] .hsh-bg__fill--spiral,
 .hsh-bg[data-bg="dots"] .hsh-bg__fill--dots,
-.hsh-bg[data-bg="stripes"] .hsh-bg__fill--stripes,
-.hsh-bg[data-bg="gingham"] .hsh-bg__fill--gingham { display: inline; }
+.hsh-bg[data-bg="stars"] .hsh-bg__fill--stars,
+.hsh-bg[data-bg="paws"] .hsh-bg__fill--paws { display: inline; }
 
 .hsh-loader__stage {
   position: relative; /* 배경 위 */
@@ -83,27 +74,20 @@
   }
 }
 
-/* ---------- 윤곽 위글 — 4장을 번갈아 한 장씩 ---------- */
+/* ---------- 윤곽 위글 — 4장 중 한 장만(wobble.js 가 .is-on 을 옮긴다) ---------- */
 
 .hsh-loader__frame {
+  display: none;
   fill: var(--hsh-fill);
   stroke: var(--hsh-line);
   stroke-width: 1;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-  opacity: 0;
-  animation: hsh-boil calc(var(--hsh-boil-frame) * 4) steps(1, end) infinite;
 }
 
-.hsh-loader__frame:nth-child(1) { animation-delay: 0s; }
-.hsh-loader__frame:nth-child(2) { animation-delay: calc(var(--hsh-boil-frame) * -3); }
-.hsh-loader__frame:nth-child(3) { animation-delay: calc(var(--hsh-boil-frame) * -2); }
-.hsh-loader__frame:nth-child(4) { animation-delay: calc(var(--hsh-boil-frame) * -1); }
-
-@keyframes hsh-boil {
-  0%   { opacity: 1; }
-  25%  { opacity: 0; }
-  100% { opacity: 0; }
+.hsh-loader:not(.is-wobbling) .hsh-loader__frame:first-child,
+.hsh-loader__frame.is-on {
+  display: inline;
 }
 
 /* ---------- 글자 ---------- */
@@ -114,7 +98,6 @@
   font-weight: 400;
   fill: var(--hsh-ink);
   letter-spacing: 0;
-  filter: url(#hsh-wobble); /* 손그림 위글 — index.html 의 #hsh-wobble */
   visibility: hidden; /* JS 가 글자를 나누기 전 깜빡임 방지 */
 }
 
@@ -145,8 +128,11 @@
   line-height: 1;
   color: var(--hsh-note);
   white-space: nowrap;
-  filter: url(#hsh-wobble); /* 손그림 위글 — 집 안 글자와 같은 필터 */
   transition: opacity 220ms ease;
+}
+
+.hsh-status__char {
+  display: inline-block; /* wobble.js 가 글자마다 살짝 기울인다 */
 }
 
 .hsh-status.is-swapping {
@@ -280,7 +266,6 @@
     --hsh-fade: 200ms;
   }
 
-  .hsh-loader__frame,
   .hsh-bell,
   .hsh-ring,
   .hsh-run__body,
@@ -288,10 +273,6 @@
   .hsh-door__panel,
   .hsh-tap {
     animation: none;
-  }
-
-  .hsh-loader__frame:first-child {
-    opacity: 1;
   }
 
   .hsh-run__a {
@@ -303,12 +284,10 @@
   }
 
   .hsh-status {
-    filter: none;
     transition: none;
   }
 
   .hsh-loader__text {
-    filter: none;
     visibility: visible;
   }
 
