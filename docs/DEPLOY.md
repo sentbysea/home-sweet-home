@@ -44,6 +44,7 @@ https://xn--9g3b29an0p.me/
 - 로그아웃 상태: 평면도 · 방 창(about · notice · neighbor)이 전과 같다. 버튼을 붙였다면 글 창 목록 → 글 → 뒤로.
 - 주소: `/notice` · `/neighbor/banner` · `/category/1` · `/post/<공개 글>` 를 주소창에 바로 넣기 · 새로고침 · 뒤로/앞으로 · × → `/`.
   없는 주소(`/nope`)는 홈. `/admin/` 은 관리자 그대로.
+  창 주소로 바로 들어오기 · 새로고침 · × 로 `/` — 로딩 화면이 한 번도 비치지 않는다(PC · 휴대폰). `/` 로 들어오면 로딩 → 집 누르기.
 - 이웃 방(`/neighbor`)에서 edit → Google 로그인 → `/neighbor` 로 돌아와 고치기 모드.
 - `https://xn--9g3b29an0p.me/admin/` → Google 로그인 → **바이브.me 로 돌아와** 관리 화면(주인 계정).
   다른 Google 계정이면 "사이트 주인 계정으로만" 이 떠야 한다.

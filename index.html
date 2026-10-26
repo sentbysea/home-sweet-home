@@ -14,6 +14,13 @@
       try { state = JSON.parse(sessionStorage.getItem("hsh:route-state")); sessionStorage.removeItem("hsh:route-state"); } catch (e) {}
       history.replaceState(state, "", route + location.hash);
     })();
+    // 창 주소(/notice · /post/13 …)로 들어왔다 — 직접 · 새로고침 · 공유 링크 · 로그인에서 보던 창으로 돌아오기.
+    // 로딩 화면 없이 그 창을 바로 연다(src/main.js). 첫 화면 전에 정해야 로딩 화면이 잠깐 비치지 않는다
+    (function () {
+      var back = false;
+      try { back = /access_token=|[?&]code=|[#&?]error=/.test(location.hash + location.search) && Boolean(sessionStorage.getItem("hsh:auth-return")); } catch (e) {}
+      if (location.pathname !== "/" || (history.state && history.state.view) || back) document.documentElement.setAttribute("data-hsh-entry", "direct");
+    })();
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#fcfbf8">

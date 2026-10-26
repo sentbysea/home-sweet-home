@@ -1,6 +1,7 @@
 // 글 · 갤러리 · 메모 창 안쪽 — 목록 → 글. 방 창(plan/room-window.js)의 스크롤 칸 안에 그린다.
 //   데이터는 hongjiwon.love 원본(data.js), 본문은 그쪽 렌더러(render.js) — 이 파일은 바이브.me 모양만 맡는다.
-//   화면 하나 = 상태 하나 { cat, look, view: 'list' | 'gallery' | 'post', folder, page, post, nav, back }.
+//   화면 하나 = 상태 하나 { cat, look, view: 'list' | 'gallery' | 'series' | 'post' | 'quote', folder, page, post, nav, back }.
+//     'series' = 이어서 읽기 — 목록(폴더) 한 칸의 글을 위에서부터 한 화면에 이어 그린다.
 //   다른 화면으로 갈 때마다 onNavigate(상태)로 창 기록을 한 칸 쌓는다 — < > · 휴대폰 뒤로 가기가 목록 ↔ 글을 오간다.
 //   모양(look): 버튼의 data-look 이 정한다. 없으면 카테고리 유형으로 — gallery → 'gallery', 나머지 → 'log'.
 //     'memo' 는 같은 목록을 짧은 쪽지처럼 그린다(데이터 · 순서 · 공개 범위는 같다).
@@ -107,6 +108,7 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
       }
       if (s.view === 'quote') await renderQuote(s, category, who, stale);
       else if (s.view === 'post') await renderPost(s, category, who, stale);
+      else if (s.view === 'series' && category.type !== 'gallery') await renderSeries(s, category, who, stale);
       else if (category.type === 'gallery') await renderGallery(s, category, who, stale);
       else await renderList(s, category, who, stale, fresh);
     } catch (e) {
@@ -127,24 +129,22 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     onTitle(category.name, trail.map((f) => f.name));
 
     const page = h('div', { class: 'hsh-ct__list' });
-    put(page, crumbs(category, trail, s));
 
     const lockedBy = tree.locked(s.folder);
     if (lockedBy) {
+      put(page, crumbRow(crumbs(category, trail, s)));
       page.append(folderGate(lockedBy, s, category));
       root.replaceChildren(page);
       return;
     }
 
-    if (folder) {
-      page.append(h('div', { class: 'hsh-ct__folder-head' },
-        h('p', { class: 'hsh-ct__kicker', text: 'FOLDER' }),
-        h('h3', { class: 'hsh-ct__folder-title', text: folder.name }),
-        h('button', { class: 'hsh-ct__link', type: 'button', text: '↑ UP', onclick: () => go({ ...s, folder: folder.parent_id ?? null, view: 'list' }) })));
-    }
-
     const subfolders = tree.visibleChildren(s.folder);
     const posts = tree.postsIn(s.folder);
+    // 위치 줄 오른쪽 — 이어서 읽기(이 칸의 글을 한 화면에) · ↑ UP
+    put(page, crumbRow(crumbs(category, trail, s),
+      posts.length > 1 && h('button', { class: 'hsh-ct__link', type: 'button', text: '이어서 읽기', onclick: () => go({ ...s, view: 'series' }) }),
+      folder && h('button', { class: 'hsh-ct__link', type: 'button', text: '↑ UP', onclick: () => go({ ...s, folder: folder.parent_id ?? null, view: 'list' }) })));
+    if (folder) page.append(h('h3', { class: 'hsh-ct__folder-title', text: folder.name }));
     if (!subfolders.length && !posts.length) {
       page.append(h('p', { class: 'hsh-ct__empty', text: s.folder ? '이 폴더는 비어 있어요.' : '아직 기록이 없어요.' }));
       root.replaceChildren(page);
@@ -181,6 +181,13 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     onResize();
   }
 
+  /** 위치(카테고리 › 폴더)와 같은 줄 오른쪽에 버튼들 — 둘 다 없으면 null */
+  function crumbRow(bar, ...tools) {
+    const kept = tools.filter(Boolean);
+    if (!bar && !kept.length) return null;
+    return h('div', { class: 'hsh-ct__crumb-row' }, bar || h('span'), kept.length > 0 && h('span', { class: 'hsh-ct__crumb-tools' }, kept));
+  }
+
   function crumbs(category, trail, s) {
     if (!trail.length) return null;
     const bar = h('nav', { class: 'hsh-ct__crumbs', 'aria-label': '위치' });
@@ -194,7 +201,7 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     return bar;
   }
 
-  function gate({ label, onSubmit }) {
+  function gate({ label, onSubmit, focus = true }) {
     const input = h('input', { class: 'hsh-ct__input', type: 'password', autocomplete: 'off', required: true, 'aria-label': '비밀번호' });
     const msg = h('p', { class: 'hsh-ct__gate-msg', role: 'alert' });
     const btn = h('button', { class: 'hsh-ct__btn', type: 'submit', text: '열기' });
@@ -212,7 +219,7 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
       btn.disabled = false;
       if (!ok) { msg.textContent = '비밀번호가 일치하지 않습니다.'; input.select(); }
     });
-    requestAnimationFrame(() => input.focus({ preventScroll: true }));
+    if (focus) requestAnimationFrame(() => input.focus({ preventScroll: true }));
     return form;
   }
 
@@ -305,16 +312,15 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     }
 
     const backState = s.back || (category.type === 'gallery' ? { view: 'gallery', page: 1 } : { view: 'list', folder: post.folder_id ?? null });
-    const backLabel = backState.view === 'list' && folder && Number(backState.folder) === Number(folder.id) ? folder.name : category.name;
+    const backLabel = backState.view === 'series' ? '이어서 읽기'
+      : backState.view === 'list' && folder && Number(backState.folder) === Number(folder.id) ? folder.name : category.name;
 
     const title = h('h3', { class: 'hsh-ct__post-title' });
     format.title(title, post.visibility, post.title);
     const down = h('button', { class: 'hsh-ct__scale-btn', type: 'button', 'aria-label': '글자 작게', text: '−', onclick: () => stepFontScale(-1) });
     const up = h('button', { class: 'hsh-ct__scale-btn', type: 'button', 'aria-label': '글자 크게', text: '+', onclick: () => stepFontScale(1) });
-    // 주인이 누르면 방문자 기본 크기로 저장된다(그쪽 posts-reader-scale.js) — 같은 값이라 두 사이트에 같이
-    const scale = h('span', { class: 'hsh-ct__scale', hidden: true },
-      who.owner && h('span', { class: 'hsh-ct__scope', text: '기본값 · 두 사이트', title: '주인이 바꾸면 hongjiwon.love · 바이브.me 방문자의 기본 글자 크기가 같이 바뀌어요' }),
-      down, up);
+    // 누구에게나 보인다. 주인이 누르면 방문자 기본 크기(기기 종류별)로 저장되고, 방문자가 누르면 그 브라우저에만(그쪽 posts-reader-scale.js)
+    const scale = h('span', { class: 'hsh-ct__scale', hidden: true }, down, up);
     const content = h('div', { class: 'post-detail-content' });
     const wrap = h('div', { class: 'post-detail-content-wrap' }, content);
     const sheet = h('div', { class: 'hsh-ct__sheet' }, wrap);
@@ -328,7 +334,7 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
         title,
         h('p', { class: 'hsh-ct__post-meta' },
           h('time', { dateTime: post.created_at, text: format.date(post.created_at) }),
-          h('span', { class: 'hsh-ct__tools' }, scale, quoteBtn))),
+          h('span', { class: 'hsh-ct__tools' }, quoteBtn, scale))),
       sheet,
       postNav(s, post));
     if (who.owner) {
@@ -381,6 +387,85 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     await draw(text);
   }
 
+  // ---------- 이어서 읽기 ----------
+  //   목록 한 칸(폴더 · 카테고리 맨 위)의 글을 목록 순서대로 이어 그린다. 제목을 누르면 그 글 하나로.
+  //   비밀글은 방문자에게 그 자리에 비밀번호 칸(맞히면 그 자리에 본문). 글자 크기 ± 는 글 하나 화면에서만.
+
+  async function renderSeries(s, category, who, stale) {
+    const data = await treeOf(category);
+    if (stale()) return;
+    const tree = makeTree(data, who);
+    const folder = tree.find(s.folder);
+    const trail = tree.path(s.folder);
+    onTitle(category.name, [...trail.map((f) => f.name), '이어서 읽기']);
+    const lockedBy = tree.locked(s.folder);
+    if (lockedBy) {
+      root.replaceChildren(h('div', { class: 'hsh-ct__list' }, folderGate(lockedBy, s, category)));
+      return;
+    }
+    const posts = tree.postsIn(s.folder);
+    const nav = posts.map((p) => p.id);
+    const access = { postIds: nav, viewer: Boolean(who.user) };
+    const readable = (p) => who.owner || p.visibility !== 'secret';
+    // 글 행(본문 모양 · 프리셋) · 본문은 한꺼번에 받고 순서대로 그린다 — 비밀글(방문자) 본문은 비밀번호를 맞힌 뒤에
+    const [rows, texts] = await Promise.all([
+      Promise.all(posts.map((p) => fetchPost(p.id).catch(() => null))),
+      Promise.all(posts.map((p) => (readable(p) ? fetchPostContent(p.id).catch(() => null) : null))),
+    ]);
+    if (stale()) return;
+
+    const page = h('div', { class: 'hsh-ct__series' },
+      h('button', { class: 'hsh-ct__back', type: 'button', onclick: () => go({ ...s, view: 'list', post: null, nav: null, back: null }) },
+        h('span', { 'aria-hidden': 'true', text: '← ' }), folder ? folder.name : category.name));
+    const items = posts.map((p, i) => {
+      const title = h('span', {});
+      format.title(title, p.visibility, p.title);
+      const content = h('div', { class: 'post-detail-content' });
+      const wrap = h('div', { class: 'post-detail-content-wrap' }, content);
+      const sheet = h('div', { class: 'hsh-ct__sheet' }, wrap);
+      page.append(h('article', { class: 'hsh-ct__post is-series' },
+        h('header', { class: 'hsh-ct__post-head' },
+          h('h3', { class: 'hsh-ct__post-title' },
+            h('button', { class: 'hsh-ct__series-open', type: 'button', onclick: () => go({ ...s, view: 'post', post: p.id, nav, back: { view: 'series', folder: s.folder ?? null } }) }, title)),
+          h('p', { class: 'hsh-ct__post-meta' }, h('time', { dateTime: p.created_at, text: format.date(p.created_at) }))),
+        sheet));
+      return { p, row: rows[i], content, wrap, sheet };
+    });
+    if (!posts.length) page.append(h('p', { class: 'hsh-ct__empty', text: s.folder ? '이 폴더는 비어 있어요.' : '아직 기록이 없어요.' }));
+    root.replaceChildren(page);
+    onResize();
+
+    // 그쪽 렌더러는 글 하나 자리(전역)를 본다 — 글마다 그 자리를 이 글로 옮겨 놓고 그린다. ± 는 화면 밖 빈 요소
+    const draw = async ({ row, content, wrap }, text) => {
+      bindDetail({ content, wrap, scale: h('span'), down: h('button'), up: h('button') });
+      await renderPostBody(content, { contentType: row.content_type, text, presetId: row.quote_preset_id, ownerId: row.user_id, access });
+      (content.shadowRoot || content).querySelectorAll('img').forEach((img) => img.addEventListener('load', onResize, { once: true }));
+      onResize();
+    };
+    for (const [i, item] of items.entries()) {
+      if (stale()) return;
+      if (!readable(item.p) && item.row) {
+        item.wrap.hidden = true;
+        item.sheet.append(gate({
+          label: '비밀글입니다. 비밀번호를 입력해 주세요.',
+          focus: false,
+          onSubmit: async (pw) => {
+            const res = await unlockSecretPost(item.p.id, pw);
+            if (!res) return false;
+            if (res.galleryToken) rememberGalleryToken(item.p.id, res.galleryToken);
+            item.sheet.querySelector('.hsh-ct__gate')?.remove();
+            item.wrap.hidden = false;
+            await draw(item, res.content);
+            return true;
+          },
+        }));
+        continue;
+      }
+      if (texts[i] == null || !item.row) { item.wrap.replaceWith(h('p', { class: 'hsh-ct__empty', text: '이 글은 불러오지 못했어요.' })); continue; }
+      await draw(item, texts[i]);
+    }
+  }
+
   // ---------- Quote(주인) ----------
 
   async function renderQuote(s, category, who, stale) {
@@ -399,10 +484,8 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     const text = await fetchPostContent(post.id); // 주인은 비밀글 본문도 읽는다(RLS)
     if (stale()) return;
     let html = text;
-    let note = '';
     if (s.range && post.content_type !== 'html' && (await excerptRangeReady())) {
-      const part = window.getPostExcerptHTML(text, s.range.start, s.range.end);
-      if (part) { html = part; note = '고른 구간만 발췌해요. 글 전체로 바꾸려면 ← 글로 돌아가 “글 전체”를 누르세요.'; }
+      html = window.getPostExcerptHTML(text, s.range.start, s.range.end) || text;
     }
     onTitle(category.name, [post.title || '', 'quote']);
     const win = root.closest('.hsh-win');
@@ -410,7 +493,6 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     const host = h('div', { class: 'hsh-ct__quote' });
     root.replaceChildren(h('article', { class: 'hsh-ct__post is-quote' },
       h('button', { class: 'hsh-ct__back', type: 'button', onclick: back }, h('span', { 'aria-hidden': 'true', text: '← ' }), post.title || '글로'),
-      h('p', { class: 'hsh-ct__quote-hint', text: '이미지 모양은 hongjiwon.love 발췌와 같아요(Quote Preset · 이 글의 프리셋). 여기서 바꾼 정렬 · 비율 · 배경은 이번 발췌에만.' }),
       host));
     mountQuote(host, {
       contentType: post.content_type,
@@ -421,7 +503,6 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
       viewer: true,
       tint: css?.getPropertyValue('--hsh-win-tint').trim(),
       ink: css?.getPropertyValue('--hsh-win-ink').trim(),
-      note,
     }, onResize);
     onResize();
   }
@@ -456,6 +537,11 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     initial({ category, look }) {
       trees.clear(); // 다시 열면 새 목록(원본이 바뀌었을 수 있다)
       return { cat: category, look: look || null, view: 'list', folder: null, page: 1, post: null };
+    },
+    /** 무엇을 그릴지 아직 모를 때(주소로 연 글의 카테고리를 받는 중) — 창 안에 '불러오는 중'만 */
+    loading() {
+      seq++;
+      loading();
     },
     /** 기록에서 돌아온 상태 · 처음 상태를 그린다 */
     show(s) {

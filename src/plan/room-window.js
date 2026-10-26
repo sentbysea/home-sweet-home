@@ -577,6 +577,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
 
   const openWindow = ({ room, label, name, bg, fg, category, auto }, from) => {
     clearTimeout(closing);
+    const already = win.classList.contains('is-open'); // 주소로 연 글 창이 이제 카테고리를 알게 됐다 — 스티커 · 등장은 그대로
     back = from ?? null;
     current = category ? `${room}:${category}` : room; // 하트는 버튼마다
     win.dataset.room = room;
@@ -587,10 +588,11 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.style.setProperty('--hsh-win-tint', bg);
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.');
-    scatter(frame);
+    if (!already) scatter(frame);
     setPill(room, PILLS[label] ?? name);
     thumb.style.backgroundImage = label === 'notice' ? `url("${NOTICE_THUMB}")` : '';
     paintLike();
+    if (already) return;
     win.hidden = false;
     win.classList.remove('is-closing');
     void win.offsetWidth; // 다시 열 때도 등장 전환이 처음부터
@@ -645,11 +647,14 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     }
     if (r.category) {
       const detail = categoryDetail(r.category);
-      open(detail, null, { state: { cat: detail.category, look: detail.look || null, view: 'list', folder: r.folder ?? null, page: r.page || 1, post: null } });
+      open(detail, null, { state: { cat: detail.category, look: detail.look || null, view: r.read ? 'series' : 'list', folder: r.folder ?? null, page: r.page || 1, post: null } });
       return;
     }
-    // 글 — 그 글의 카테고리 창으로(글을 볼 수 없으면 창 안에 안내)
+    // 글 — 그 글의 카테고리 창으로(글을 볼 수 없으면 창 안에 안내). 어느 카테고리인지 받는 동안에도 창은 먼저 열고 안에서 '불러오는 중'
+    openWindow({ ...categoryDetail('pending'), label: '' }, null);
+    content.loading();
     const post = await fetchPost(r.post).catch(() => null);
+    if (!win.classList.contains('is-open')) return; // 받는 동안 닫았다
     // 볼 수 없는 글이어도 글 창으로 연다 — 안에서 '볼 수 없는 글'(state.cat 이 비어 있다, content/viewer.js)
     const detail = post ? categoryDetail(post.category_id) : { room: 'content', label: 'post', name: '', bg: '#cfe0fb', fg: '#8a62dc', category: 'none', auto: true };
     const state = { cat: post ? detail.category : '', look: detail.look || null, view: 'post', post: r.post, nav: null, back: null };

@@ -25,6 +25,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 창 주소로 들어왔다(index.html 머리 스크립트) — 로딩 화면 없이 그 창으로. 첫 화면부터 그리지 않는다 */
+[data-hsh-entry="direct"] .hsh-loader { display: none; }
+
 .hsh-loader.is-ready .hsh-loader__house {
   cursor: pointer;
 }

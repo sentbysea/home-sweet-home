@@ -123,6 +123,8 @@ ready.catch((e) => {
 /* global setEditorContentMode, setRichEditorContent, postEditorTitle, postEditorHtmlContent, postEditorPresetSelect,
    prepareEditorUI, applyPostPresetById, loadPostPresetOptions, openEditorPreview, updateEditorPreview */
 
+let presetPick = null; // 맨 위 preset 드롭다운(presetRow)
+
 /**
  * 글 창이 부른다(같은 출처 iframe — contentWindow.hshQuote.open)
  * @param {{ contentType: string, html: string, title: string, presetId: number|null, postId: number, viewer: boolean }} post
@@ -134,7 +136,6 @@ async function open(post) {
   // 조작 칸 색 = 글 창을 연 버튼 색(quote.css 의 --hsh-q-tint · --hsh-q-ink)
   if (post.tint) document.body.style.setProperty('--hsh-q-tint', post.tint);
   if (post.ink) document.body.style.setProperty('--hsh-q-ink', post.ink);
-  showNote(post.note || '');
   const html = post.contentType === 'html';
   // 그쪽 에디터의 글 열기(posts-view-editor-load.js)와 같은 순서
   if (typeof loadPostPresetOptions === 'function') await loadPostPresetOptions();
@@ -149,20 +150,37 @@ async function open(post) {
   } else if (postEditorPresetSelect) {
     postEditorPresetSelect.value = '';
   }
+  presetRow(post.presetId);
   openEditorPreview();
   await updateEditorPreview();
 }
 
-/** 발췌 칸 위 한 줄 — 고른 구간 · 글 전체 */
-function showNote(text) {
-  let note = document.querySelector('.hsh-quote__range');
-  if (!note) {
-    note = document.createElement('p');
-    note.className = 'hsh-quote__range';
-    document.getElementById('postEditorPreviewSection')?.before(note);
+/**
+ * 설정 줄 맨 위 — preset 드롭다운. 목록은 그쪽 에디터의 프리셋 칸(postEditorPresetSelect)을 그대로 옮겨 온다.
+ * 고르면 그쪽 에디터가 프리셋을 고를 때와 같은 함수로 미리보기만 바꾼다 — 글에 저장하지 않는다(이번 발췌에만).
+ */
+function presetRow(presetId) {
+  if (!postEditorPresetSelect) return;
+  if (!presetPick) {
+    const row = document.createElement('div');
+    row.className = 'post-editor-preview-subrow hsh-quote__preset';
+    const label = document.createElement('span');
+    label.className = 'post-editor-preview-subrow-label';
+    label.textContent = 'preset';
+    presetPick = document.createElement('select');
+    presetPick.className = 'post-editor-preview-select';
+    presetPick.setAttribute('aria-label', '이번 발췌의 프리셋');
+    presetPick.addEventListener('change', async () => {
+      postEditorPresetSelect.value = presetPick.value;
+      await applyPostPresetById(presetPick.value);
+    });
+    row.append(label, presetPick);
+    const first = document.getElementById('postEditorPreviewAlignRow');
+    if (first) first.before(row);
+    else document.getElementById('postEditorPreviewSection')?.prepend(row);
   }
-  note.textContent = text;
-  note.hidden = !text;
+  presetPick.replaceChildren(...[...postEditorPresetSelect.options].map((o) => new Option(o.textContent, o.value)));
+  presetPick.value = presetId ? String(presetId) : '';
 }
 
 window.hshQuote = { open, ready };

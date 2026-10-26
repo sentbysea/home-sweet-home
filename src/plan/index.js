@@ -33,10 +33,11 @@ export function loadPlan() {
 /**
  * @param {HTMLElement} el      .hsh-plan
  * @param {string} svgText      floorplan.svg
- * @param {{ reduced?: boolean }} opts
+ * @param {{ reduced?: boolean, instant?: boolean }} opts
+ *   instant  그리는 등장 없이 다 그려진 채로(창 주소로 바로 들어왔을 때 — 창 뒤에 놓일 뿐)
  * @returns {{ done: Promise<void>, replay: () => Promise<void> }}
  */
-export function mountPlan(el, svgText, { reduced = false } = {}) {
+export function mountPlan(el, svgText, { reduced = false, instant = false } = {}) {
   const card = el.querySelector('.hsh-plan__card');
   card.innerHTML = svgText;
   el.hidden = false;
@@ -63,7 +64,7 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   }
 
   const replay = () => reveal(el, { reduced });
-  return { done: replay(), replay };
+  return { done: instant ? reveal(el, { reduced: true }) : replay(), replay };
 }
 
 // 위글 — 로딩 화면처럼 4프레임을 190ms 마다(필터 없음). 다 그려진 뒤(.is-done)에만, 그리는 동안은 0프레임.
