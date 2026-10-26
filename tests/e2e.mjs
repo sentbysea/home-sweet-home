@@ -143,7 +143,9 @@ function seed() {
   const key = (u) => String(u || '').trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/[/?#]+$/, '');
   // 사이트 제목(Edge Function site-title) — 이름을 비우면 이걸로
   db.titles = { 'https://added.example/': '추가된 사이트', 'https://new-neighbor.example/home': '새 이웃 사이트' };
+  db.homeHouse = undefined; // 홍차네 집(neighbor_home) — undefined 면 아직 한 번도 고치지 않은 것(빈 표)
   db.hooks.beforeRequest = async ({ route, url }) => {
+    if (url.pathname === '/rest/v1/neighbor_home') { await reply(route, 200, db.homeHouse === undefined ? [] : [{ house: db.homeHouse }]); return true; }
     if (url.pathname !== '/functions/v1/site-title') return false;
     await reply(route, 200, { title: db.titles[url.searchParams.get('url')] || '' });
     return true;
@@ -166,6 +168,13 @@ function seed() {
       if (db.banners.some((b) => b.category_id === 4 && key(b.url) === key(url))) { await reply(route, 200, 'listed'); return true; }
       if (db.banner_requests.some((r) => r.status === 'pending' && key(r.site_url) === key(url))) { await reply(route, 200, 'pending'); return true; }
       db.banner_requests.push({ id: db.banner_requests.length + 1, site_name: nm, site_url: url, image_url: img, message: String(args.p_message || '').trim() || null, house: args.p_house ?? null, status: 'pending', created_at: new Date().toISOString() });
+      await reply(route, 200, 'ok');
+      return true;
+    }
+    if (name === 'set_home_house') {
+      if (uid !== OWNER_ID) { await reply(route, 403, { code: '42501', message: 'owner only' }); return true; }
+      if (!houseOk(args.p_house)) { await reply(route, 400, { code: '22023', message: 'house' }); return true; }
+      db.homeHouse = args.p_house ?? null;
       await reply(route, 200, 'ok');
       return true;
     }
@@ -1285,9 +1294,15 @@ async function neighborVillage(device, name) {
   const vh = await page.evaluate(() => innerHeight);
   check(`${name} — 패널이 화면 안`, sheet.x >= 0 && sheet.r <= vw && sheet.y >= 0 && sheet.b <= vh + 1, JSON.stringify(sheet));
   const tabs = await page.$$eval('.nbh-tabs[data-mode="exchange"] [role="tab"]', (b) => b.filter((x) => !x.hidden).map((x) => `${x.textContent.trim()}:${x.getAttribute('aria-selected')}`));
-  check(`${name} — 교환 탭: 교환 신청(처음) · 내 배너 — 한 번에 하나만`, tabs.join('|') === '교환 신청:true|내 배너:false' && (await page.$eval('[data-ex="mine"]', (x) => x.hidden)) && !(await page.$eval('[data-ex="apply"]', (x) => x.hidden)), tabs.join('|'));
-  await page.click('[data-ex-tab="mine"]');
-  check(`${name} — 내 배너 탭 → 내 배너만`, !(await page.$eval('[data-ex="mine"]', (x) => x.hidden)) && (await page.$eval('[data-ex="apply"]', (x) => x.hidden)));
+  check(`${name} — 우체통: 교환 신청만(내 배너는 홍차네 집으로)`, tabs.join('|') === '교환 신청:true' && !(await page.$('[data-ex-tab="mine"]')) && (await page.$eval('[data-mode="mine"]', (x) => x.hidden)) && !(await page.$eval('[data-ex="apply"]', (x) => x.hidden)), tabs.join('|'));
+  check(`${name} — 방문자에게는 받은 신청 칸 없음`, await page.$eval('.nbh-review', (r) => r.hidden));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  // 홍차네 집 → 내 배너(/neighbor/mine)
+  const hc = (await rects(page, '.nbh-center .nbh-art'))[0];
+  await page.mouse.click(hc.x + hc.w / 2, hc.y + hc.h / 2);
+  await page.waitForSelector('.nbh-panel.is-open [data-mode="mine"]:not([hidden])', { timeout: 5000 });
+  check(`${name} — 홍차네 집 → /neighbor/mine(내 배너만)`, at() === '/neighbor/mine' && (await page.textContent('.nbh-panel__title')) === '내 배너' && (await page.$eval('[data-ex="apply"]', (x) => x.hidden)), at());
   const mine = await page.evaluate(() => ({
     img: document.querySelector('.nbh-mine__preview img').getAttribute('src'),
     vals: [...document.querySelectorAll('.nbh-mine__val')].map((v) => v.textContent),
@@ -1296,7 +1311,6 @@ async function neighborVillage(device, name) {
   }));
   check(`${name} — 내 배너: 실제 이미지 · 이름 · 주소 · 이미지 주소 · 삽입 코드`, mine.img === MY_IMAGE && mine.vals.join('|') === `바이브.me|https://xn--9g3b29an0p.me|${MY_IMAGE}`
     && mine.code === `<a href="https://xn--9g3b29an0p.me" target="_blank" rel="noopener"><img src="${MY_IMAGE}" alt="바이브.me" width="200" height="40"></a>` && mine.copies.length === 4, JSON.stringify(mine));
-  check(`${name} — 방문자에게는 받은 신청 칸 없음`, await page.$eval('.nbh-review', (r) => r.hidden));
   if (!device && BROWSER === 'chromium') {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: VIBE_ORIGIN });
     const got = [];
@@ -1435,7 +1449,7 @@ async function neighborOwner() {
   await page.click('.nbh__owner [data-act="edit"]');
   await page.waitForSelector('.nbh__owner [data-act="add"]:not([hidden])', { timeout: 15000 });
   await page.waitForFunction(() => document.querySelector('.nbh__count')?.textContent === '1', null, { timeout: 10000 }).catch(() => {});
-  check('주인 — edit → 집마다 고치기 표시 · + add banner · 받은 신청 수', (await page.$$('.nbh-home__edit')).length === 3 && (await page.textContent('.nbh__count')) === '1');
+  check('주인 — edit → 집마다(홍차네 집까지) 고치기 표시 · + add banner · 받은 신청 수', (await page.$$('.nbh-home__edit')).length === 4 && (await page.textContent('.nbh__count')) === '1');
 
   await page.click('.nbh__owner [data-act="requests"]');
   await page.waitForSelector('.nbh-review:not([hidden]) .nbh-req', { timeout: 10000 });
@@ -1474,6 +1488,19 @@ async function neighborOwner() {
   await until(() => !db.banners.some((b) => b.id === 3), 8000);
   await page.waitForFunction(() => document.querySelectorAll('.nbh-home').length === 3, null, { timeout: 8000 }).catch(() => {});
   check('주인 — 내리기', !db.banners.some((b) => b.id === 3) && (await page.$$('.nbh-home')).length === 3);
+  // 홍차네 집 고치기 — edit 중 홍차네 집을 누르면 모양만(내용 탭 · 내리기 없음) → set_home_house
+  await page.waitForTimeout(400);
+  const hcr = (await rects(page, '.nbh-center .nbh-art'))[0];
+  await page.mouse.click(hcr.x + hcr.w / 2, hcr.y + hcr.h / 2);
+  await page.waitForSelector('.nbh-panel.is-open [data-mode="house"]:not([hidden])', { timeout: 5000 });
+  check('주인 — edit 중 홍차네 집 → 홍차네 집 고치기(모양만)', (await page.textContent('.nbh-panel__title')) === '홍차네 집 고치기'
+    && (await page.$eval('[data-mode="house"] [role="tablist"]', (t) => t.hidden)) && (await page.$eval('[data-house="delete"]', (b) => b.hidden)) && at() === '/neighbor');
+  await page.click(`${H} [data-key="roof"] [data-v="twin"]`);
+  await page.click('[data-house="save"]');
+  await until(() => db.homeHouse?.roof === 'twin', 8000);
+  await page.waitForFunction(() => document.querySelector('.nbh-center')?.dataset.house.includes('/twin/'), null, { timeout: 8000 }).catch(() => {});
+  check('주인 — 홍차네 집 모양 저장 · 마을에 반영', db.homeHouse?.roof === 'twin' && (await page.$eval('.nbh-center', (b) => b.dataset.house)).includes('/twin/'), JSON.stringify(db.homeHouse));
+
   // 내용 고치기 — 집 고치기 옆 탭에서 이름 · 주소 · 배너 이미지
   await page.waitForTimeout(400);
   const h1 = (await rects(page, '.nbh-home[data-i="1"] .nbh-art'))[0];

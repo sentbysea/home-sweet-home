@@ -2,6 +2,7 @@
 //   /                              홈(창 없음)
 //   /about /teatime /notice /neighbor /archive   방 버튼(data-label → ROOM_PATHS)
 //   /neighbor/banner               neighbor 우체통의 배너 교환 패널
+//   /neighbor/mine                 neighbor 홍차네 집의 내 배너
 //   /pair                          about __VE 방의 Vibe · Echo 카드(about 은 아스키 집 · 짧은 글)
 //   /category/:id                  글 · 갤러리 · 메모 목록(:id 는 카테고리 id 또는 slug — 버튼의 data-category 그대로)
 //   /category/:id/folder/:fid      폴더
@@ -39,6 +40,7 @@ const enc = encodeURIComponent;
 export function pathOf(view) {
   if (!view) return '/';
   if (view.page === 'banner') return '/neighbor/banner';
+  if (view.page === 'mine') return '/neighbor/mine';
   if (view.page === 'pair') return '/pair';
   if (view.page === 'content') {
     const s = view.state || {};
@@ -56,7 +58,7 @@ export function pathOf(view) {
 
 /**
  * 주소 → 무엇을 열지(없으면 null = 홈)
- * @returns {null | { room: string, page: 'room' | 'banner' | 'pair' } | { category: string, folder?: string, page?: number, read?: boolean } | { post: string, quote?: boolean }}
+ * @returns {null | { room: string, page: 'room' | 'banner' | 'mine' | 'pair' } | { category: string, folder?: string, page?: number, read?: boolean } | { post: string, quote?: boolean }}
  */
 export function parsePath(pathname, search = '') {
   const parts = pathname.split('/').filter(Boolean).map(decodeURIComponent);
@@ -64,7 +66,7 @@ export function parsePath(pathname, search = '') {
   const [head, a, b, c] = parts;
   const room = Object.entries(ROOM_PATHS).find(([, slug]) => slug === head)?.[0];
   if (room && parts.length === 1) return { room, page: 'room' };
-  if (room === 'neighbor' && a === 'banner' && parts.length === 2) return { room, page: 'banner' };
+  if (room === 'neighbor' && (a === 'banner' || a === 'mine') && parts.length === 2) return { room, page: a };
   if (head === 'pair' && parts.length === 1) return { room: 'about __VE', page: 'pair' };
   if (head === 'category' && a) {
     const rest = parts.slice(2);
