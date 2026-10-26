@@ -14,7 +14,7 @@
 //   · 홍차네 집 — 주인이 고친 모양(neighbor_home, 없으면 HOME_HOUSE). 누르면 내 배너(onHouse), 주인 고치기 중이면 홍차네 집 고치기.
 //   · 주인 고치기 중에는 집을 누르면 그 집 고치기(onEdit).
 
-import { houseSvg, houseKey, normalizeHouse, defaultHouse, tagTone, HOME_HOUSE, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
+import { houseSvg, houseKey, normalizeHouse, defaultHouse, tagTone, HOME_HOUSE, HOME_NAME, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
 
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -135,8 +135,8 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     home.type = 'button';
     home.className = 'nbh-center';
     home.dataset.house = houseKey(homeSpec);
-    home.setAttribute('aria-label', `홍차네 집 — ${editing ? '집 고치기' : '내 배너'}`);
-    home.innerHTML = `<span class="nbh-home__art">${hs.svg}</span><span class="nbh-center__tag nbh-label" aria-hidden="true">홍차네 집</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
+    home.setAttribute('aria-label', `${HOME_NAME} — ${editing ? '집 고치기' : '내 배너'}`);
+    home.innerHTML = `<span class="nbh-home__art">${hs.svg}</span><span class="nbh-center__tag nbh-label" aria-hidden="true">${HOME_NAME}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
     home.addEventListener('click', () => onHouse(home));
     const cbase = (center.r + 0.82) * g.rowH;
     const cx = g.left + (center.c + 0.5) * g.cw - g.cw * (g.cols === 3 ? 0.12 : 0.08);

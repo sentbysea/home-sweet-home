@@ -12,7 +12,7 @@
 
 import { MY_BANNER, uploadMyBanner, bannerCode, httpUrl, siteLabel, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, setHomeHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
 import { mountCustomizer } from './customizer.js';
-import { houseSvg, normalizeHouse, defaultHouse, randomHouse, HOME_HOUSE } from './house-art.js';
+import { houseSvg, normalizeHouse, defaultHouse, randomHouse, HOME_HOUSE, HOME_NAME } from './house-art.js';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const SENT_KEY = 'hsh:nbh-sent';
@@ -649,7 +649,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
 
   info.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!editing) return;
+    if (!editing || editing.home) return; // 홍차네 집은 모양만(내 배너는 홍차네 집 → 내 배너에서)
     const s = session();
     const b = editing.banner;
     const url = httpUrl(withScheme(info.url.value));
@@ -747,7 +747,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
       if (mode === 'add' && next !== 'add') discardUpload();
       mode = next;
       back = from;
-      title.textContent = next === 'add' ? '이웃집 짓기' : next === 'house' ? (editing.home ? '홍차네 집 고치기' : '이웃집 고치기') : next === 'mine' ? '내 배너' : '배너 교환';
+      title.textContent = next === 'add' ? '이웃집 짓기' : next === 'house' ? (editing.home ? `${HOME_NAME} 고치기` : '이웃집 고치기') : next === 'mine' ? '내 배너' : '배너 교환';
       root.querySelectorAll('[data-mode]').forEach((s) => { s.hidden = s.dataset.mode !== next || (s.hasAttribute('data-owner') && !session().owner); });
       say(addMsg, '');
       root.hidden = false;
