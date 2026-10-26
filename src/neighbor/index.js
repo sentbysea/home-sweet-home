@@ -26,7 +26,7 @@ function build() {
   root.innerHTML = `
     <div class="nbh__scroll">
       <button class="nbh__home" type="button"><span aria-hidden="true">←</span> home</button>
-      <h2 class="nbh__title" id="nbh-title">neighbor</h2>
+      <h2 class="nbh__title" id="nbh-title">Neighbor</h2>
       <div class="nbh__village" role="group" aria-label="이웃 마을 — 집을 고르면 그 집의 배너가 보여요"></div>
       <footer class="nbh__foot">
         <p class="nbh__msg" role="status" aria-live="polite" hidden></p>

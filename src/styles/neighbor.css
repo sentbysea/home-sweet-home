@@ -237,78 +237,59 @@
   left: 0;
   top: 0;
   z-index: 4;
-  width: min(272px, calc(100vw - 24px));
-  display: grid;
-  gap: 6px;
-  justify-items: center;
-  padding: 10px 10px 8px;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 1px 0 rgba(84, 88, 92, 0.18), 0 6px 18px rgba(84, 88, 92, 0.12);
+  width: min(268px, calc(100vw - 24px));
+  padding: 10px 11px 8px;
   opacity: 0;
   translate: 0 8px;
   transition: opacity 240ms ease-out, translate 240ms ease-out;
+  filter: drop-shadow(0 2px 0 rgba(84, 88, 92, 0.07)); /* 아주 옅게 — 종이가 살짝 뜬 정도 */
 }
 .nbh-pop.is-below { translate: 0 -8px; }
 .nbh-pop[hidden] { display: none; }
 .nbh-pop.is-open { opacity: 1; translate: 0 0; }
-/* 집 쪽 꼬리 */
-.nbh-pop::after {
-  content: "";
-  position: absolute;
-  left: calc(var(--tail, 50%) - 6px);
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  rotate: 45deg;
-  box-shadow: 1px 1px 0 rgba(84, 88, 92, 0.12);
-}
-.nbh-pop.is-below::after { bottom: auto; top: -6px; box-shadow: -1px -1px 0 rgba(84, 88, 92, 0.12); }
 
-.nbh-pop__banner {
+/* 손그림 말풍선 — 흰 바탕 + 집과 같은 선(village.js 가 그린다) */
+.nbh-pop__frame { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.nbh-pop__frame .nbh-ink path { stroke-width: 1.5; }
+
+/* 배너가 곧 링크 — 누르면 그 사이트(새 탭) */
+.nbh-pop__link {
   position: relative;
-  z-index: 1;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  color: var(--hsh-text);
+  text-decoration: none;
+  outline: none;
+}
+.nbh-pop__banner {
   display: grid;
   place-items: center;
   width: 100%;
   aspect-ratio: 5 / 1; /* 원본 5:1 — 이미지 전체를 보인다 */
   background: #fff;
+  transition: rotate 160ms ease-out;
 }
 .nbh-pop__banner img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .nbh-pop__alt { display: none; font-family: var(--nbh-font); font-size: 13px; color: var(--hsh-link); }
 .nbh-pop.is-broken .nbh-pop__banner img { display: none; }
 .nbh-pop.is-broken .nbh-pop__alt { display: block; }
 .nbh-pop__name {
-  position: relative;
-  z-index: 1;
-  margin: 0;
   max-width: 100%;
-  font-family: var(--nbh-font);
-  font-size: 13.5px;
-  color: var(--hsh-text);
+  padding: 0 3px;
+  font-family: var(--hsh-mono);
+  font-size: 12.5px;
+  color: var(--hsh-link);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.nbh-pop__go {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--hsh-sky);
-  font-family: var(--nbh-font);
-  font-size: 13px;
-  color: var(--hsh-text);
-  text-decoration: none;
+.nbh-pop__name::after { content: " ↗"; font-size: 11px; }
+@media (hover: hover) {
+  .nbh-pop__link:hover .nbh-pop__banner { rotate: -0.8deg; }
+  .nbh-pop__link:hover .nbh-pop__name { color: var(--hsh-text); background: linear-gradient(var(--hsh-sky), var(--hsh-sky)) 0 calc(100% - 1px) / 100% 6px no-repeat; }
 }
-.nbh-pop__go:focus-visible,
-.nbh-pop__banner:focus-visible { outline: 1.5px solid var(--nbh-ink); outline-offset: 2px; }
-/* PC(올리기)에서는 이름 아래 방문하기가 없어도 집을 누르면 간다 — 그래도 보여 둔다(키보드) */
+.nbh-pop__link:focus-visible .nbh-pop__banner { outline: 1.5px dashed var(--nbh-ink); outline-offset: 3px; }
 
 /* ---------- 우리 집 꾸미기(customizer.js) ---------- */
 

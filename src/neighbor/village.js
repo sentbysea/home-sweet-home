@@ -4,7 +4,8 @@
 //     둘레에 남는 칸 몇 곳에만 나무 · 울타리.
 //   · 집마다 다른 주기로 2~4px 둥실(CSS). 외곽선 위글은 .nbh 의 data-boil(index.js)이 돌린다.
 //   · 배너: 평소엔 숨기고, 집을 고르면 집 위로 하나만 — PC 는 올리기 · 포커스(집 → 배너로 옮겨도 그대로), 누르면 새 탭.
-//     휴대폰은 한 번 누르면 배너 · 이름 · '방문하기 ↗', 방문하기를 눌러야 이동. 바깥 · 다른 집을 누르면 닫힌다. Esc 로 닫기.
+//     휴대폰은 한 번 누르면 배너 · 이름이 뜨고, 그 배너를 눌러야 이동. 바깥 · 다른 집을 누르면 닫힌다. Esc 로 닫기.
+//     배너 말풍선은 집과 같은 손그림 외곽선(위글 변형 4장) — 그림자 없이.
 //     배너는 화면 가장자리에서 잘리지 않게 자리를 고친다(위에 자리가 없으면 아래로).
 //   · 주인 고치기 중에는 집을 누르면 그 집 고치기(onEdit).
 
@@ -69,9 +70,11 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   pop.hidden = true;
   pop.setAttribute('role', 'dialog');
   pop.innerHTML = `
-    <a class="nbh-pop__banner" target="_blank" rel="noopener noreferrer" tabindex="-1"><img alt="" decoding="async"><span class="nbh-pop__alt"></span></a>
-    <p class="nbh-pop__name"></p>
-    <a class="nbh-pop__go" target="_blank" rel="noopener noreferrer">방문하기 <span aria-hidden="true">↗</span></a>`;
+    <svg class="nbh-pop__frame" aria-hidden="true" focusable="false"></svg>
+    <a class="nbh-pop__link" target="_blank" rel="noopener noreferrer">
+      <span class="nbh-pop__banner"><img alt="" decoding="async"><span class="nbh-pop__alt"></span></span>
+      <span class="nbh-pop__name"></span>
+    </a>`;
   stage.append(town, pop);
   let items = [];
   let state = 'loading';
@@ -215,10 +218,10 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   // ---------- 배너 미리보기 ----------
 
   const popImg = pop.querySelector('img');
-  const popBanner = pop.querySelector('.nbh-pop__banner');
+  const popLink = pop.querySelector('.nbh-pop__link');
+  const popFrame = pop.querySelector('.nbh-pop__frame');
   const popAlt = pop.querySelector('.nbh-pop__alt');
   const popName = pop.querySelector('.nbh-pop__name');
-  const popGo = pop.querySelector('.nbh-pop__go');
   popImg.addEventListener('error', () => pop.classList.add('is-broken'));
   popImg.addEventListener('load', () => pop.classList.remove('is-broken'));
 
@@ -238,7 +241,22 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     pop.classList.toggle('is-below', below);
     pop.style.left = `${f(left - sr.left)}px`;
     pop.style.top = `${f(top - sr.top)}px`;
-    pop.style.setProperty('--tail', `${f(hr.left + hr.width / 2 - left)}px`);
+    drawFrame(pw, ph, Math.max(16, Math.min(pw - 16, hr.left + hr.width / 2 - left)), below);
+  };
+
+  // 손그림 말풍선 — 집 쪽으로 작은 꼬리. 선 변형 4장(.nbh 의 data-boil)
+  const drawFrame = (w, h, tx, below) => {
+    const i = 1.5;
+    const t = 8;
+    const pts = below
+      ? [[i, i], [tx - 7, i], [tx, -t], [tx + 7, i], [w - i, i], [w - i, h - i], [i, h - i]]
+      : [[i, i], [w - i, i], [w - i, h - i], [tx + 7, h - i], [tx, h + t], [tx - 7, h - i], [i, h - i]];
+    popFrame.setAttribute('viewBox', `0 ${below ? -t : 0} ${f(w)} ${f(h + t)}`);
+    popFrame.setAttribute('width', f(w));
+    popFrame.setAttribute('height', f(h + t));
+    popFrame.style.top = below ? `${-t}px` : '0';
+    popFrame.innerHTML = Array.from({ length: BOIL }, (_, v) =>
+      `<g class="nbh-v nbh-v${v} nbh-ink"><path d="${sketch(pts, { closed: true, seed: 91, v, radius: 7, amp: 0.45 })}" fill="#fff"/></g>`).join('');
   };
 
   const openPop = (i, { pin = false } = {}) => {
@@ -254,9 +272,8 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       if (it.image) popImg.src = it.image; else popImg.removeAttribute('src');
       popAlt.textContent = it.label;
       popName.textContent = it.label;
-      for (const a of [popBanner, popGo]) {
-        if (it.href) a.href = it.href; else a.removeAttribute('href');
-      }
+      if (it.href) popLink.href = it.href; else popLink.removeAttribute('href');
+      popLink.setAttribute('aria-label', `${it.label} 방문하기 — 새 탭`);
       pop.setAttribute('aria-label', `${it.label} 배너`);
       pop.hidden = false;
       pop.classList.remove('is-open');
@@ -319,9 +336,9 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     if (!b) return;
     const i = Number(b.dataset.i);
     if (editing) { onEdit(items[i], b); return; }
-    if (e.detail === 0) { // 키보드 Enter · Space — 고정해 열고 방문하기로
+    if (e.detail === 0) { // 키보드 Enter · Space — 고정해 열고 배너(링크)로
       openPop(i, { pin: true });
-      popGo.focus({ preventScroll: true });
+      popLink.focus({ preventScroll: true });
       return;
     }
     if (lastPointer === 'mouse') { visit(i); return; }
