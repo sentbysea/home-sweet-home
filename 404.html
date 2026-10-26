@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>home sweet home</title>
+  <meta name="robots" content="noindex">
+  <script>
+    // GitHub Pages 는 없는 주소(/notice · /post/13 …)에 이 문서를 준다. 홈으로 돌려보내며 주소를 실어 보내면
+    // index.html 이 그 주소로 되돌리고 그 창을 연다(src/plan/routes.js). 정말 없는 주소면 홈이 열린다.
+    // 새로고침이면 이 칸에 창 화면이 적혀 있다(history.state) — 되돌린 뒤에도 같은 칸이게 잠깐 넘긴다
+    try { if (history.state) sessionStorage.setItem("hsh:route-state", JSON.stringify(history.state)); } catch (e) {}
+    location.replace("/?route=" + encodeURIComponent(location.pathname + location.search) + location.hash);
+  </script>
+</head>
+<body></body>
+</html>

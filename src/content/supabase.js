@@ -74,6 +74,23 @@ export function consumeAuthError() {
   return why.replace(/\+/g, ' ');
 }
 
+/** 이번에 Google 로그인에서 돌아왔나(성공 #access_token · ?code / 실패 error) — 모듈을 읽는 때, 주소를 정리하기 전에 잰다 */
+export const AUTH_RETURN = /access_token=|[?&]code=|[#&?]error=/.test(location.hash + location.search);
+
+const RETURN_KEY = 'hsh:auth-return';
+
+/** 로그인하러 나가기 전 — 지금 보던 바이브.me 주소(돌아온 뒤 그 창을 다시 연다, plan/room-window.js) */
+export function rememberReturnPath() {
+  try { sessionStorage.setItem(RETURN_KEY, location.pathname + location.search); } catch { /* 홈으로 돌아온다 */ }
+}
+
+/** 적어 둔 주소를 꺼낸다(한 번만) — 이 사이트 안 경로만 */
+export function takeReturnPath() {
+  let path = null;
+  try { path = sessionStorage.getItem(RETURN_KEY); sessionStorage.removeItem(RETURN_KEY); } catch { /* 없음 */ }
+  return path && path.startsWith('/') && !path.startsWith('//') ? path : null;
+}
+
 /** 저장된 로그인이 있나(supabase-js 를 받기 전에 — 주인일 때만 미리 깨우려고) */
 export function hasSavedLogin() {
   try { return Boolean(localStorage.getItem(AUTH_KEY)); } catch { return false; }

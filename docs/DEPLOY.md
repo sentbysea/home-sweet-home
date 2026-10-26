@@ -42,6 +42,9 @@ https://xn--9g3b29an0p.me/
 
 배포 뒤 확인:
 - 로그아웃 상태: 평면도 · 방 창(about · notice · neighbor)이 전과 같다. 버튼을 붙였다면 글 창 목록 → 글 → 뒤로.
+- 주소: `/notice` · `/neighbor/banner` · `/category/1` · `/post/<공개 글>` 를 주소창에 바로 넣기 · 새로고침 · 뒤로/앞으로 · × → `/`.
+  없는 주소(`/nope`)는 홈. `/admin/` 은 관리자 그대로.
+- 이웃 방(`/neighbor`)에서 edit → Google 로그인 → `/neighbor` 로 돌아와 고치기 모드.
 - `https://xn--9g3b29an0p.me/admin/` → Google 로그인 → **바이브.me 로 돌아와** 관리 화면(주인 계정).
   다른 Google 계정이면 "사이트 주인 계정으로만" 이 떠야 한다.
 - HOME 에서 제목 저장 → 바이브.me 새로고침 → 탭 제목. hongjiwon.love 탭 제목은 그대로.

@@ -59,6 +59,28 @@ ready.resolve();
 - 방문 단계 글은 `status.js` 의 `VISIT_STEPS`. 글을 바꾸면 한글 서브셋 폰트도 다시 받아야 한다(아래).
 - `prefers-reduced-motion: reduce` — 위글·타이핑·아이콘 모션 없이 완성 상태. 단계 글은 바뀌고 눌러서 들어간다.
 
+## 주소
+
+창마다 고유 주소가 있다(`src/plan/routes.js`). 창을 열거나 창 안에서 옮겨 가면 주소만 바뀐다 — 페이지는 다시 불러오지 않고,
+집 배경 · 창 열리는 모양은 그대로다. 직접 들어오기 · 새로고침 · 뒤로/앞으로 모두 주소의 창을 연다. × · 덮개 · Esc 는 홈 `/` 로.
+
+| 주소 | 화면 |
+| --- | --- |
+| `/` | 홈(창 없음) |
+| `/about` `/teatime` `/notice` `/neighbor` `/archive` | 방 버튼 창(about __VE · teatime? · notice · neighbor · archive) |
+| `/neighbor/banner` | neighbor 의 '배너교환은 여기에서'(내 배너) |
+| `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
+| `/post/:id` · `/post/:id/quote` | 글 · Quote(주인) — hongjiwon.love 와 같은 글 주소 모양 |
+
+- 그 카테고리 버튼이 아직 평면도에 없어도 주소로 열린다(기본 색 창, 제목은 카테고리 이름). 버튼을 붙이면 그 버튼 색 · 이름.
+- 볼 수 없는 글(비공개 · 없는 글)은 창 안에 안내만 — 제목 · 내용은 오지 않는다(RLS).
+- 음악 · 조명 · 이스터에그(시계 말풍선 · D-day)에는 주소가 없다. 방명록은 아직 없는 화면이라 주소도 없다.
+- `/admin/` · `/quote.html` · 정적 파일과 겹치지 않는다. 그 밖의 주소는 홈.
+- GitHub Pages: 없는 주소에 `404.html` → `/?route=<주소>` 로 보내고 `index.html` 이 주소(와 새로고침이면 그 칸의 화면)를 되돌린다.
+  `index.html` 의 `<base href="/">` 로 상대 주소는 늘 루트 기준. 로컬 `npm run dev` 도 같은 404 처리.
+- 이웃 로그인: 복귀 주소는 허용 목록의 `/` 하나, 로그인 전에 보던 주소는 적어 두었다가(sessionStorage) 돌아온 뒤 그 창을 연다.
+  관리자는 `/admin/` 그대로.
+
 ## 글 · 갤러리 · 메모 (hongjiwon.love 연동)
 
 hongjiwon.love 와 **같은 Supabase 원본**을 그대로 읽는다(복사본 없음 — 그쪽에서 쓰고 · 고치고 · 지우면 바로 보인다).
@@ -114,7 +136,7 @@ tag('living', 'pic', '사진', 582, 726, '#fbefae', '#e8893a', -2, { category: 2
 
 ```sh
 npm run e2e                     # node tests/e2e.mjs — 이웃 web 저장소(WEB_DIR, 기본 ../web)가 있어야 한다
-npm run e2e -- --only=owner     # visitor · owner · admin · mobile
+npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile (--browser=webkit)
 ```
 
 web 저장소의 `tests/lib/harness.mjs`(Playwright · 정적 서버)와 `mock-supabase.mjs`(RLS 흉내 메모리 DB)를 쓴다 —

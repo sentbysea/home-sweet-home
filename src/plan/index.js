@@ -46,7 +46,8 @@ export function mountPlan(el, svgText, { reduced = false } = {}) {
   mountClock(el.querySelector('.hsh-clock')); // 판 밖 화면 고정 — 기울여도 그대로
   mountBubbles(el, el.querySelector('.hsh-clock'), { reduced }); // 시계 단어 → 디데이 · 말풍선
   enableStickers(el);
-  enableRoomWindow(el.parentElement, el, { reduced });
+  const rooms = enableRoomWindow(el.parentElement, el, { reduced });
+  rooms.routeFromLocation(); // 주소(/notice · /post/13 …)의 창 — 직접 들어오기 · 새로고침 · 로그인에서 돌아오기
   const hint = setupHint(el);
   fitAroundClock(el);
   thinStars(el);

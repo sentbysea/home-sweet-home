@@ -90,6 +90,8 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     loading();
     try {
       await renderReady();
+      // 주소(/post/:id)로 왔는데 그 글을 볼 수 없다(없는 글 · 비공개 · 잠긴 폴더 밖)
+      if (!s.cat) { onTitle(''); status('볼 수 없는 글이에요. 지워졌거나 공개 범위가 바뀌었을 수 있어요.'); return; }
       const category = await categoryOf(s.cat);
       if (stale()) return;
       if (!category) { onTitle(''); status('찾을 수 없는 카테고리예요.'); return; }

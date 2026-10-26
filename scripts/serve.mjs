@@ -30,7 +30,10 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
     res.end(body);
   } catch {
-    res.writeHead(404, { 'content-type': 'text/plain' }).end('not found');
+    // GitHub Pages 처럼 — 없는 주소에는 404.html(창 주소 /notice · /post/13 … 을 홈으로 돌려보낸다)
+    const page = await readFile(join(root, '404.html')).catch(() => null);
+    if (page) res.writeHead(404, { 'content-type': TYPES['.html'], 'cache-control': 'no-store' }).end(page);
+    else res.writeHead(404, { 'content-type': 'text/plain' }).end('not found');
   }
 }).listen(port, () => {
   console.log(`home sweet home  →  http://localhost:${port}/`);

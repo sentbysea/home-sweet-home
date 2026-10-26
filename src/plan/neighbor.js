@@ -5,7 +5,7 @@
 //     (이미지 파일은 user-banners 버킷 {user_id}/category-banners/{uuid}/image).
 //   클라이언트는 글 창 · 관리자와 같은 하나(content/supabase.js).
 
-import { SUPABASE_URL, SUPABASE_KEY, getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError } from '../content/supabase.js';
+import { SUPABASE_URL, SUPABASE_KEY, getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError, rememberReturnPath } from '../content/supabase.js';
 
 const CATEGORY_ID = 4; // hongjiwon.love 배너 카테고리
 const BUCKET = 'user-banners';
@@ -120,6 +120,8 @@ export function mountNeighbor(root, onResize = () => {}) {
     session = await ownerSession(client);
     if (!session.user) {
       say('Google 로그인으로 이동 중...');
+      // 돌아오는 곳은 허용 목록의 루트(/) 하나 — 보던 주소(/neighbor 등)는 적어 두었다가 돌아온 뒤 연다
+      rememberReturnPath();
       const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: HOME_REDIRECT },

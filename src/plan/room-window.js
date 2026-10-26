@@ -9,10 +9,14 @@
 //   neighbor 방의 칩은 '배너교환은 여기에서' 버튼 — 누르면 hsh:banner 이벤트, 지금은 배너 정보 자리로 바꿔 보여 준다.
 //   버튼에 data-category(hongjiwon.love 카테고리 id 또는 slug)가 있으면 그 카테고리의 글 · 갤러리 · 메모 창
 //   (content/viewer.js). 목록 → 폴더 → 글로 갈 때마다 창 기록을 한 칸씩 쌓는다 — < > · 휴대폰 뒤로 가기가 그대로 오간다.
+//   화면마다 주소가 있다(routes.js) — 직접 들어오거나 새로고침해도 그 창이 열리고, 닫으면(×) 홈(/)으로 돌아간다.
 
 import { mountAbout } from './about.js';
 import { mountNeighbor } from './neighbor.js';
 import { mountContent } from '../content/viewer.js';
+import { fetchPost } from '../content/data.js';
+import { getClient, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
+import { pathOf, parsePath, withKeep } from './routes.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const LIKE_KEY = 'hsh:liked';
@@ -335,13 +339,17 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const content = mountContent(ctBox, {
     // 창 안에서 다른 화면으로 — 지금 칸에 스크롤 위치를 적어 두고(뒤로 오면 그 자리로) 한 칸 쌓는다
     onNavigate: (state) => {
-      if (steps[at]) steps[at].state = { ...steps[at].state, scroll: scroller.scrollTop };
+      if (steps[at]) {
+        steps[at].state = { ...steps[at].state, scroll: scroller.scrollTop };
+        history.replaceState({ hshWin: at, view: steps[at] }, '', location.href);
+      }
       step({ detail: steps[at].detail, page: 'content', state });
       scroller.scrollTop = 0;
     },
     onResize: () => syncRail(),
     // 주소창: 사이트 / 방 / (카테고리) / 폴더 … / 글 제목
     onTitle: (name, trail = []) => {
+      if (win.dataset.auto && name) title.textContent = name;
       const label = title.textContent;
       const parts = [label, name && name.toLowerCase() !== label.toLowerCase() ? name : null, ...trail].filter(Boolean);
       url.textContent = `${siteHost()} / ${parts.join(' / ')}`;
@@ -472,11 +480,16 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     navFwd.disabled = at < 0 || at >= steps.length - 1;
   };
 
+  // 기록 한 칸 = 그 화면 전부(새로고침 · 다른 방을 거친 앞으로 가기에서도 그 칸만 보고 다시 그린다)
+  const urlOf = (view) => {
+    const [path, query = ''] = pathOf(view).split('?');
+    return withKeep(path, query);
+  };
   const step = (view) => {
     at += 1;
     steps.length = at;
     steps.push(view);
-    history.pushState({ hshWin: at }, '');
+    history.pushState({ hshWin: at, view }, '', urlOf(view));
     paintNav();
   };
 
@@ -505,37 +518,41 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const finishUnwind = () => {
     clearTimeout(unwindTimer);
     unwinding = false;
-    if (queued) { const [detail, from] = queued; queued = null; open(detail, from); }
+    if (queued) { const [detail, from, first] = queued; queued = null; open(detail, from, first); }
   };
 
   window.addEventListener('popstate', (e) => {
     const i = e.state?.hshWin;
+    const view = e.state?.view;
     if (unwinding) {
       if (typeof i === 'number') return; // 아직 창 기록 위
       finishUnwind();
       return;
     }
-    if (typeof i !== 'number' || !steps[i]) {
+    if (typeof i !== 'number' || !view) {
       // 창보다 앞(홈)으로 돌아왔다 — 열려 있으면 닫는다
-      if (at >= 0) { at = -1; closeWindow(); }
+      if (at >= 0 || !win.hidden) { at = -1; closeWindow(); }
       return;
     }
     at = i;
-    showStep(steps[i]);
+    steps[i] = view;
+    showStep(view);
   });
 
-  const open = (detail, from) => {
-    if (unwinding) { queued = [detail, from]; return; }
+  // first — 주소로 열 때 처음 화면(없으면 버튼의 기본: 방 · 카테고리 목록)
+  const open = (detail, from, first = null) => {
+    if (unwinding) { queued = [detail, from, first]; return; }
     steps = [];
     at = -1;
     openWindow(detail, from);
     if (detail.category) {
-      const state = content.initial(detail);
+      const state = first?.state || content.initial(detail);
       step({ detail, page: 'content', state });
       content.show(state);
       return;
     }
-    step({ detail, page: 'room' });
+    step({ detail, page: first?.page || 'room' });
+    if (first?.page === 'banner') showBanner();
   };
 
   // ×  · 덮개 · Esc — 쌓아 둔 기록을 한꺼번에 되돌리고 닫는다
@@ -550,13 +567,15 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     closeWindow();
   };
 
-  const openWindow = ({ room, label, name, bg, fg, category }, from) => {
+  const openWindow = ({ room, label, name, bg, fg, category, auto }, from) => {
     clearTimeout(closing);
     back = from ?? null;
     current = category ? `${room}:${category}` : room; // 하트는 버튼마다
     win.dataset.room = room;
     if (category) win.dataset.category = category;
     else delete win.dataset.category;
+    if (auto) win.dataset.auto = '1';
+    else delete win.dataset.auto;
     win.style.setProperty('--hsh-win-tint', bg);
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.');
@@ -596,6 +615,65 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   });
 
   trigger.addEventListener('hsh:room', (e) => open(e.detail, e.target));
+
+  // ---------- 주소로 열기(직접 들어오기 · 새로고침 · 404.html 이 돌려보낸 주소) ----------
+
+  const stickerDetail = (s) => {
+    const { room, label, bg, fg, category, look } = s.dataset;
+    return { room, label, name: s.getAttribute('aria-label'), bg, fg, category, look };
+  };
+  const findSticker = (attr, value) => [...trigger.querySelectorAll('.hsh-sticker')].find((s) => s.dataset[attr] === String(value));
+  // 그 카테고리 버튼이 아직 평면도에 없으면 기본 색 창(제목은 카테고리 이름 — onTitle)
+  const categoryDetail = (ref, alt) => {
+    const s = findSticker('category', ref) || (alt != null ? findSticker('category', alt) : null);
+    return s ? stickerDetail(s) : { room: 'content', label: '', name: '', bg: '#cfe0fb', fg: '#8a62dc', category: String(ref), auto: true };
+  };
+
+  const openRoute = async (r) => {
+    if (r.room) {
+      const s = findSticker('label', r.room);
+      if (s) open(stickerDetail(s), null, { page: r.page });
+      return;
+    }
+    if (r.category) {
+      const detail = categoryDetail(r.category);
+      open(detail, null, { state: { cat: detail.category, look: detail.look || null, view: 'list', folder: r.folder ?? null, page: r.page || 1, post: null } });
+      return;
+    }
+    // 글 — 그 글의 카테고리 창으로(글을 볼 수 없으면 창 안에 안내)
+    const post = await fetchPost(r.post).catch(() => null);
+    // 볼 수 없는 글이어도 글 창으로 연다 — 안에서 '볼 수 없는 글'(state.cat 이 비어 있다, content/viewer.js)
+    const detail = post ? categoryDetail(post.category_id) : { room: 'content', label: 'post', name: '', bg: '#cfe0fb', fg: '#8a62dc', category: 'none', auto: true };
+    const state = { cat: post ? detail.category : '', look: detail.look || null, view: 'post', post: r.post, nav: null, back: null };
+    if (r.quote) state.view = 'quote';
+    if (r.quote) state.from = { ...state, view: 'post' };
+    open(detail, null, { state });
+  };
+
+  /** 처음 한 번 — 지금 주소의 창을 연다. 홈 칸을 아래에 두어 첫 칸에서 뒤로 · × 가 홈(/)으로 간다 */
+  const routeFromLocation = async () => {
+    // 새로고침 — 이 칸에 화면이 적혀 있으면 기록은 그대로 두고 그 화면만(뒤로 가면 아까 보던 목록으로)
+    const kept = history.state;
+    if (!AUTH_RETURN && kept?.view && typeof kept.hshWin === 'number') {
+      steps = [];
+      steps[kept.hshWin] = kept.view;
+      at = kept.hshWin;
+      showStep(kept.view);
+      return;
+    }
+    let target = location.pathname + location.search;
+    const saved = takeReturnPath();
+    if (AUTH_RETURN) {
+      // Google 로그인에서 돌아왔다 — 주소의 토큰을 supabase-js 가 받은 뒤에(주소를 바꾸면 토큰을 잃는다), 로그인 전 화면으로
+      try { await (await getClient()).auth.getSession(); } catch { /* 로그인 실패여도 화면은 연다 */ }
+      if (saved) target = saved;
+    }
+    const url = new URL(target, location.origin);
+    const r = parsePath(url.pathname, url.search);
+    history.replaceState(null, '', withKeep('/'));
+    if (r) await openRoute(r);
+  };
+
   win.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });
   document.addEventListener('keydown', (e) => {
     if (win.hidden) return;
@@ -610,4 +688,6 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
   });
+
+  return { routeFromLocation };
 }

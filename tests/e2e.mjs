@@ -1,6 +1,6 @@
 // 바이브.me E2E — 실제 파일(이 저장소 + 이웃 web 저장소) · 흉내 Supabase(임시 데이터, 운영 DB 에 닿지 않는다)
 //
-//   node tests/e2e.mjs [--only=visitor|owner|admin|mobile] [--browser=webkit]   (WEB_DIR=../web 이 기본)
+//   node tests/e2e.mjs [--only=visitor|owner|admin|routing|mobile] [--browser=webkit]   (WEB_DIR=../web 이 기본)
 //
 //   · web 저장소의 tests/lib/harness.mjs(Playwright 찾기 · 정적 서버) · mock-supabase.mjs(RLS 흉내 메모리 DB)를 쓴다.
 //   · "hongjiwon.love" = web 작업 트리를 띄운 정적 서버(127.0.0.1:8789). 그쪽 함수 두 개는 실제 코드를 그대로 돌린다:
@@ -544,6 +544,136 @@ async function activeSwitch() {
   await context.close();
 }
 
+
+// ---------- 주소(창마다 고유 경로) ----------
+
+async function routing() {
+  console.log('\n[routing — 주소 · 새로고침 · 뒤로/앞으로 · 닫기]');
+  const { page, errors, context } = await open(null);
+  const at = () => {
+    const u = new URL(page.url());
+    return u.pathname + (u.searchParams.get('page') ? `?page=${u.searchParams.get('page')}` : '');
+  };
+  const winOpen = () => page.$eval('.hsh-win', (w) => !w.hidden);
+  const go = async (path) => {
+    await page.goto(`${VIBE_ORIGIN}${path}${path.includes('?') ? '&' : '?'}plan=only&${Q}`);
+    await page.waitForSelector('.hsh-plan.is-done', { timeout: 20000 });
+  };
+
+  // 방 — 직접 들어오기(GitHub Pages 처럼 404.html → /?route= → 되돌리기)
+  await go('/notice');
+  await page.waitForSelector('.hsh-win:not([hidden]) .hsh-note', { timeout: 15000 });
+  check('/notice 직접 → 공지 창(404.html 을 거쳐 주소 되돌림)', at() === '/notice' && (await page.textContent('.hsh-win__title')) === 'notice', at());
+  await page.click('.hsh-win__x');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  check('× → 홈(/) · 창 닫힘', at() === '/' && !(await winOpen()), at());
+  await page.goForward();
+  await page.waitForSelector('.hsh-win:not([hidden])', { timeout: 5000 }).catch(() => {});
+  check('앞으로 가기 → 공지 창 다시', at() === '/notice' && (await winOpen()));
+  await page.goBack();
+  await page.waitForTimeout(400);
+  check('뒤로 가기 → 홈 · 닫힘', at() === '/' && !(await winOpen()));
+
+  // 버튼으로 열기 → 주소가 같이 바뀐다(페이지는 그대로)
+  await page.evaluate(() => { window.__sameDocument = true; });
+  await page.locator('.hsh-sticker[data-label="neighbor"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('.hsh-win:not([hidden]) .hsh-nb', { timeout: 10000 });
+  check('neighbor 버튼 → /neighbor', at() === '/neighbor', at());
+  await page.click('.hsh-win__pill.is-link');
+  check('배너교환 칩 → /neighbor/banner', at() === '/neighbor/banner', at());
+  check('페이지를 다시 불러오지 않았다', await page.evaluate(() => window.__sameDocument === true));
+  await page.reload();
+  await page.waitForSelector('.hsh-win:not([hidden]) .hsh-banner:not([hidden])', { timeout: 15000 });
+  check('새로고침 → 내 배너 그대로', at() === '/neighbor/banner');
+  await page.goBack();
+  await page.waitForSelector('.hsh-win:not([hidden]) .hsh-nb:not([hidden])', { timeout: 10000 }).catch(() => {});
+  check('새로고침 뒤 뒤로 → neighbor', at() === '/neighbor' && (await winOpen()), at());
+  await page.goBack();
+  await page.waitForTimeout(400);
+  check('한 번 더 뒤로 → 홈', at() === '/' && !(await winOpen()), at());
+
+  // 글 창 — 목록 · 폴더 · 글
+  await openRoom(page, '1');
+  await page.waitForSelector('.hsh-ct__folders');
+  check('카테고리 → /category/1', at() === '/category/1', at());
+  await page.locator('.hsh-ct__folder', { hasText: 'open' }).click();
+  await page.waitForSelector('.hsh-ct__row');
+  check('폴더 → /category/1/folder/11', at() === '/category/1/folder/11', at());
+  await clickRow(page, '사진 글');
+  await bodyReady(page);
+  check('글 → /post/101', at() === '/post/101', at());
+  await page.reload();
+  await page.waitForSelector('.hsh-plan.is-done');
+  await bodyReady(page);
+  check('새로고침 → 같은 글', (await page.textContent('.post-detail-content')).includes('FIRSTPARA'));
+  await page.goBack();
+  await page.waitForSelector('.hsh-ct__row', { timeout: 10000 });
+  check('뒤로 → 폴더 목록', at() === '/category/1/folder/11', at());
+  await page.goForward();
+  await bodyReady(page);
+  check('앞으로 → 글', at() === '/post/101', at());
+  await page.click('.hsh-win__x');
+  await page.waitForTimeout(500);
+  check('글에서 × → 홈(/)', at() === '/' && !(await winOpen()), at());
+
+  await go('/post/104');
+  await bodyReady(page);
+  check('/post/104 직접 → 그 글의 카테고리 창', (await page.textContent('.hsh-ct__post-title')).includes('프리셋 지정 글') && (await page.textContent('.hsh-win__title')) === 'LOG', await page.textContent('.hsh-win__title'));
+  await page.goBack();
+  await page.waitForTimeout(400);
+  check('직접 들어온 글에서 뒤로 → 홈(사이트 밖으로 나가지 않는다)', at() === '/' && !(await winOpen()), page.url());
+  await go('/post/103');
+  await page.waitForSelector('.hsh-ct__state:not(.is-loading)', { timeout: 15000 });
+  check('/post/103(비공개) 직접 → 볼 수 없는 글', (await page.textContent('.hsh-ct')).includes('볼 수 없는 글'));
+  check('비공개 글 내용 · 제목이 새지 않는다', !(await page.content()).includes('PRIVATEBODY') && !(await page.textContent('.hsh-win')).includes('나만 보는 글'));
+  await go('/category/1/folder/10');
+  await page.waitForSelector('.hsh-ct__gate', { timeout: 15000 });
+  check('/category/1/folder/10(비밀번호 폴더) 직접 → 비밀번호 칸', true);
+  await go('/category/2?page=1');
+  await page.waitForSelector('.hsh-ct__grid', { timeout: 15000 });
+  check('/category/2 직접 → 갤러리', true);
+  await go('/category/with');
+  await page.waitForSelector('.hsh-ct__grid', { timeout: 15000 });
+  check('/category/<slug> 도 열린다', true);
+  await go('/nope/really');
+  await page.waitForTimeout(800);
+  check('없는 주소 → 홈(/), 창 없음', at() === '/' && !(await winOpen()), at());
+
+  // 시계 단어(말풍선 · D-day) 는 주소를 바꾸지 않는다
+  const before = page.url();
+  await page.locator('.hsh-clock').evaluate((c) => c.querySelectorAll('*').forEach((b) => b.dispatchEvent(new MouseEvent('click', { bubbles: true }))));
+  await page.waitForTimeout(300);
+  check('시계 · 말풍선 · D-day 는 주소 그대로', page.url() === before);
+  check('콘솔 오류 없음(routing)', errors.length === 0, errors.join(' | '));
+  await context.close();
+
+  // 이웃 로그인 — 로그인 전에 보던 주소로 돌아온다(복귀 주소 자체는 허용 목록의 /)
+  const lg = await open(USERS.owner);
+  await lg.page.goto(`${VIBE_ORIGIN}/?plan=only&${Q}`);
+  await lg.page.evaluate(() => sessionStorage.setItem('hsh:auth-return', '/neighbor'));
+  await lg.page.goto(`${VIBE_ORIGIN}/?plan=only&${Q}#access_token=token-owner.mock-session-0001&token_type=bearer&expires_in=3600`);
+  await lg.page.waitForSelector('.hsh-win:not([hidden]) .hsh-nb', { timeout: 20000 }).catch(() => {});
+  check('로그인에서 돌아오면 → 보던 /neighbor', new URL(lg.page.url()).pathname === '/neighbor' && !lg.page.url().includes('access_token'), lg.page.url());
+  await lg.context.close();
+
+  // 주인 — Quote 주소 직접 · 방문자는 안내만
+  const ow = await open(USERS.owner);
+  await ow.page.goto(`${VIBE_ORIGIN}/post/101/quote?plan=only&${Q}`);
+  await ow.page.waitForSelector('.hsh-plan.is-done');
+  const frame = await quoteFrame(ow.page);
+  check('/post/101/quote 직접(주인) → Quote 화면', (await frame.$eval('#postEditorPreviewPages', (p) => p.textContent)).includes('FIRSTPARA'));
+  await ow.page.click('.hsh-ct__post.is-quote .hsh-ct__back');
+  await bodyReady(ow.page);
+  check('Quote ← → /post/101', new URL(ow.page.url()).pathname === '/post/101');
+  await ow.context.close();
+  const vq = await open(null);
+  await vq.page.goto(`${VIBE_ORIGIN}/post/101/quote?plan=only&${Q}`);
+  await vq.page.waitForSelector('.hsh-ct__state:not(.is-loading)', { timeout: 20000 });
+  check('/post/101/quote(방문자) → 주인만 안내, Quote 화면 없음', (await vq.page.textContent('.hsh-ct')).includes('주인만') && !(await vq.page.$('.hsh-ct__quote-frame')));
+  await vq.context.close();
+}
+
 // ---------- 휴대폰 ----------
 
 async function mobile() {
@@ -576,6 +706,7 @@ try {
   if (!ONLY || ONLY === 'visitor') await visitor();
   if (!ONLY || ONLY === 'owner') await owner();
   if (!ONLY || ONLY === 'admin') { await admin(); await activeSwitch(); }
+  if (!ONLY || ONLY === 'routing') await routing();
   if (!ONLY || ONLY === 'mobile') await mobile();
 } catch (e) {
   console.error(e);
