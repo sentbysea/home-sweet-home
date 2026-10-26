@@ -298,21 +298,22 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     x.strokeRect(22, 22, c.width - 44, c.height - 44);
     x.setLineDash([]);
     x.save();
-    x.translate(c.width / 2, c.height / 2 - 52);
+    x.translate(c.width / 2, c.height / 2);
     x.rotate(Math.PI / 2);
     x.fillStyle = '#4f5357';
     x.font = '76px "Nanum Gothic Coding", ui-monospace, monospace';
-    x.textAlign = 'center';
+    x.textAlign = 'left';
     x.textBaseline = 'middle';
-    x.fillText('home sweet home', 0, 4);
-    x.restore();
-    // 글씨 끝에 빨간 집 하나(지붕 · 몸통 · 작은 문)
-    const hx = c.width / 2;
-    const hy = c.height - 118;
-    const u = 1.9; // 집 크기
-    x.lineJoin = 'round';
-    x.lineWidth = 6;
-    x.strokeStyle = INK;
+    // 글씨 바로 뒤(마지막 home 옆)에 빨간 집 — 글씨와 같이 90° 돌아 있다. 글씨 + 집을 한 덩어리로 가운데에
+    const text = 'home sweet home';
+    const u = 0.95; // 집 크기(폭 약 53px)
+    const gap = 18;
+    const houseW = 56 * u;
+    const tw = x.measureText(text).width;
+    const x0 = -(tw + gap + houseW) / 2;
+    x.fillText(text, x0, 4);
+    const hx = x0 + tw + gap + houseW / 2;
+    const hy = 2;
     x.fillStyle = '#e8574d';
     x.beginPath();
     x.moveTo(hx, hy - 30 * u);
@@ -324,11 +325,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     x.lineTo(hx - 28 * u, hy - 6 * u);
     x.closePath();
     x.fill();
-    x.stroke();
-    x.fillStyle = TONES.cloth.face;
-    x.lineWidth = 5;
-    x.fillRect(hx - 6 * u, hy + 6 * u, 12 * u, 18 * u);
-    x.strokeRect(hx - 6 * u, hy + 6 * u, 12 * u, 18 * u);
+    x.restore();
     const t = keep(new T.CanvasTexture(c));
     t.colorSpace = T.SRGBColorSpace;
     t.anisotropy = 4;
