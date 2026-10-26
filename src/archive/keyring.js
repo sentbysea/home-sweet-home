@@ -46,7 +46,7 @@ const BOIL_FRAMES = 3;
 const OBJECTS = {
   bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky', keySize: 0.68, charmFlip: true },
   diary: { key: 'roundKey', tone: 'butter', charm: 'diary', charmTone: 'lilac', charmFront: true },
-  heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'lilac' },
+  heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'lilac', keySize: 0.84 }, // tistory(1) 와 twitter(0.68) 사이
   house: { key: 'houseKey', tone: 'silver' },
 };
 const HOUSE_LOOKS = [['silver', '#cfe0fb', '#f6c6d6'], ['butter', '#dfd2f6', '#cfe0fb'], ['silver', '#fbefae', '#dfd2f6']];
@@ -55,8 +55,12 @@ const HOUSE_LOOKS = [['silver', '#cfe0fb', '#f6c6d6'], ['butter', '#dfd2f6', '#c
 
 const RING_R = 0.78;
 const CENTER_Y = -1.12; // 카메라가 보는 곳(꾸러미 가운데쯤)
-const FRONT = (60 * Math.PI) / 180; // 고른 열쇠가 미끄러져 가는 자리(고리 앞쪽 아래)
-const SPREAD = (52 * Math.PI) / 180;
+// 배치 — 고리를 거의 정면으로 보고, 매단 것들을 고리 아래 둘레에 왼쪽 → 오른쪽으로 펼친다(φ 가 클수록 왼쪽)
+//   파랑새 · twitter 열쇠 · tistory · luvlog · love 열쇠 … · 맨 오른쪽 home sweet home 이름표
+const KEY_L = 0.8; // 첫 열쇠 자리
+const KEY_R = -0.72; // 마지막 열쇠 자리
+const FAN = 0.42; // 바깥쪽 열쇠일수록 끝이 바깥으로 벌어지는 정도
+const FACE_C = 1.2; // 고리 철사에 끼운 채 돌아간 정도 — 정면에서 앞면이 살짝 비스듬히 보이게
 const LIMIT = { a: 0.75, b: 1.0, c: 1.25 }; // 진자 각도 한도(쉬는 자리에서)
 
 /** 고리 위 점(φ: 맨 아래 0, 앞쪽 +) — 고리는 YZ 평면 */
@@ -155,6 +159,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   const renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(0xffffff, 0);
+  renderer.autoClear = false; // 조각마다 따로 그린다(drawLayered)
 
   const scene = new T.Scene();
   const camera = new T.PerspectiveCamera(28, 1, 0.1, 60);
@@ -180,6 +185,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
 
   const bundle = new T.Group();
   scene.add(bundle);
+  const ringParts = []; // 고리(조각보다 먼저, 맨 뒤에 그린다)
 
   // ---------- 고리(두 바퀴 감긴 납작 고리) — 바깥에 짙은 회색 테(안팎 뒤집은 껍질, 굵기를 조금씩 흔들어) ----------
   const ringMat = toon(TONES.silver.face);
@@ -203,6 +209,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     holder.rotation.set(0, Math.PI / 2, rotZ);
     holder.position.x = x;
     bundle.add(holder);
+    ringParts.push(holder);
   };
   addTorus(RING_R, 0.03, Math.PI * 2, 0, 0);
   addTorus(RING_R - 0.01, 0.028, Math.PI * 0.5, Math.PI * 0.5, 0.062);
@@ -321,6 +328,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       piece, holder, site: o.site ?? null, kind: o.kind, follow: o.follow ?? null,
       phi: o.phi, phiT: o.phi, phi0: o.phi, phiOff: o.phiOff ?? 0, phiSel: o.phiSel ?? (o.phiOff ?? 0) * 1.6,
       a0: o.a0, aSel: o.aSel ?? 0, b0: o.b0 ?? 0, bSel: o.bSel ?? -0.34, c0: o.c0 ?? 0, size: o.size ?? 1,
+      layer: o.layer ?? 0, layerSel: o.layerSel ?? 0.08, front: o.front ?? 0, order: 0,
       a: o.a0, b: o.b0 ?? 0, c: o.c0 ?? 0, va: 0, vb: 0, vc: 0,
       sel: 0, dim: 0, mass: o.mass ?? 1,
       seed: o.seed, pa: rng(o.seed)() * 6.28, pb: rng(o.seed + 1)() * 6.28,
@@ -346,26 +354,28 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       def = SHAPES[spec.key]();
     }
     if (site.tone && TONES[site.tone]) tone = site.tone;
-    const phi = n > 1 ? SPREAD - (2 * SPREAD * i) / (n - 1) : 0; // 첫 사이트가 맨 앞
-    const side = i % 2 ? -1 : 1;
-    const a0 = side * (0.24 + 0.2 * ((i * 0.618) % 1));
-    // c0 — 고리 철사에 끼운 채 조금씩 돌아가 있어, 비스듬히 본 꾸러미에서도 열쇠 앞면이 보인다
+    const phi = n > 1 ? KEY_L + ((KEY_R - KEY_L) * i) / (n - 1) : 0;
+    const a0 = (-FAN * phi) / KEY_L; // 왼쪽 열쇠는 왼쪽으로, 오른쪽 열쇠는 오른쪽으로 벌어진다
+    // 겹치는 열쇠끼리 앞뒤로 조금씩 — 서로 뚫고 지나가 보이지 않게(b<0 은 끝이 화면 쪽으로)
+    const b0 = [0.06, -0.08, 0.1, -0.04][i % 4];
+    const layer = [0, 0.035, -0.03, 0.02][i % 4];
     const size = spec.keySize ?? 1;
     // 작게 줄인 열쇠도 선 굵기는 같게(펜을 그만큼 굵게)
     const key = addPendulum(buildPiece(def, tone, 0.075, 11 + i * 17, PEN / size), {
-      site: i, kind: 'key', phi, a0, b0: 0, c0: 0.55 + (rand() - 0.5) * 0.3, seed: 300 + i * 13, mass: size, size,
+      site: i, kind: 'key', phi, a0, b0, layer, c0: FACE_C + (rand() - 0.5) * 0.2, seed: 300 + i * 13, mass: size, size,
     });
     keys.push(key);
     if (spec.charm) {
       const piece = buildPiece(SHAPES[spec.charm](), spec.charmTone, 0.09, 101 + i * 23);
       piece.group.add(jumpRing());
+      // charmFlip(파랑새) — 열쇠 바깥 왼쪽, 맨 앞 줄로 화면 쪽에 나와 있다. 나머지는 제 열쇠 왼쪽 틈에(오른쪽 끝 이름표 · 집 열쇠 머리를 가리지 않게)
+      const off = spec.charmFlip ? 0.42 : 0.2;
       addPendulum(piece, {
-        site: i, kind: 'charm', follow: key, b0: 0.05, c0: 0.4 + (rand() - 0.5) * 0.5, seed: 500 + i * 7, mass: 0.6,
-        ...(spec.charmFlip
-          ? { phi: phi - 0.4 * side, phiOff: -0.4 * side, a0: a0 + side * 0.5, c0: 1.0 } // 반대쪽 · 앞면이 화면 쪽
-          : { phi: phi + 0.2 * side, phiOff: 0.2 * side, a0: a0 - side * 0.55 }),
-        // 고르면 — 열쇠 앞(고리 앞쪽 · 화면 쪽으로 더 흔들려 나옴) 또는 열쇠 옆으로 비켜
-        ...(spec.charmFront ? { phiSel: 0.2, aSel: -side * 0.12, bSel: -0.6 } : { aSel: -side * 0.6 }),
+        site: i, kind: 'charm', follow: key, phi: phi + off, phiOff: off, seed: 500 + i * 7, mass: 0.6,
+        a0: (-FAN * 0.6 * (phi + off)) / KEY_L, c0: FACE_C + (rand() - 0.5) * 0.2,
+        b0: spec.charmFlip ? -0.38 : -0.16, layer: spec.charmFlip ? 0.06 : 0.045, front: spec.charmFlip ? 0.35 : 0.05,
+        // 고르면 — 열쇠 앞(제 열쇠 머리 위 · 화면 쪽) 또는 열쇠 옆으로 비켜
+        ...(spec.charmFront ? { phiSel: 0.04, aSel: 0, bSel: -0.62, layerSel: 0.12 } : { phiSel: off * 1.25, aSel: a0 * 1.2, bSel: -0.5, layerSel: 0.1 }),
       });
     }
   });
@@ -386,10 +396,8 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     m.rotation.y = ry;
     labelPiece.group.add(m);
   }
-  // 늘 맨 앞(고리 앞쪽 끝)에 — 열쇠를 고르면 그 열쇠를 가리지 않게 고리 뒤쪽으로 미끄러져 비켰다가, 풀면 다시 앞으로
-  const LABEL_FRONT = 1.5;
-  const LABEL_BACK = -1.75;
-  const labelPend = addPendulum(labelPiece, { kind: 'label', phi: LABEL_FRONT, a0: 0.04, b0: -0.28, c0: 1.1, seed: 999, mass: 0.55 });
+  // 맨 오른쪽 · 맨 앞 줄 — 다른 것에 가리지 않고 아래로 곧게 늘어진다
+  addPendulum(labelPiece, { kind: 'label', phi: -1.62, a0: 0.3, b0: -0.3, c0: FACE_C + 0.05, layer: 0.07, front: 0.45, seed: 999, mass: 0.55 });
 
   // ---------- 화면 맞추기 ----------
   const fit = () => {
@@ -411,7 +419,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   ro.observe(canvas);
 
   // ---------- 끌어 돌리기 · 누르기 ----------
-  const YAW0 = -1.12; // 처음엔 비스듬히 — 고리도 열쇠도 입체로 보이게
+  const YAW0 = -1.42; // 고리를 거의 정면으로 — 매단 것들이 좌우로 펼쳐 보이고, 열쇠 앞면은 살짝 비스듬히
   const PITCH0 = 0.08;
   const st = { yaw: YAW0, pitch: PITCH0, vyaw: 0, vpitch: 0, yawT: null, drag: null, moved: false, selected: null };
   let lastVyaw = 0;
@@ -470,7 +478,8 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     const hits = ray.intersectObjects(pendulums.filter((p) => p.site != null).map((p) => p.piece.body), false);
-    if (hits.length) return hits[0].object.userData.pend.site;
+    // 화면에 맨 위로 그려진 조각이 이긴다(drawLayered 순서)
+    if (hits.length) return hits.reduce((a, h) => (h.object.userData.pend.order > a.object.userData.pend.order ? h : a)).object.userData.pend.site;
     // 가장 가까운 화면 상자(여유 22px)
     const pad = 22;
     let best = null;
@@ -515,13 +524,6 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     const next = i == null || i < 0 || i >= n ? null : i;
     if (next === st.selected) return;
     st.selected = next;
-    // 고리 위 자리 다시 나누기 — 고른 열쇠는 맨 앞, 나머지는 순서 그대로 뒤쪽으로
-    const rest = keys.filter((k) => k.site !== next);
-    if (next == null) keys.forEach((k) => { k.phiT = k.phi0; });
-    else {
-      keys[next].phiT = FRONT;
-      rest.forEach((k, j) => { k.phiT = rest.length > 1 ? FRONT - 0.45 - ((FRONT - 0.45 + SPREAD) * j) / (rest.length - 1) : -0.3; });
-    }
     if (next != null) {
       // 열쇠 앞면이 보이는 가까운 각도(조금 비스듬히)로 — 뒤를 보고 있었거나 키보드로 골랐을 때
       const face = -keys[next].c0 - 0.22;
@@ -529,7 +531,6 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       if (turn || Math.abs(wrap(face - st.yaw)) > 1.1) st.yawT = target;
       st.vyaw = 0;
     }
-    labelPend.phiT = next == null ? LABEL_FRONT : LABEL_BACK;
     onSelect(next);
   }
 
@@ -598,6 +599,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
 
       ringPoint(p.phi, tmp);
       p.holder.position.copy(tmp);
+      p.holder.position.x += p.layer + p.layerSel * p.sel; // 앞뒤 줄(고리 정면에서 화면 쪽이 +) — 고르면 앞으로
       p.holder.rotation.set(p.b, p.c, p.a, 'YXZ');
       p.piece.group.scale.setScalar(p.size * (1 + 0.12 * p.sel * (p.kind === 'key' ? 1 : 0.6)));
       // 고르지 않은 것은 조금 바랜다
@@ -616,6 +618,35 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   let boilAt = 0;
   const setBoil = (k) => pendulums.forEach((p) => p.piece.frames.forEach((f, j) => { f.visible = j === k; }));
 
+  // ---------- 그리기 — 조각을 하나씩, 먼 것부터(앞 조각이 뒤 조각을 늘 통째로 가린다) ----------
+  //   얇은 조각끼리 깊이로만 그리면 흔들리다 서로 뚫고 지나가 보인다(뒤 키링이 이름표를 뚫고 나오는 것 같은).
+  //   그래서 고리를 먼저 그리고, 조각마다 깊이를 지우고 하나씩 덧그린다 — 한 조각 안(두께 · 선 · 칠)만 깊이로.
+  //   순서 = 화면 쪽 거리 + 앞 기울임(front: 이름표 · 파랑새, 고른 열쇠와 그 키링). 뒤에서 보면 거리가 커서 뒤집힌다.
+  const viewInv = new T.Matrix4();
+  const vc = new T.Vector3();
+  const drawLayered = () => {
+    scene.updateMatrixWorld();
+    viewInv.copy(camera.matrixWorldInverse);
+    for (const p of pendulums) {
+      p.piece.group.localToWorld(vc.set(0, p.kind === 'key' ? -0.9 : -0.35, 0));
+      p.depth = vc.applyMatrix4(viewInv).z + p.front + p.sel * (p.kind === 'charm' ? 0.75 : 0.7);
+    }
+    const sorted = [...pendulums].sort((a, b) => a.depth - b.depth);
+    sorted.forEach((p, i) => { p.order = i; });
+    renderer.clear();
+    for (const p of pendulums) p.holder.visible = false;
+    renderer.render(scene, camera); // 고리
+    for (const r of ringParts) r.visible = false;
+    for (const p of sorted) {
+      p.holder.visible = true;
+      renderer.clearDepth();
+      renderer.render(scene, camera);
+      p.holder.visible = false;
+    }
+    for (const r of ringParts) r.visible = true;
+    for (const p of pendulums) p.holder.visible = true;
+  };
+
   let raf = 0;
   let last = performance.now();
   let alive = true;
@@ -629,7 +660,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     tick(dt, now / 1000);
     tick(dt, now / 1000 + dt);
     if (!reduced && now - boilAt > BOIL_MS) { boilAt = now; boil = (boil + 1) % BOIL_FRAMES; setBoil(boil); }
-    renderer.render(scene, camera);
+    drawLayered();
   };
   raf = requestAnimationFrame(loop);
 
