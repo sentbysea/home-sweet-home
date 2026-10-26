@@ -72,10 +72,36 @@ async function start() {
 
   await loadScripts([...core, ...posts].filter((p) => !SKIP.includes(p)));
   window.buildPostBodyImageUrl = bodyImageUrl; // 본문 사진 주소만 그쪽 도메인으로
+  fitStageToCanvas();
   // 그쪽에서는 글쓰기 화면으로 넘어갈 때 여는 칸들 — 여기서는 처음부터 발췌 칸만
   document.getElementById('postArea').hidden = false;
   document.getElementById('postEditor').hidden = false;
   boot.remove();
+}
+
+/* global editorPreviewPages, editorPreviewPageIndex */
+
+/**
+ * 대지 높이를 캔버스 비율에 맞춘다 — 가로로 긴 캔버스 위아래에 빈 대지가 남지 않게.
+ * 그쪽 applyEditorPreviewScale 은 대지 clientWidth · clientHeight 안에 캔버스를 맞춰 줄이므로(object-fit: contain),
+ * 그 직전에 대지 높이를 "폭에 맞춘 캔버스 높이"(최대 --hsh-q-stage)로 정해 둔다. 캔버스 · 캡처는 건드리지 않는다.
+ */
+function fitStageToCanvas() {
+  const scale = window.applyEditorPreviewScale;
+  if (typeof scale !== 'function') return;
+  window.applyEditorPreviewScale = function applyEditorPreviewScaleFitted(...args) {
+    const stage = document.getElementById('postEditorPreviewStage');
+    const page = editorPreviewPages?.[editorPreviewPageIndex] || editorPreviewPages?.[0];
+    if (stage && page?.offsetHeight) {
+      const cs = getComputedStyle(stage);
+      const frame = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+      const max = parseFloat(getComputedStyle(document.body).getPropertyValue('--hsh-q-stage')) || 520;
+      const wide = Math.min(1, stage.clientWidth / 520); // 그쪽 캔버스 폭 520 고정
+      const inner = Math.min(max - frame, Math.ceil(page.offsetHeight * wide));
+      stage.style.setProperty('height', `${Math.round(inner + frame)}px`, 'important');
+    }
+    return scale.apply(this, args);
+  };
 }
 
 function loadLocalStyle(href) {

@@ -112,14 +112,24 @@ body {
 .hsh-quote .post-editor-preview-drag-handle { display: none !important; }
 .hsh-quote .post-editor-preview-section { margin-top: 0 !important; }
 
-/* 대지 — 상자 없이 바탕만(페이지 안은 그대로 — 저장되는 이미지와 무관) */
+/* 대지(작업 영역) — 연한 회청색 바탕으로 캔버스와 나눈다. 대지는 캡처 대상(페이지) 밖이라 이미지에 안 들어간다 */
 .hsh-quote .post-editor-preview-stage {
   flex: none !important;
-  height: var(--hsh-q-stage, 520px) !important;
+  height: var(--hsh-q-stage, 520px) !important; /* 최대 — 실제 높이는 캔버스 비율에 맞춘다(studio.js) */
+  box-sizing: border-box !important;
   margin: 0 !important;
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
+  padding: 0 !important;
+  background: #eef1f5 !important;
+  /* 캔버스 둘레 여백 — 같은 색 테두리로 준다(그쪽 맞춤 계산은 clientWidth/Height = 테두리 안쪽만 쓴다) */
+  border: 14px solid #eef1f5 !important;
+  border-radius: 10px !important;
+}
+
+/* 캔버스 — 얇은 경계선 · 은은한 그림자. 그쪽이 이미 쓰는 outline(offset -1px) · box-shadow 자리에 값만 바꾼다 —
+   html2canvas 는 outline 을 그리지 않고, 바깥 그림자는 페이지 경계 밖이라 잘린다(이미지 그대로) */
+.hsh-quote .post-editor-preview-page {
+  outline-color: #cfd6df;
+  box-shadow: 0 2px 4px rgb(42 58 82 / 0.06), 0 8px 22px rgb(42 58 82 / 0.10);
 }
 
 /* copy · export — 검정 알약(방 창 이름표 · 복사 버튼과 같다) */
