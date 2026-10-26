@@ -67,11 +67,13 @@ ready.resolve();
 로딩 화면(집 누르기)은 홈 `/` 로 들어올 때만. 창 주소로 들어오거나(새로고침 · 공유 링크 · 로그인에서 보던 창으로 돌아오기)
 그 창을 닫아 `/` 로 가도 로딩 화면은 나오지 않는다 — `index.html` 머리 스크립트가 첫 화면 전에 `data-hsh-entry="direct"` 를 달아
 로딩 화면을 그리지 않고, 평면도는 다 그려진 채로 깔린다. 글을 받는 동안의 "불러오는 중" 은 창 안에만.
+창에서 새로고침한 뒤 닫으면 브라우저가 홈 칸 문서를 새로 불러오는데, 창을 열 때 홈 칸에 남겨 둔 표시(`history.state.hshHome`)로 그때도 로딩 없이.
 
 | 주소 | 화면 |
 | --- | --- |
 | `/` | 홈(창 없음) |
-| `/about` `/teatime` `/notice` `/neighbor` `/archive` | 방 버튼 창(about __VE · teatime? · notice · neighbor · archive) |
+| `/about` `/teatime` `/notice` `/neighbor` | 방 버튼 창(about __VE · teatime? · notice · neighbor) |
+| `/archive` | 열쇠꾸러미(창 대신 흰 화면 — 아래 "archive") |
 | `/neighbor/banner` | neighbor 의 '배너교환은 여기에서'(내 배너) |
 | `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
 | `/category/:id/read` · `/category/:id/folder/:fid/read` | 이어서 읽기 — 그 칸의 글을 목록 순서대로 한 화면에 |
@@ -85,6 +87,33 @@ ready.resolve();
   `index.html` 의 `<base href="/">` 로 상대 주소는 늘 루트 기준. 로컬 `npm run dev` 도 같은 404 처리.
 - 이웃 로그인: 복귀 주소는 허용 목록의 `/` 하나, 로그인 전에 보던 주소는 적어 두었다가(sessionStorage) 돌아온 뒤 그 창을 연다.
   관리자는 `/admin/` 그대로.
+
+## archive (열쇠꾸러미)
+
+홈의 archive 버튼 · `/archive` — 브라우저 창 꼴 대신 흰 화면 가운데 3D 열쇠꾸러미. 내 계정 · 사이트 주소 모음.
+
+```
+src/archive/links.js     사이트 목록 — 이름 · 주소 · 오브젝트 · 순서(여기만 고친다)
+src/archive/shapes.js    열쇠 · 키링 2D 윤곽(둥근 머리 · 하트 머리 · 집 머리 열쇠, 새 · 일기장 · 하트 자물쇠, 천 라벨)
+src/archive/keyring.js   three.js 장면 — 손그림 떨림 윤곽을 얇게 뽑은 조각, 고리에 매달린 진자, 끌어 돌리기 · 관성 · 고르기
+src/archive/index.js     화면 — ← home · 사이트 버튼 줄 · '이름 ↗' 링크 · 이름표 · 3D 못 쓸 때 목록 · 닫으면 정리
+src/styles/archive.css
+```
+
+- 사이트 더하기 · 고치기: `links.js` 의 `ARCHIVE_LINKS` 한 줄. `url` 이 비어 있으면 열쇠 · 이름은 보이되 밖으로 나가지 않는다(링크 비활성 · "준비 중").
+  지금: twitter(x.com/3luespark) · tistory(3luespark.tistory.com) · luvlog(v.luvlog.me) · love(hongjiwon.love).
+  다른 갠홈은 `object: 'house'` 줄을 더 붙이면 열쇠가 하나씩 늘어난다(색은 은색 · 버터색, 창 색은 하늘 · 연보라 · 버터를 번갈아).
+- 조작: 끌면 꾸러미가 돌고(위아래는 조금) 놓으면 관성으로 돌다 멈춘다. 열쇠마다 고리의 한 점에 매달린 진자라 따로 흔들리고,
+  각도는 한도 안이라 떨어지거나 화면 밖으로 날아가지 않는다. 열쇠 한 번 → 앞으로 나오며 이름표, 아래에 '이름 ↗'.
+  같은 열쇠를 또 누르거나 링크 → 새 탭. (고른 열쇠는 제자리에서 화면 쪽으로 나오고 커진다) 다른 열쇠 → 선택 바뀜, 빈 곳 → 풀림, 5px(손가락 10px) 넘게 끌면 누름이 아니다.
+  아래 버튼 줄로도 고른다(키보드 Tab · ← → · Enter). Esc 는 선택 풀기 → 한 번 더 누르면 홈.
+- home sweet home 가죽 이름표: 작은 고리로 큰 고리 오른쪽 끝에 걸려 아래로 늘어진다(세로 글씨, 맨 앞 줄).
+- 배치: 고리를 거의 정면으로 보고 왼쪽부터 파랑새 · twitter · tistory · luvlog · love 열쇠 · home sweet home 이름표로 펼친다.
+  조각은 먼 것부터 하나씩 통째로 덧그려(drawLayered) 흔들려도 서로 뚫고 지나가 보이지 않는다 — 이름표 · 파랑새 · 고른 열쇠가 앞.
+- 손그림: 윤곽은 짙은 회색(`#55595d`, 평면도 선보다 한 단 짙게), 굵기가 조금씩 다르고 3장이 190ms 마다 바뀐다(평면도 위글과 같은 박자).
+  색은 툰 3단 그늘뿐 — 금속 반짝임 없음. 라벨 글씨는 로딩 화면 글꼴(Nanum Gothic Coding).
+- three.js(`three@0.169.0`)는 jsDelivr 에서 archive 를 열 때만 받는다 — 홈 첫 화면 무게는 그대로. WebGL 이 없거나 못 받으면 같은 데이터로 목록.
+- 모션 줄이기: 저절로 흔들림 · 위글 · 관성 없이(손으로 돌리기 · 고르기는 그대로). archive 를 벗어나면 그리기를 멈추고 WebGL 자원 · 캔버스를 정리한다.
 
 ## 글 · 갤러리 · 메모 (hongjiwon.love 연동)
 
@@ -141,7 +170,7 @@ tag('living', 'pic', '사진', 582, 726, '#fbefae', '#e8893a', -2, { category: 2
 
 ```sh
 npm run e2e                     # node tests/e2e.mjs — 이웃 web 저장소(WEB_DIR, 기본 ../web)가 있어야 한다
-npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile · layout (--browser=webkit)
+npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile · layout · archive (--browser=webkit)
 ```
 
 web 저장소의 `tests/lib/harness.mjs`(Playwright · 정적 서버)와 `mock-supabase.mjs`(RLS 흉내 메모리 DB)를 쓴다 —

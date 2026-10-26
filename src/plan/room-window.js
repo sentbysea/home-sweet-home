@@ -10,6 +10,7 @@
 //   버튼에 data-category(hongjiwon.love 카테고리 id 또는 slug)가 있으면 그 카테고리의 글 · 갤러리 · 메모 창
 //   (content/viewer.js). 목록 → 폴더 → 글로 갈 때마다 창 기록을 한 칸씩 쌓는다 — < > · 휴대폰 뒤로 가기가 그대로 오간다.
 //   화면마다 주소가 있다(routes.js) — 직접 들어오거나 새로고침해도 그 창이 열리고, 닫으면(×) 홈(/)으로 돌아간다.
+//   archive 버튼만 브라우저 창 대신 흰 화면 가운데 열쇠꾸러미(archive/index.js) — 주소 · 뒤로/앞으로 · 닫기는 같은 길.
 
 import { mountAbout } from './about.js';
 import { mountNeighbor } from './neighbor.js';
@@ -17,6 +18,7 @@ import { mountContent } from '../content/viewer.js';
 import { fetchPost } from '../content/data.js';
 import { getClient, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
 import { pathOf, parsePath, withKeep } from './routes.js';
+import { mountArchive } from '../archive/index.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const LIKE_KEY = 'hsh:liked';
@@ -324,6 +326,7 @@ function build() {
 export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const win = build();
   host.append(win);
+  const archive = mountArchive(host, { reduced, cover: trigger });
   const frame = win.querySelector('.hsh-win__frame');
   const title = win.querySelector('.hsh-win__title');
   const url = win.querySelector('.hsh-win__url');
@@ -495,6 +498,9 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   };
   const step = (view) => {
     at += 1;
+    // 창을 처음 열 때 지금 홈 칸에 표시 — 창에서 새로고침한 뒤 × · ← home 으로 이 칸에 돌아오면 브라우저가 문서를 새로 불러오는데,
+    // 그때도 로딩 화면 없이 평면도로(index.html 머리 스크립트가 hshHome 을 본다)
+    if (at === 0 && !history.state?.view && !history.state?.hshHome) history.replaceState({ ...history.state, hshHome: true }, '', location.href);
     steps.length = at;
     steps.push(view);
     history.pushState({ hshWin: at, view }, '', urlOf(view));
@@ -577,6 +583,19 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
 
   const openWindow = ({ room, label, name, bg, fg, category, auto }, from) => {
     clearTimeout(closing);
+    // archive — 창 대신 열쇠꾸러미. ← home · Esc 는 × 와 같이 기록을 되돌리며 홈으로
+    if (label === 'archive') {
+      if (!win.hidden) {
+        content.close();
+        win.hidden = true;
+        win.classList.remove('is-open', 'is-closing');
+      }
+      back = null;
+      current = room;
+      archive.show({ from, home: close });
+      return;
+    }
+    archive.hide({ instant: true });
     const already = win.classList.contains('is-open'); // 주소로 연 글 창이 이제 카테고리를 알게 됐다 — 스티커 · 등장은 그대로
     back = from ?? null;
     current = category ? `${room}:${category}` : room; // 하트는 버튼마다
@@ -601,6 +620,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   };
 
   const closeWindow = () => {
+    archive.hide();
     if (win.hidden || win.classList.contains('is-closing')) return;
     content.close();
     win.classList.remove('is-open');
@@ -684,7 +704,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     }
     const url = new URL(target, location.origin);
     const r = parsePath(url.pathname, url.search);
-    history.replaceState(null, '', withKeep('/'));
+    history.replaceState(r || history.state?.hshHome ? { hshHome: true } : null, '', withKeep('/')); // 홈 칸 표시는 남긴다(step 참고)
     if (r) await openRoute(r);
   };
 
