@@ -26,6 +26,9 @@
 .hsh-win[data-category] .hsh-win__head { margin-bottom: 18px; }
 .hsh-win[data-category] .hsh-win__page { position: static; display: block; border: 0; border-radius: 0; overflow: visible; }
 .hsh-win[data-category] .hsh-win__scroll { min-width: 0; overflow: visible; }
+/* 글 · 발췌를 읽는 동안은 창 둘레 스티커(별 · 하트 · 클로버 …)를 치운다 — 본문 · 버튼을 가리지 않게.
+   다른 방 창을 열면(data-category 가 없으면) 그대로 나온다 */
+.hsh-win[data-category] .hsh-win__deco { display: none; }
 
 .hsh-ct {
   --hsh-ct-mono: "Nanum Gothic Coding", ui-monospace, Menlo, Consolas, monospace;

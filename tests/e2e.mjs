@@ -784,13 +784,32 @@ async function layout() {
       const doc = f.contentDocument.documentElement;
       return { border: cs.borderTopWidth, right: f.getBoundingClientRect().right, vw: innerWidth, inner: doc.scrollHeight > doc.clientHeight + 1, innerX: doc.scrollWidth > doc.clientWidth + 1 };
     });
+    const look = await frame.evaluate(() => ({
+      stage: getComputedStyle(document.querySelector('.post-editor-preview-stage')).backgroundColor,
+      shadow: getComputedStyle(document.querySelector('.post-editor-preview-page')).boxShadow,
+    }));
+    check(`${name} — 발췌 작업 영역 회청색 · 캔버스 그림자`, look.stage === 'rgb(238, 241, 245)' && look.shadow.includes("42, 58, 82"), JSON.stringify(look));
+    const gap = await frame.evaluate(() => {
+      const st = document.querySelector('.post-editor-preview-stage').getBoundingClientRect();
+      const pg = document.querySelector('.post-editor-preview-page').getBoundingClientRect();
+      return { top: Math.round(pg.top - st.top), bottom: Math.round(st.bottom - pg.bottom) };
+    });
+    check(`${name} — 캔버스 위 빈 공간 = 여백만(≤ 18px)`, gap.top <= 18 && gap.bottom <= 18 && gap.top >= 0, JSON.stringify(gap));
+    check(`${name} — 글 · 발췌 창에는 둘레 스티커 없음`, await page.$$eval('.hsh-win__deco', (d) => d.length > 0 && d.every((x) => getComputedStyle(x).display === 'none')));
     check(`${name} — 발췌 창: 둥근 테두리 없음`, q.border === '0px', JSON.stringify(q));
     check(`${name} — 발췌 창: 가로로 잘리지 않음`, q.right <= q.vw && !q.innerX, JSON.stringify(q));
     check(`${name} — 발췌 창: 중첩 스크롤 없음`, !q.inner && (await innerScrollers(page)).length === 0, JSON.stringify(q) + (await innerScrollers(page)).join(' | '));
     await page.screenshot({ path: path.join(OUT, `layout-${name}-quote.png`), fullPage: false });
     const label = (await frame.textContent('#postEditorPreviewExportSize')).trim();
     const out = await exportFirst(page, frame, `layout-${name}`);
-    check(`${name} — export 크기 = 프리셋 출력 크기`, label.startsWith(`${out.size.w}`) && label.includes(`${out.size.h}`), `${label} / ${JSON.stringify(out.size)}`);
+    const [lw, lh] = label.split('×').map((x) => parseInt(x, 10));
+    // AUTO 비율 높이는 html2canvas 가 복제본에서 다시 잰다(그쪽 주석) — 1~2px 차이는 원래 그렇다
+    check(`${name} — export 크기 = 프리셋 출력 크기`, out.size.w === lw && Math.abs(out.size.h - lh) <= 2, `${label} / ${JSON.stringify(out.size)}`);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(600);
+    await page.evaluate(() => document.querySelector('.hsh-plan').dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room: 'n', label: 'notice', name: '공지', bg: '#cfe0fb', fg: '#8a62dc' } })));
+    await page.waitForTimeout(800);
+    check(`${name} — 다른 방 창을 열면 스티커 다시`, await page.$$eval('.hsh-win__deco', (d) => d.some((x) => getComputedStyle(x).display !== 'none')));
     check(`콘솔 오류 없음(layout ${name})`, errors.length === 0, errors.join(' | '));
     await context.close();
   }
