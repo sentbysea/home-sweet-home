@@ -23,9 +23,12 @@ window.SITE_OPS_API_BASE = `${ORIGIN}/api/ops`;
 
 /** 그쪽 문서 안 loadVersionedStyles([...]) · loadVersionedScripts([...]) 목록 → 그쪽 루트 기준 경로 */
 function listedPaths(doc, fn) {
-  const code = [...doc.querySelectorAll('script:not([src])')].map((s) => s.textContent).find((c) => c.includes(`${fn}(`));
+  // 이름 앞이 글자가 아니어야 한다 — preloadVersionedScripts( 안의 loadVersionedScripts( 를 잡지 않게
+  const re = new RegExp(`(^|[^A-Za-z_$])${fn}\\(`);
+  const code = [...doc.querySelectorAll('script:not([src])')].map((s) => s.textContent).find((c) => re.test(c));
   if (!code) return [];
-  const from = code.indexOf(`${fn}(`);
+  const match = re.exec(code);
+  const from = match.index + match[0].length;
   const array = code.slice(code.indexOf('[', from), code.indexOf(']', from) + 1).replace(/\/\*[\s\S]*?\*\//g, '');
   return [...array.matchAll(/"([^"]+)"/g)].map(([, p]) => new URL(p, `${ORIGIN}/admin/`).pathname.slice(1));
 }
@@ -48,19 +51,29 @@ function trimMarkup(root) {
   for (const id of ['profileTabButton', 'bgmTabButton', 'myBannerTabButton']) root.querySelector(`#${id}`)?.setAttribute('hidden', '');
   const title = root.querySelector('#siteTitleInput');
   if (title) title.placeholder = 'home sweet home';
-  note(root.querySelector('#homeSettingsPanel'), '바이브.me 전용 값이에요 — 여기서 바꾸면 바이브.me 의 탭 제목 · 파비콘 · 커서만 바뀌고, hongjiwon.love 는 그대로예요.');
-  note(root.querySelector('#categorySettingsPanel'), '카테고리는 hongjiwon.love 와 같은 표예요 — 이름 · 순서 · 유형을 바꾸면 두 사이트에 같이 반영돼요. 평면도 버튼은 카테고리 번호(id)로 연결돼 있어 이름을 바꿔도 끊기지 않아요.');
-  note(root.querySelector('#quotePanel'), 'Quote Preset 은 hongjiwon.love 와 같은 프리셋이에요 — 저장 · 사용 중 지정이 두 사이트의 글 화면과 Quote 발췌에 같이 적용돼요.');
+  // 저장하기 전에 적용 범위가 보이게 — 저장 버튼 바로 옆에 짧게
+  const VIBE_ONLY = ['바이브.me 에만', 'hongjiwon.love 의 탭 제목 · 파비콘 · 커서는 그대로예요'];
+  const BOTH = ['두 사이트 함께', 'hongjiwon.love 와 같은 데이터 — 저장하면 두 사이트에 같이 반영돼요'];
+  for (const id of ['siteTitleSaveButton', 'faviconSaveButton', 'cursorSaveButton']) scope(root.querySelector(`#${id}`), ...VIBE_ONLY, 'is-vibe');
+  scope(root.querySelector('#categorySaveButton'), ...BOTH, 'is-both');
+  scope(root.querySelector('#quoteSaveButton'), ...BOTH, 'is-both');
+  // 사용 중(활성) 지정은 목록 버튼마다 — 목록 바로 위에 한 번
+  const list = root.querySelector('#quotePresetList');
+  if (list) list.before(chip('사용 중 지정 · 두 사이트 함께', '사용 중 프리셋은 두 사이트에서 프리셋을 따로 고르지 않은 글의 본문 · Quote 에 쓰여요', 'is-both'));
+  const dashHead = root.querySelector('#statsDashboardPanel .view-heading');
+  if (dashHead) dashHead.append(chip('hongjiwon.love 통계', '바이브.me 방문은 세지 않아요', 'is-origin'));
 }
 
-function note(panel, text) {
-  if (!panel) return;
-  const p = document.createElement('p');
-  p.className = 'hsh-admin-note';
-  p.textContent = text;
-  const head = panel.querySelector(':scope > .view-top, :scope > .settings-group-title');
-  if (head) head.after(p);
-  else panel.prepend(p);
+function chip(text, title, kind) {
+  const span = document.createElement('span');
+  span.className = `hsh-admin-scope ${kind}`;
+  span.textContent = text;
+  span.title = title;
+  return span;
+}
+
+function scope(button, text, title, kind) {
+  button?.after(chip(text, title, kind));
 }
 
 /** 대시보드 — 그쪽 글 주소 · '내 방문 제외'는 그쪽 브라우저 저장소라 여기서 바꿀 수 없다 */

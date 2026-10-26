@@ -6,7 +6,8 @@
   "description": "home sweet home — loading screen (SVG + CSS, no dependencies)",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "wobble": "node tools/wobble.mjs"
+    "wobble": "node tools/wobble.mjs",
+    "e2e": "node tests/e2e.mjs"
   },
   "engines": {
     "node": ">=18"

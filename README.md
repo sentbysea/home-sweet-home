@@ -96,11 +96,38 @@ tag('living', 'pic', '사진', 582, 726, '#fbefae', '#e8893a', -2, { category: 2
 - 목록 → 폴더 → 글로 갈 때마다 창 기록이 한 칸씩 쌓인다(< > · 휴대폰 뒤로 가기). 목록으로 돌아오면 스크롤 자리 그대로.
 - 공개 범위는 DB 가 정한다 — 비공개 글 · 나만 보기 폴더는 방문자에게 오지 않고, 비밀글 · 비밀번호 폴더는 칸에 비밀번호를 넣어야 열린다.
 - HTML 모드 글은 shadow root 안에 그린다(글 안 `<style>` 이 홈 화면에 번지지 않게) — 화면보다 넓으면 그쪽과 같은 계산으로 줄인다.
-- 글쓰기 · 고치기 · Quote 발췌 이미지 만들기는 hongjiwon.love 에서(주인에게는 글 아래 링크).
+- 글쓰기 · 고치기 · 지우기는 hongjiwon.love 에서(주인에게는 글 아래 링크).
+
+### Quote(주인만)
+
+글 머리의 `quote` → 발췌 구간 고르기 → `미리보기 →` 로 창 안에 Quote 화면이 열린다(copy · export).
+
+- 구간: `시작점` · `끝점` 을 누르고 본문에서 그 자리를 탭한다(단어 · 대사 · 지문 단위로 맞춘다). 고르지 않으면 글 전체 — 그쪽 에디터 발췌와 같다.
+  그려진 본문의 두 점 → 원본 HTML 구간은 그쪽 공용 파일 `posts/preview/posts-excerpt-range.js`(그쪽 배포 전이면 글 전체만).
+- Quote 화면 = `quote.html`(같은 출처 iframe, `src/quote/studio.js`). 그쪽 `index.html` 의 CSS · posts 스크립트 · `posts/posts` 마크업을
+  같은 판으로 깔고, 그쪽 에디터가 글을 열 때와 같은 함수(`setRichEditorContent` → `prepareEditorUI` → `applyPostPresetById` → `openEditorPreview`)를 부른다.
+  페이지 나누기 · 프리셋 · 배경 · 사진 굳히기 · html2canvas 캡처 · 파일 이름이 그쪽과 같다. 조작 칸 모양만 `src/styles/quote.css`.
+  iframe 인 까닭: 그쪽 에디터 스크립트가 선언하는 전역 이름이 글 창이 쓰는 이름과 겹친다.
+- 저장(save) · 임시저장은 부르지 않는다. HTML 모드 글은 디자인 한 장(그쪽과 같다).
+
+## 확인(E2E)
+
+```sh
+npm run e2e                     # node tests/e2e.mjs — 이웃 web 저장소(WEB_DIR, 기본 ../web)가 있어야 한다
+npm run e2e -- --only=owner     # visitor · owner · admin · mobile
+```
+
+web 저장소의 `tests/lib/harness.mjs`(Playwright · 정적 서버)와 `mock-supabase.mjs`(RLS 흉내 메모리 DB)를 쓴다 —
+**운영 DB 에 닿지 않는다.** web 작업 트리를 "hongjiwon.love" 로 띄우고 그쪽 `functions/api/post-cover.js` · `ops/[[path]].js`
+실제 코드를 돌린다. 방문자(잠금 폴더 · 비밀글 · 사진 표) · 주인(비공개 사진 · 부분 발췌 · export PNG 크기 · 사용 중 프리셋 바꾸기) ·
+관리자(주인/다른 계정/로그아웃 · Home 저장과 새로고침 · Category · Quote Preset 이 두 사이트에 반영 · Dashboard) · 휴대폰.
+Google 로그인 자체는 흉내 세션이다 — 실제 로그인은 배포 뒤에 확인한다.
 
 ### 관리자 `/admin/`
 
 SETTINGS(HOME · CATEGORY) · QUOTE PRESET · DASHBOARD. 로그인은 Google(같은 계정), 주인 계정이 아니면 화면을 닫는다.
+저장 버튼마다 옆에 적용 범위가 붙는다 — `바이브.me 에만`(HOME) · `두 사이트 함께`(CATEGORY · QUOTE PRESET 저장 · 사용 중 지정) ·
+`hongjiwon.love 통계`(DASHBOARD). 글 창의 글자 크기 ± 는 주인이 누르면 두 사이트 방문자 기본값이 된다(`기본값 · 두 사이트`).
 
 - HOME — 키 `vibe_site_title` · `vibe_site_favicon_url` · `vibe_site_cursor`(같은 `site_settings` 표, hongjiwon.love 값과 따로).
 - CATEGORY · QUOTE PRESET — hongjiwon.love 와 **같은 데이터**. 바꾸면 두 사이트에 같이 반영된다.

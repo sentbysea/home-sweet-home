@@ -497,8 +497,24 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   navBack.addEventListener('click', () => { if (at >= 0) history.back(); });
   navFwd.addEventListener('click', () => { if (at < steps.length - 1) history.forward(); });
 
+  // ×  · Esc 로 닫으며 기록을 되돌리는 중(history.go 는 비동기) — 그 popstate 가 오기 전에 연 창을 닫지 않게,
+  // 되돌리기가 끝난 뒤에 연다(느린 브라우저 · WebKit 에서 닫자마자 다른 방을 누르면 새 창이 바로 닫히던 것)
+  let unwinding = false;
+  let queued = null;
+  let unwindTimer = 0;
+  const finishUnwind = () => {
+    clearTimeout(unwindTimer);
+    unwinding = false;
+    if (queued) { const [detail, from] = queued; queued = null; open(detail, from); }
+  };
+
   window.addEventListener('popstate', (e) => {
     const i = e.state?.hshWin;
+    if (unwinding) {
+      if (typeof i === 'number') return; // 아직 창 기록 위
+      finishUnwind();
+      return;
+    }
     if (typeof i !== 'number' || !steps[i]) {
       // 창보다 앞(홈)으로 돌아왔다 — 열려 있으면 닫는다
       if (at >= 0) { at = -1; closeWindow(); }
@@ -509,6 +525,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   });
 
   const open = (detail, from) => {
+    if (unwinding) { queued = [detail, from]; return; }
     steps = [];
     at = -1;
     openWindow(detail, from);
@@ -526,6 +543,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     if (at >= 0) {
       const n = at + 1;
       at = -1;
+      unwinding = true;
+      unwindTimer = setTimeout(finishUnwind, 800); // popstate 가 끝내 오지 않아도 멈추지 않게
       history.go(-n);
     }
     closeWindow();

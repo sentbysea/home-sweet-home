@@ -49,13 +49,11 @@ export function releaseImages() {
 }
 
 /**
- * root 안의 사진(<img data-imory-image>)을 그쪽 주소로 받는다
- * @param {ParentNode} root
- * @param {{ postIds?: number[], viewer?: boolean }} access  postIds — 이 사진들이 든 글(비밀글 읽기 표를 찾는다), viewer — 로그인한 사람이 보고 있다
+ * /api/post-cover 요청에 실을 머리글 — 그쪽 쿠키(imory_cover_at · imory_gallery_* · imory_folder_*)와 같은 값.
+ * 없으면 빈 객체(공개 사진은 머리글 없이 받는다). Quote 화면(src/quote/studio.js)도 같은 값을 쓴다.
+ * @param {{ postIds?: number[], viewer?: boolean }} access
  */
-export async function hydrateBodyImages(root, access = {}) {
-  const imgs = [...root.querySelectorAll('img[data-imory-image]')].filter((img) => ID.test(img.dataset.imoryImage));
-  if (!imgs.length) return;
+export async function coverHeaders(access = {}) {
   const headers = {};
   const folders = typeof window.getFolderAccessHeaderValue === 'function' ? window.getFolderAccessHeaderValue() : '';
   const gallery = galleryHeader(access.postIds || []);
@@ -63,6 +61,18 @@ export async function hydrateBodyImages(root, access = {}) {
   if (folders) headers['X-Imory-Folder-Access'] = folders;
   if (gallery) headers['X-Imory-Gallery-Access'] = gallery;
   if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+/**
+ * root 안의 사진(<img data-imory-image>)을 그쪽 주소로 받는다
+ * @param {ParentNode} root
+ * @param {{ postIds?: number[], viewer?: boolean }} access  postIds — 이 사진들이 든 글(비밀글 읽기 표를 찾는다), viewer — 로그인한 사람이 보고 있다
+ */
+export async function hydrateBodyImages(root, access = {}) {
+  const imgs = [...root.querySelectorAll('img[data-imory-image]')].filter((img) => ID.test(img.dataset.imoryImage));
+  if (!imgs.length) return;
+  const headers = await coverHeaders(access);
 
   for (const img of imgs) {
     const url = bodyImageUrl(img.dataset.imoryImage);

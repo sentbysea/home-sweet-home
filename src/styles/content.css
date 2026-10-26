@@ -366,6 +366,69 @@
 }
 .hsh-ct__zoom img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid var(--hsh-win-line); background: #fff; }
 
+
+/* ---------- 글 도구(글자 크기 · quote) ---------- */
+
+.hsh-ct__tools { display: inline-flex; align-items: center; gap: 8px; }
+.hsh-ct__scope { margin-right: 2px; font-size: 10px; color: var(--hsh-win-note); white-space: nowrap; }
+.hsh-ct__tool {
+  height: 22px;
+  padding: 0 11px;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 999px;
+  background: var(--hsh-win-paper);
+  font-family: var(--hsh-ct-mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.hsh-ct__tool[aria-pressed="true"] { background: var(--hsh-win-tint); }
+
+/* ---------- 발췌 구간 고르기(주인) ---------- */
+
+.hsh-ct__pick {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px dashed var(--hsh-win-line);
+  border-radius: 10px;
+  background: var(--hsh-ct-soft);
+}
+.hsh-ct__pick-hint,
+.hsh-ct__pick-state { margin: 0; font-size: 12px; line-height: 1.5; color: var(--hsh-win-note); word-break: keep-all; }
+.hsh-ct__pick-state { font-family: var(--hsh-ct-mono); font-size: 11px; color: var(--hsh-win-text); overflow-wrap: anywhere; }
+.hsh-ct__pick-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.hsh-ct__pick-row .hsh-ct__btn { margin-left: auto; }
+.hsh-ct__pick-btn {
+  height: 28px;
+  padding: 0 13px;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 999px;
+  background: var(--hsh-win-paper);
+  font-size: 12px !important;
+  cursor: pointer;
+}
+.hsh-ct__pick-btn[aria-pressed="true"] { background: var(--hsh-win-tint); box-shadow: inset 0 0 0 1px var(--hsh-win-ink); }
+.hsh-ct__pick-btn:disabled { opacity: 0.4; cursor: default; }
+/* 고르는 중에는 본문을 누를 자리로 — 고른 구간은 버튼 바탕색 형광펜(본문 서식은 그대로) */
+.hsh-ct__sheet .post-detail-content.is-picking { cursor: text; }
+.hsh-ct__sheet .post-detail-content.is-picking img { cursor: text; }
+::highlight(hsh-quote-range) { background-color: color-mix(in srgb, var(--hsh-win-tint, #fbd5e3) 85%, transparent); }
+
+/* ---------- Quote 화면(iframe) ---------- */
+
+.hsh-ct__quote-hint { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: var(--hsh-win-note); word-break: keep-all; }
+.hsh-ct__quote-frame {
+  display: block;
+  width: 100%;
+  height: min(72vh, 860px);
+  height: min(72svh, 860px);
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 10px;
+  background: var(--hsh-win-paper);
+}
+
 /* ---------- 휴대폰 ---------- */
 
 @media (max-width: 600px) {
@@ -374,7 +437,9 @@
   .hsh-ct__memos { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
   .hsh-ct__folders { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
   /* 글을 읽는 동안은 창 머리(썸네일 · 제목)를 접어 본문 자리를 넓힌다 */
-  .hsh-win:has(.hsh-ct[data-view="post"]) .hsh-win__head { display: none; }
+  .hsh-win:has(.hsh-ct[data-view="post"]) .hsh-win__head,
+  .hsh-win:has(.hsh-ct[data-view="quote"]) .hsh-win__head { display: none; }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -56,3 +56,21 @@
   font-size: 12px;
   cursor: pointer;
 }
+
+/* 적용 범위 — 저장 버튼 옆 작은 알약(src/admin/shell.js) */
+.hsh-admin-scope {
+  display: inline-block;
+  margin: 4px 8px;
+  padding: 2px 9px 3px;
+  border: 1px solid #8f9497;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+  color: #3a3b3e;
+  background: #fffefb;
+}
+.hsh-admin-scope.is-vibe { background: #e4d4fb; }
+.hsh-admin-scope.is-both { background: #fbefae; }
+.hsh-admin-scope.is-origin { background: #cfe0fb; }

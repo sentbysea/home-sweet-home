@@ -12,6 +12,7 @@ import {
 } from './data.js';
 import { hydrateBodyImages, releaseImages, rememberGalleryToken } from './images.js';
 import { ORIGIN } from './remote.js';
+import { quotePicker, mountQuote, excerptRangeReady } from './quote.js';
 
 const PAGER_WINDOW = 5; // posts-view-gallery.js GALLERY_PAGER_WINDOW
 
@@ -102,7 +103,8 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
         status('배너 모음은 neighbor 방에서 볼 수 있어요.');
         return;
       }
-      if (s.view === 'post') await renderPost(s, category, who, stale);
+      if (s.view === 'quote') await renderQuote(s, category, who, stale);
+      else if (s.view === 'post') await renderPost(s, category, who, stale);
       else if (category.type === 'gallery') await renderGallery(s, category, who, stale);
       else await renderList(s, category, who, stale, fresh);
     } catch (e) {
@@ -307,10 +309,15 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     format.title(title, post.visibility, post.title);
     const down = h('button', { class: 'hsh-ct__scale-btn', type: 'button', 'aria-label': '글자 작게', text: '−', onclick: () => stepFontScale(-1) });
     const up = h('button', { class: 'hsh-ct__scale-btn', type: 'button', 'aria-label': '글자 크게', text: '+', onclick: () => stepFontScale(1) });
-    const scale = h('span', { class: 'hsh-ct__scale', hidden: true }, down, up);
+    // 주인이 누르면 방문자 기본 크기로 저장된다(그쪽 posts-reader-scale.js) — 같은 값이라 두 사이트에 같이
+    const scale = h('span', { class: 'hsh-ct__scale', hidden: true },
+      who.owner && h('span', { class: 'hsh-ct__scope', text: '기본값 · 두 사이트', title: '주인이 바꾸면 hongjiwon.love · 바이브.me 방문자의 기본 글자 크기가 같이 바뀌어요' }),
+      down, up);
     const content = h('div', { class: 'post-detail-content' });
     const wrap = h('div', { class: 'post-detail-content-wrap' }, content);
     const sheet = h('div', { class: 'hsh-ct__sheet' }, wrap);
+    // Quote — 주인만(그쪽에서도 발췌는 주인의 에디터에만 있다)
+    const quoteBtn = who.owner && h('button', { class: 'hsh-ct__tool', type: 'button', 'aria-pressed': 'false', text: 'quote' });
 
     const article = h('article', { class: 'hsh-ct__post' },
       h('button', { class: 'hsh-ct__back', type: 'button', onclick: () => go({ ...s, ...backState, post: null, nav: null, back: null }) },
@@ -319,11 +326,11 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
         title,
         h('p', { class: 'hsh-ct__post-meta' },
           h('time', { dateTime: post.created_at, text: format.date(post.created_at) }),
-          scale)),
+          h('span', { class: 'hsh-ct__tools' }, scale, quoteBtn))),
       sheet,
       postNav(s, post));
     if (who.owner) {
-      // 글쓰기 · 고치기 · 지우기는 hongjiwon.love 에서(에디터 · Quote 발췌는 그쪽에만 있다)
+      // 글쓰기 · 고치기 · 지우기는 hongjiwon.love 에서
       article.append(h('a', { class: 'hsh-ct__owner', href: `${ORIGIN}/post/${post.id}`, target: '_blank', rel: 'noopener', text: 'hongjiwon.love 에서 고치기 ↗' }));
     }
     root.replaceChildren(article);
@@ -331,7 +338,19 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     sheet.addEventListener('click', zoomImage);
 
     const access = { postIds: [post.id], viewer: Boolean(who.user) };
+    let picker = null;
+    const toQuote = (range) => go({ ...s, view: 'quote', range, from: { ...s } });
     const draw = async (text) => {
+      if (quoteBtn) {
+        quoteBtn.onclick = () => {
+          if (post.content_type === 'html') { toQuote(null); return; } // HTML 글은 디자인 한 장(그쪽과 같다)
+          if (picker) { picker.dispose(); picker.bar.remove(); picker = null; quoteBtn.setAttribute('aria-pressed', 'false'); onResize(); return; }
+          picker = quotePicker({ content, text, h, onGo: toQuote, onResize });
+          sheet.before(picker.bar);
+          quoteBtn.setAttribute('aria-pressed', 'true');
+          excerptRangeReady();
+        };
+      }
       await renderPostBody(content, { contentType: post.content_type, text, presetId: post.quote_preset_id, ownerId: post.user_id, access });
       (content.shadowRoot || content).querySelectorAll('img').forEach((img) => img.addEventListener('load', onResize, { once: true }));
       onResize();
@@ -358,6 +377,51 @@ export function mountContent(root, { onNavigate = () => {}, onResize = () => {},
     const text = await fetchPostContent(post.id);
     if (stale()) return;
     await draw(text);
+  }
+
+  // ---------- Quote(주인) ----------
+
+  async function renderQuote(s, category, who, stale) {
+    const back = () => go({ ...(s.from || { ...s, view: 'post' }), view: 'post' });
+    if (!who.owner) {
+      onTitle(category.name);
+      status('Quote 는 사이트 주인만 만들 수 있어요.');
+      return;
+    }
+    const post = await fetchPost(s.post);
+    if (stale()) return;
+    if (!post || Number(post.category_id) !== Number(category.id)) {
+      status('볼 수 없는 글이에요.');
+      return;
+    }
+    const text = await fetchPostContent(post.id); // 주인은 비밀글 본문도 읽는다(RLS)
+    if (stale()) return;
+    let html = text;
+    let note = '';
+    if (s.range && post.content_type !== 'html' && (await excerptRangeReady())) {
+      const part = window.getPostExcerptHTML(text, s.range.start, s.range.end);
+      if (part) { html = part; note = '고른 구간만 발췌해요. 글 전체로 바꾸려면 ← 글로 돌아가 “글 전체”를 누르세요.'; }
+    }
+    onTitle(category.name, [post.title || '', 'quote']);
+    const win = root.closest('.hsh-win');
+    const css = win ? getComputedStyle(win) : null;
+    const host = h('div', { class: 'hsh-ct__quote' });
+    root.replaceChildren(h('article', { class: 'hsh-ct__post is-quote' },
+      h('button', { class: 'hsh-ct__back', type: 'button', onclick: back }, h('span', { 'aria-hidden': 'true', text: '← ' }), post.title || '글로'),
+      h('p', { class: 'hsh-ct__quote-hint', text: '이미지 모양은 hongjiwon.love 발췌와 같아요(Quote Preset · 이 글의 프리셋). 여기서 바꾼 정렬 · 비율 · 배경은 이번 발췌에만.' }),
+      host));
+    mountQuote(host, {
+      contentType: post.content_type,
+      html,
+      title: post.title || '',
+      presetId: post.quote_preset_id,
+      postId: post.id,
+      viewer: true,
+      tint: css?.getPropertyValue('--hsh-win-tint').trim(),
+      ink: css?.getPropertyValue('--hsh-win-ink').trim(),
+      note,
+    }, onResize);
+    onResize();
   }
 
   // 같은 목록(폴더 · 갤러리 페이지) 안의 이전 · 다음 글 — 목록에서 열었을 때만 순서를 안다

@@ -5,7 +5,7 @@
 //     (이미지 파일은 user-banners 버킷 {user_id}/category-banners/{uuid}/image).
 //   클라이언트는 글 창 · 관리자와 같은 하나(content/supabase.js).
 
-import { SUPABASE_URL, SUPABASE_KEY, getClient, ownerSession, hasSavedLogin } from '../content/supabase.js';
+import { SUPABASE_URL, SUPABASE_KEY, getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError } from '../content/supabase.js';
 
 const CATEGORY_ID = 4; // hongjiwon.love 배너 카테고리
 const BUCKET = 'user-banners';
@@ -122,7 +122,7 @@ export function mountNeighbor(root, onResize = () => {}) {
       say('Google 로그인으로 이동 중...');
       const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${location.origin}${location.pathname}` },
+        options: { redirectTo: HOME_REDIRECT },
       });
       if (error) { console.error(error); say('로그인하지 못했어요.'); }
       return;
@@ -205,6 +205,8 @@ export function mountNeighbor(root, onResize = () => {}) {
   });
 
   // Google 로그인에서 돌아왔거나 이미 로그인돼 있으면 클라이언트를 미리 깨워 둔다(주소의 토큰을 받아 저장)
+  // 로그인이 실패해 돌아왔으면 주소를 정리하고, 이 방을 열었을 때 이유를 보여 준다
+  const authError = consumeAuthError();
   const back = /access_token=|[?&]code=/.test(location.hash + location.search);
   if (back || hasSavedLogin()) getClient().catch(() => {});
 
@@ -212,7 +214,7 @@ export function mountNeighbor(root, onResize = () => {}) {
   return {
     /** 방을 열 때마다 — 처음 한 번만 불러온다 */
     show() {
-      if (!loaded) { loaded = true; load(); }
+      if (!loaded) { loaded = true; load().then(() => { if (authError) say(`로그인하지 못했어요 — ${authError}`); }); }
       else onResize();
     },
   };

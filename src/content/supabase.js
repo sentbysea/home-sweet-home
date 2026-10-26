@@ -52,6 +52,28 @@ export async function ownerSession(client) {
   return { user, owner: ownerId === user.id };
 }
 
+/**
+ * Google 로그인에서 돌아오는 주소 — 늘 사이트 루트(Supabase 허용 목록에 `https://xn--9g3b29an0p.me/` 한 줄).
+ * 관리자는 그쪽 admin-session.js 가 `${origin}/admin/` 으로 정한다(허용 목록의 다른 한 줄).
+ */
+export const HOME_REDIRECT = `${location.origin}/`;
+
+/**
+ * 로그인이 실패해 돌아왔으면(#error=… / ?error=…) 주소에서 지우고 이유를 돌려준다 — 없으면 ''.
+ * 허용 목록에 없는 주소였다면 Supabase 는 여기로 오지 않고 Site URL(hongjiwon.love)로 보낸다.
+ */
+export function consumeAuthError() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const query = new URLSearchParams(location.search);
+  const error = hash.get('error') || query.get('error');
+  if (!error) return '';
+  const why = hash.get('error_description') || query.get('error_description') || error;
+  for (const k of ['error', 'error_code', 'error_description']) query.delete(k);
+  const q = query.toString();
+  history.replaceState(history.state, '', `${location.pathname}${q ? `?${q}` : ''}`);
+  return why.replace(/\+/g, ' ');
+}
+
 /** 저장된 로그인이 있나(supabase-js 를 받기 전에 — 주인일 때만 미리 깨우려고) */
 export function hasSavedLogin() {
   try { return Boolean(localStorage.getItem(AUTH_KEY)); } catch { return false; }
