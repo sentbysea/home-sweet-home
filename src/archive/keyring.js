@@ -42,8 +42,9 @@ const BOIL_FRAMES = 3;
 // 사이트 오브젝트 → 열쇠 + 키링
 //   keySize    열쇠 크기(1 = 보통) — twitter 열쇠는 눈에 띄게 작다(새 키링은 그대로)
 //   charmFront 고르면 키링이 열쇠 옆이 아니라 열쇠 앞(화면 쪽)으로 나온다
+//   charmFlip  키링을 열쇠 반대쪽에(맨 앞 home sweet home 이름표에 가리지 않게)
 const OBJECTS = {
-  bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky', keySize: 0.68 },
+  bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky', keySize: 0.68, charmFlip: true },
   diary: { key: 'roundKey', tone: 'butter', charm: 'diary', charmTone: 'lilac', charmFront: true },
   heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'lilac' },
   house: { key: 'houseKey', tone: 'silver' },
@@ -273,28 +274,35 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     return g;
   };
 
-  // 천 라벨 글씨 — 바이브.me 로딩과 같은 글꼴
-  const labelTexture = async () => {
-    try { await document.fonts?.load('40px "Nanum Gothic Coding"'); } catch { /* 기본 글꼴로 */ }
+  // 가죽 이름표 글씨 — 바이브.me 로딩과 같은 글꼴, 위에서 아래로 세로(첨부 키링 이름표처럼)
+  const labelTexture = async (w, h) => {
+    try { await document.fonts?.load('80px "Nanum Gothic Coding"'); } catch { /* 기본 글꼴로 */ }
     const c = document.createElement('canvas');
-    c.width = 512;
-    c.height = 210;
+    c.width = 256;
+    c.height = Math.round((256 * h) / w);
     const x = c.getContext('2d');
     x.fillStyle = TONES.cloth.face;
     x.fillRect(0, 0, c.width, c.height);
+    // 가장자리 바느질
     x.strokeStyle = '#d6c6ad';
-    x.lineWidth = 4;
-    x.setLineDash([14, 10]);
-    x.strokeRect(16, 16, c.width - 32, c.height - 32);
+    x.lineWidth = 5;
+    x.setLineDash([18, 12]);
+    x.strokeRect(22, 22, c.width - 44, c.height - 44);
     x.setLineDash([]);
-    x.fillStyle = '#6a6e72';
-    x.font = '44px "Nanum Gothic Coding", ui-monospace, monospace';
+    x.save();
+    x.translate(c.width / 2, c.height / 2 - 24);
+    x.rotate(Math.PI / 2);
+    x.fillStyle = '#4f5357';
+    x.font = '76px "Nanum Gothic Coding", ui-monospace, monospace';
     x.textAlign = 'center';
     x.textBaseline = 'middle';
-    x.fillText('home sweet home', c.width / 2, c.height / 2 + 2);
+    x.fillText('home sweet home', 0, 4);
+    x.restore();
     x.fillStyle = '#f4a6c9';
-    x.font = '26px sans-serif';
-    x.fillText('♥', c.width - 52, 46);
+    x.font = '44px sans-serif';
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillText('♥', c.width / 2, c.height - 66);
     const t = keep(new T.CanvasTexture(c));
     t.colorSpace = T.SRGBColorSpace;
     t.anisotropy = 4;
@@ -352,28 +360,36 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       const piece = buildPiece(SHAPES[spec.charm](), spec.charmTone, 0.09, 101 + i * 23);
       piece.group.add(jumpRing());
       addPendulum(piece, {
-        site: i, kind: 'charm', follow: key, phi: phi + 0.2 * side, phiOff: 0.2 * side,
-        a0: a0 - side * 0.55, b0: 0.05, c0: 0.4 + (rand() - 0.5) * 0.5, seed: 500 + i * 7, mass: 0.6,
+        site: i, kind: 'charm', follow: key, b0: 0.05, c0: 0.4 + (rand() - 0.5) * 0.5, seed: 500 + i * 7, mass: 0.6,
+        ...(spec.charmFlip
+          ? { phi: phi - 0.4 * side, phiOff: -0.4 * side, a0: a0 + side * 0.5, c0: 1.0 } // 반대쪽 · 앞면이 화면 쪽
+          : { phi: phi + 0.2 * side, phiOff: 0.2 * side, a0: a0 - side * 0.55 }),
         // 고르면 — 열쇠 앞(고리 앞쪽 · 화면 쪽으로 더 흔들려 나옴) 또는 열쇠 옆으로 비켜
         ...(spec.charmFront ? { phiSel: 0.2, aSel: -side * 0.12, bSel: -0.6 } : { aSel: -side * 0.6 }),
       });
     }
   });
-  // 천 라벨 — 고리 옆에 꿰매어 달린 home sweet home
+  // 가죽 이름표 — 작은 고리로 큰 고리에 걸려 열쇠들 옆에 아래로 늘어진 home sweet home
+  const LABEL_DEPTH = 0.045;
   const labelDef = SHAPES.label();
-  const labelPiece = buildPiece(labelDef, 'cloth', 0.024, 909);
-  const tex = await labelTexture();
+  const labelPiece = buildPiece(labelDef, 'cloth', LABEL_DEPTH, 909);
+  labelPiece.group.add(jumpRing());
   const { x0, y0, x1, y1 } = labelDef.face;
-  const plane = keep(new T.PlaneGeometry(x1 - x0 - 0.02, y1 - y0 - 0.02));
+  const fw = x1 - x0 - 0.03;
+  const fh = y1 - y0 - 0.03;
+  const tex = await labelTexture(fw, fh);
+  const plane = keep(new T.PlaneGeometry(fw, fh));
   const labelMat = keep(new T.MeshBasicMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-  for (const [z, ry] of [[0.0135, 0], [-0.0135, Math.PI]]) {
+  for (const [z, ry] of [[LABEL_DEPTH / 2 + 0.0015, 0], [-LABEL_DEPTH / 2 - 0.0015, Math.PI]]) {
     const m = new T.Mesh(plane, labelMat);
     m.position.set((x0 + x1) / 2, (y0 + y1) / 2, z);
     m.rotation.y = ry;
     labelPiece.group.add(m);
   }
-  labelPiece.frames.forEach((f) => f.children.forEach((m) => { m.position.z *= 1.25; }));
-  addPendulum(labelPiece, { kind: 'label', phi: -1.95, a0: -0.08, b0: 0, c0: 0.25, seed: 999, mass: 0.4 });
+  // 늘 맨 앞(고리 앞쪽 끝)에 — 열쇠를 고르면 그 열쇠를 가리지 않게 고리 뒤쪽으로 미끄러져 비켰다가, 풀면 다시 앞으로
+  const LABEL_FRONT = 1.5;
+  const LABEL_BACK = -1.75;
+  const labelPend = addPendulum(labelPiece, { kind: 'label', phi: LABEL_FRONT, a0: 0.04, b0: -0.28, c0: 1.1, seed: 999, mass: 0.55 });
 
   // ---------- 화면 맞추기 ----------
   const fit = () => {
@@ -513,6 +529,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       if (turn || Math.abs(wrap(face - st.yaw)) > 1.1) st.yawT = target;
       st.vyaw = 0;
     }
+    labelPend.phiT = next == null ? LABEL_FRONT : LABEL_BACK;
     onSelect(next);
   }
 
