@@ -5,6 +5,7 @@
 //   /category/:id                  글 · 갤러리 · 메모 목록(:id 는 카테고리 id 또는 slug — 버튼의 data-category 그대로)
 //   /category/:id/folder/:fid      폴더
 //   /category/:id?page=N           갤러리 N 쪽
+//   /category/:id(/folder/:fid)/read   이어서 읽기(그 칸의 글을 한 화면에)
 //   /post/:id                      글 하나(hongjiwon.love 와 같은 주소 모양)
 //   /post/:id/quote                Quote(주인)
 //   관리자 /admin/ · Quote 화면 /quote.html · 정적 파일과는 겹치지 않는다(아래 모양 밖은 전부 홈).
@@ -41,8 +42,9 @@ export function pathOf(view) {
     const s = view.state || {};
     if (s.view === 'quote' && s.post) return `/post/${enc(s.post)}/quote`;
     if (s.view === 'post' && s.post) return `/post/${enc(s.post)}`;
-    const base = `/category/${enc(s.cat)}`;
-    if (s.folder != null) return `${base}/folder/${enc(s.folder)}`;
+    const base = `/category/${enc(s.cat)}${s.folder != null ? `/folder/${enc(s.folder)}` : ''}`;
+    if (s.view === 'series') return `${base}/read`;
+    if (s.folder != null) return base;
     if (Number(s.page) > 1) return `${base}?page=${Number(s.page)}`;
     return base;
   }
@@ -52,7 +54,7 @@ export function pathOf(view) {
 
 /**
  * 주소 → 무엇을 열지(없으면 null = 홈)
- * @returns {null | { room: string, page: 'room' | 'banner' } | { category: string, folder?: string, page?: number } | { post: string, quote?: boolean }}
+ * @returns {null | { room: string, page: 'room' | 'banner' } | { category: string, folder?: string, page?: number, read?: boolean } | { post: string, quote?: boolean }}
  */
 export function parsePath(pathname, search = '') {
   const parts = pathname.split('/').filter(Boolean).map(decodeURIComponent);
@@ -61,9 +63,14 @@ export function parsePath(pathname, search = '') {
   const room = Object.entries(ROOM_PATHS).find(([, slug]) => slug === head)?.[0];
   if (room && parts.length === 1) return { room, page: 'room' };
   if (room === 'neighbor' && a === 'banner' && parts.length === 2) return { room, page: 'banner' };
-  if (head === 'category' && a && (parts.length === 2 || (b === 'folder' && c && parts.length === 4))) {
-    const page = Number(new URLSearchParams(search).get('page')) || 1;
-    return { category: a, folder: b === 'folder' ? c : null, page };
+  if (head === 'category' && a) {
+    const rest = parts.slice(2);
+    const read = rest[rest.length - 1] === 'read';
+    if (read) rest.pop();
+    if (!rest.length || (rest.length === 2 && rest[0] === 'folder')) {
+      const page = Number(new URLSearchParams(search).get('page')) || 1;
+      return { category: a, folder: rest[1] ?? null, page, read };
+    }
   }
   if (head === 'post' && /^\d+$/.test(a || '') && (parts.length === 2 || (b === 'quote' && parts.length === 3))) {
     return { post: a, quote: b === 'quote' };

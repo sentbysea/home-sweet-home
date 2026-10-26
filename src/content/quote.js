@@ -144,7 +144,7 @@ export function quotePicker({ content, text, h, onGo, onResize }) {
  * 그쪽 발췌 칸은 화면 높이(vh) 기준이라 iframe 을 늘이면 서로 키우며 커진다 — 그래서 대지 높이는
  * 바깥 화면 높이로 정해 넘긴다(--hsh-q-stage, quote.css).
  * @param {HTMLElement} host
- * @param {{ contentType: string, html: string, title: string, presetId: number|null, postId: number, viewer: boolean, tint?: string, ink?: string, note?: string }} post
+ * @param {{ contentType: string, html: string, title: string, presetId: number|null, postId: number, viewer: boolean, tint?: string, ink?: string }} post
  * @param {() => void} onResize
  */
 export function mountQuote(host, post, onResize) {

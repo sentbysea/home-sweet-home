@@ -334,7 +334,7 @@ async function owner() {
   await bodyReady(page);
   check('비공개 글 사진 — 주인 토큰(Authorization)으로', await imgLoaded(page, '.post-detail-content img'));
   check('사진 요청 머리글에 주인 토큰', coverRequests.some((r) => r.headers.authorization === `Bearer ${USERS.owner.token}`));
-  check('글자 크기 기본값 범위 표시', (await page.textContent('.hsh-ct__scale')).includes('두 사이트'));
+  check('글자 크기 ± 만(기본값 문구 없음)', !(await page.textContent('.hsh-ct__scale')).includes('두 사이트'));
   await page.goBack();
 
   // 부분 발췌 — 시작점(둘째 문단 대사) ~ 끝점(셋째 문단)
@@ -648,17 +648,47 @@ async function routing() {
   check('콘솔 오류 없음(routing)', errors.length === 0, errors.join(' | '));
   await context.close();
 
-  // 로딩 화면을 거쳐도(?plan=only 없이) — 창 주소면 집을 누르지 않아도 들어가 그 창이 열린다. 홈은 지금처럼 누르기를 기다린다
-  const ld = await open(null);
-  await ld.page.goto(`${VIBE_ORIGIN}/notice?${Q}`);
-  await ld.page.waitForSelector('.hsh-win:not([hidden]) .hsh-note', { timeout: 30000 }).catch(() => {});
-  await ld.page.waitForFunction(() => !document.querySelector('.hsh-loader'), null, { timeout: 10000 }).catch(() => {}); // 로딩이 바래 사라질 때까지
-  check('로딩 화면 → 누르지 않아도 /notice 창', !(await ld.page.$('.hsh-loader')) && (await ld.page.$eval('.hsh-win', (w) => !w.hidden)));
-  await ld.page.goto(`${VIBE_ORIGIN}/?${Q}`);
-  await ld.page.waitForSelector('.hsh-loader.is-ready', { timeout: 30000 });
-  await ld.page.waitForTimeout(1500);
-  check('홈(/)은 집을 누를 때까지 로딩 화면', Boolean(await ld.page.$('.hsh-loader')));
-  await ld.context.close();
+  await direct(null, 'PC');
+
+  // 이어서 읽기 — 위치 줄 오른쪽 버튼 → 그 칸의 글을 한 화면에, 비밀글은 그 자리에서 비밀번호
+  const sr = await open(null);
+  await home(sr.page);
+  await openRoom(sr.page, '1');
+  await sr.page.waitForSelector('.hsh-ct__row');
+  check('폴더 머리에 FOLDER 글자 없음', !(await sr.page.$('.hsh-ct__kicker')));
+  await sr.page.locator('.hsh-ct__folder', { hasText: 'open' }).click();
+  await sr.page.waitForSelector('.hsh-ct__crumb-row .hsh-ct__crumb-tools');
+  check('폴더 — ↑ UP 이 위치 줄 오른쪽', await sr.page.$eval('.hsh-ct__crumb-row', (row) => {
+    const up = [...row.querySelectorAll('button')].find((b) => b.textContent.includes('UP'));
+    const crumbs = row.querySelector('.hsh-ct__crumbs');
+    return Boolean(up && crumbs) && Math.abs(up.getBoundingClientRect().top - crumbs.getBoundingClientRect().top) < 12 && up.getBoundingClientRect().left > crumbs.getBoundingClientRect().right;
+  }));
+  check('창 머리(LOG 제목 · 썸네일) 안 보임', await sr.page.$eval('.hsh-win__head', (h) => getComputedStyle(h).display === 'none'));
+  await sr.page.locator('.hsh-ct__crumb-row button', { hasText: 'UP' }).click();
+  await sr.page.waitForFunction(() => location.pathname === '/category/1');
+  await sr.page.locator('.hsh-ct__crumb-row button', { hasText: '이어서 읽기' }).click();
+  await sr.page.waitForFunction(() => document.querySelector('.hsh-ct__series')?.textContent.includes('EXPLICIT'), null, { timeout: 15000 });
+  const sAt = () => new URL(sr.page.url()).pathname;
+  check('이어서 읽기 → /category/1/read · 글 여러 개', sAt() === '/category/1/read' && (await sr.page.$$('.hsh-ct__post.is-series')).length === 2, sAt());
+  check('이어서 읽기 — 비밀글 본문은 비밀번호 전엔 없다', !(await sr.page.content()).includes('SECRETBODY') && Boolean(await sr.page.$('.hsh-ct__series .hsh-ct__gate')));
+  await sr.page.fill('.hsh-ct__series .hsh-ct__gate input', 'pw102');
+  await sr.page.click('.hsh-ct__series .hsh-ct__gate button[type="submit"]');
+  await sr.page.waitForFunction(() => document.querySelector('.hsh-ct__series')?.textContent.includes('SECRETBODY'), null, { timeout: 15000 }).catch(() => {});
+  check('이어서 읽기 — 비밀번호 맞히면 그 자리에 본문', (await sr.page.textContent('.hsh-ct__series')).includes('SECRETBODY'));
+  await sr.page.reload();
+  await sr.page.waitForFunction(() => document.querySelector('.hsh-ct__series')?.textContent.includes('EXPLICIT'), null, { timeout: 20000 });
+  check('이어서 읽기 새로고침 → 그대로(로딩 화면 없이)', sAt() === '/category/1/read' && !(await sr.page.evaluate(() => window.__loaderSeen)));
+  await sr.page.locator('.hsh-ct__series-open', { hasText: '프리셋 지정 글' }).click();
+  await bodyReady(sr.page);
+  check('제목 → 그 글 하나(/post/104)', sAt() === '/post/104');
+  await sr.page.goBack();
+  await sr.page.waitForSelector('.hsh-ct__series', { timeout: 10000 }).catch(() => {});
+  check('뒤로 → 이어서 읽기', sAt() === '/category/1/read' && Boolean(await sr.page.$('.hsh-ct__series')), sAt());
+  await sr.page.goto(`${VIBE_ORIGIN}/category/1/folder/10/read?${Q}`);
+  await sr.page.waitForSelector('.hsh-ct__gate', { timeout: 15000 });
+  check('잠긴 폴더 이어서 읽기 직접 → 비밀번호 칸 · 본문 없음', !(await sr.page.content()).includes('LOCKEDBODY'));
+  check('콘솔 오류 없음(이어서 읽기)', sr.errors.length === 0, sr.errors.join(' | '));
+  await sr.context.close();
 
   // 이웃 로그인 — 로그인 전에 보던 주소로 돌아온다(복귀 주소 자체는 허용 목록의 /)
   const lg = await open(USERS.owner);
@@ -676,8 +706,20 @@ async function routing() {
   await ow.page.waitForSelector('.hsh-plan.is-done');
   const frame = await quoteFrame(ow.page);
   check('/post/101/quote 직접(주인) → Quote 화면', (await frame.$eval('#postEditorPreviewPages', (p) => p.textContent)).includes('FIRSTPARA'));
+  check('Quote — 안내 문구 없음', !(await ow.page.$('.hsh-ct__quote-hint')) && !(await frame.$('.hsh-quote__range')));
+  const pick = await frame.$eval('.hsh-quote__preset select', (s) => ({
+    first: s.closest('.post-editor-preview-subrow') === s.closest('#postEditorPreviewSection')?.querySelector('.post-editor-preview-subrow'),
+    names: [...s.options].map((o) => o.textContent), value: s.value,
+  })).catch(() => null);
+  check('Quote — 맨 위 preset 드롭다운(프리셋 목록 · 이 글은 없음)', Boolean(pick?.first && pick.names.includes('Explicit') && pick.value === ''), JSON.stringify(pick));
+  const presetWrites = db.posts.find((p) => p.id === 101).quote_preset_id;
+  await frame.selectOption('.hsh-quote__preset select', '202');
+  await frame.waitForFunction(() => typeof postStyleSettings !== 'undefined' && postStyleSettings?.bodySize === 19, null, { timeout: 10000 }).then(() => true).catch(() => false)
+    .then((ok) => check('Quote — 프리셋을 고르면 미리보기만 그 프리셋(글에는 저장 안 함)', ok && db.posts.find((p) => p.id === 101).quote_preset_id === presetWrites));
   await ow.page.click('.hsh-ct__post.is-quote .hsh-ct__back');
   await bodyReady(ow.page);
+  check('글 도구 순서 quote → − → +, 기본값 문구 없음', await ow.page.$eval('.hsh-ct__tools', (t) =>
+    [...t.querySelectorAll('button')].map((b) => b.textContent.trim()).join(' ') === 'quote − +' && !t.textContent.includes('기본값')));
   check('Quote ← → /post/101', new URL(ow.page.url()).pathname === '/post/101');
   await ow.context.close();
   const vq = await open(null);
@@ -687,10 +729,64 @@ async function routing() {
   await vq.context.close();
 }
 
+// 창 주소로 바로 들어오기(?plan=only 없이 — 진짜 첫 화면) — 로딩 화면이 한 번도 그려지지 않고 그 창이 바로 열린다.
+//   새로고침해도 · 닫아 홈(/)으로 가도 로딩 없음. 홈 주소(/)는 지금처럼 집을 누를 때까지 로딩.
+async function direct(device, name) {
+  const d = await open(null, device ? undefined : { width: 1280, height: 900 }, device || {});
+  // 그려지는 모든 순간에 로딩 화면이 보였는지 적어 둔다(문서보다 먼저 돈다)
+  await d.context.addInitScript(() => {
+    window.__loaderSeen = false;
+    const look = () => {
+      const l = document.querySelector('.hsh-loader');
+      if (l && getComputedStyle(l).display !== 'none' && l.getBoundingClientRect().width > 0) window.__loaderSeen = true;
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  });
+  const { page } = d;
+  const at = () => new URL(page.url()).pathname;
+  for (const path of ['/notice', '/neighbor/banner', '/category/1', '/category/1/folder/11', '/category/2?page=1', '/post/104', '/category/1/read']) {
+    await page.goto(`${VIBE_ORIGIN}${path}${path.includes('?') ? '&' : '?'}${Q}`);
+    await page.waitForSelector('.hsh-win.is-open', { timeout: 15000 });
+    // 받는 중에 다음 주소로 가면 WebKit 이 끊긴 요청을 오류로 남긴다 — 다 그린 뒤에
+    await page.waitForFunction(() => !document.querySelector('.hsh-win:not([hidden]) .is-loading'), null, { timeout: 15000 });
+    await page.waitForTimeout(150);
+    check(`${name} — ${path} 직접 → 로딩 화면 없이 창`, !(await page.evaluate(() => window.__loaderSeen)) && !(await page.$('.hsh-loader')), path);
+  }
+  // 글 — 받는 동안 창 안에 '불러오는 중'
+  await page.route('**/rest/v1/posts*', async (route) => { await new Promise((r) => setTimeout(r, 700)); await route.fallback(); });
+  await page.goto(`${VIBE_ORIGIN}/post/104?${Q}`);
+  const pendingShown = await page.waitForSelector('.hsh-win.is-open .hsh-ct__state.is-loading', { timeout: 5000 }).then(() => true).catch(() => false);
+  check(`${name} — 글을 받는 동안 창 안에서만 불러오는 중`, pendingShown && !(await page.evaluate(() => window.__loaderSeen)));
+  await bodyReady(page);
+  await page.unroute('**/rest/v1/posts*');
+  check(`${name} — /post/104 본문`, (await page.textContent('.hsh-ct__post')).includes('EXPLICIT'));
+  await page.reload();
+  await bodyReady(page);
+  check(`${name} — 새로고침 → 로딩 없이 같은 글`, at() === '/post/104' && !(await page.evaluate(() => window.__loaderSeen)));
+  await page.click('.hsh-win__x');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(1200);
+  check(`${name} — × → 홈(/) · 로딩 다시 안 뜸`, at() === '/' && !(await page.evaluate(() => window.__loaderSeen)) && (await page.$eval('.hsh-plan', (p) => !p.hidden)));
+  await page.goForward();
+  await bodyReady(page);
+  check(`${name} — 앞으로 → 글 다시`, at() === '/post/104');
+  await page.goto(`${VIBE_ORIGIN}/?${Q}`);
+  await page.waitForSelector('.hsh-loader.is-ready', { timeout: 30000 });
+  await page.waitForTimeout(1500);
+  check(`${name} — 홈(/)은 집을 누를 때까지 로딩 화면`, Boolean(await page.$('.hsh-loader')) && !(await page.$eval('.hsh-plan', (p) => !p.hidden)));
+  await page.click('.hsh-loader__house');
+  await page.waitForSelector('.hsh-plan.is-done', { timeout: 20000 });
+  check(`${name} — 집 누르기 → 평면도`, !(await page.$('.hsh-loader')));
+  check(`콘솔 오류 없음(${name} 직접)`, d.errors.length === 0, d.errors.join(' | '));
+  await d.context.close();
+}
+
 // ---------- 휴대폰 ----------
 
 async function mobile() {
   console.log('\n[mobile — iPhone 13]');
+  await direct(playwright.devices['iPhone 13'], '휴대폰');
   const { page, errors, context } = await open(USERS.owner, undefined, playwright.devices['iPhone 13']);
   await home(page);
   await openRoom(page, '1');

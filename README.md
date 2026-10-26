@@ -64,12 +64,17 @@ ready.resolve();
 창마다 고유 주소가 있다(`src/plan/routes.js`). 창을 열거나 창 안에서 옮겨 가면 주소만 바뀐다 — 페이지는 다시 불러오지 않고,
 집 배경 · 창 열리는 모양은 그대로다. 직접 들어오기 · 새로고침 · 뒤로/앞으로 모두 주소의 창을 연다. × · 덮개 · Esc 는 홈 `/` 로.
 
+로딩 화면(집 누르기)은 홈 `/` 로 들어올 때만. 창 주소로 들어오거나(새로고침 · 공유 링크 · 로그인에서 보던 창으로 돌아오기)
+그 창을 닫아 `/` 로 가도 로딩 화면은 나오지 않는다 — `index.html` 머리 스크립트가 첫 화면 전에 `data-hsh-entry="direct"` 를 달아
+로딩 화면을 그리지 않고, 평면도는 다 그려진 채로 깔린다. 글을 받는 동안의 "불러오는 중" 은 창 안에만.
+
 | 주소 | 화면 |
 | --- | --- |
 | `/` | 홈(창 없음) |
 | `/about` `/teatime` `/notice` `/neighbor` `/archive` | 방 버튼 창(about __VE · teatime? · notice · neighbor · archive) |
 | `/neighbor/banner` | neighbor 의 '배너교환은 여기에서'(내 배너) |
 | `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
+| `/category/:id/read` · `/category/:id/folder/:fid/read` | 이어서 읽기 — 그 칸의 글을 목록 순서대로 한 화면에 |
 | `/post/:id` · `/post/:id/quote` | 글 · Quote(주인) — hongjiwon.love 와 같은 글 주소 모양 |
 
 - 그 카테고리 버튼이 아직 평면도에 없어도 주소로 열린다(기본 색 창, 제목은 카테고리 이름). 버튼을 붙이면 그 버튼 색 · 이름.

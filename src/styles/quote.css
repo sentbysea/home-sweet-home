@@ -26,7 +26,7 @@ body {
 
 /* 에디터의 나머지(제목 · 툴바 · 본문 칸 · 설정 · 저장)는 숨긴다 — 기능은 그대로 실려 있다 */
 #postArea > .post-container > :not(#postEditor) { display: none !important; }
-#postEditor > :not(#postEditorPreviewSection):not(.post-editor-actions):not(#postEditorMessage):not(.hsh-quote__range) { display: none !important; }
+#postEditor > :not(#postEditorPreviewSection):not(.post-editor-actions):not(#postEditorMessage) { display: none !important; }
 #postEditorCancelButton,
 #postEditorDeleteButton,
 #postEditorSaveButton { display: none !important; }
@@ -146,15 +146,6 @@ body {
 .hsh-quote .post-editor-actions .post-editor-button.copy { background: var(--hsh-q-paper) !important; color: var(--hsh-q-text) !important; border: 1px solid var(--hsh-q-line) !important; }
 .hsh-quote .post-editor-message { font-family: var(--hsh-q-font) !important; font-size: 12px !important; color: var(--hsh-q-note) !important; text-align: right; }
 
-/* 발췌 구간을 골랐을 때 위에 한 줄 */
-.hsh-quote__range {
-  margin: 0 0 10px;
-  padding: 6px 12px;
-  border: 1px dashed var(--hsh-q-line);
-  border-radius: 8px;
-  font-family: var(--hsh-q-font);
-  font-size: 12px;
-  color: var(--hsh-q-note);
-}
-.hsh-quote__range[hidden] { display: none; }
+/* 맨 위 preset 드롭다운(studio.js presetRow) — 긴 프리셋 이름도 줄 안에 */
+.hsh-quote .hsh-quote__preset .post-editor-preview-select { max-width: min(260px, 70vw); }
 #postEditorPreviewSection { margin-top: 0 !important; }
