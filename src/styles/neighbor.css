@@ -284,8 +284,8 @@
   left: 0;
   top: 0;
   z-index: 4;
-  width: min(268px, calc(100vw - 24px));
-  padding: 10px 11px 8px;
+  width: min(400px, calc(100vw - 24px)); /* 배너만 가로로 길게 */
+  padding: 9px 10px;
   opacity: 0;
   translate: 0 8px;
   transition: opacity 240ms ease-out, translate 240ms ease-out;
@@ -302,9 +302,7 @@
 /* 배너가 곧 링크 — 누르면 그 사이트(새 탭) */
 .nbh-pop__link {
   position: relative;
-  display: grid;
-  gap: 5px;
-  justify-items: center;
+  display: block;
   color: var(--hsh-text);
   text-decoration: none;
   outline: none;
@@ -321,20 +319,8 @@
 .nbh-pop__alt { display: none; font-family: var(--nbh-font); font-size: 13px; color: var(--hsh-link); }
 .nbh-pop.is-broken .nbh-pop__banner img { display: none; }
 .nbh-pop.is-broken .nbh-pop__alt { display: block; }
-.nbh-pop__name {
-  max-width: 100%;
-  padding: 0 3px;
-  font-family: var(--hsh-mono);
-  font-size: 12.5px;
-  color: var(--hsh-link);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.nbh-pop__name::after { content: " ↗"; font-size: 11px; }
 @media (hover: hover) {
   .nbh-pop__link:hover .nbh-pop__banner { rotate: -0.8deg; }
-  .nbh-pop__link:hover .nbh-pop__name { color: var(--hsh-text); background: linear-gradient(var(--hl, var(--hsh-sky)), var(--hl, var(--hsh-sky))) 0 calc(100% - 1px) / 100% 6px no-repeat; }
 }
 .nbh-pop__link:focus-visible .nbh-pop__banner { outline: 1.5px dashed var(--nbh-ink); outline-offset: 3px; }
 
@@ -497,8 +483,9 @@
   rotate: -1.5deg;
 }
 
-/* 탭 — 배너 교환(교환 신청 · 내 배너 · 받은 신청) · 이웃집 고치기(집 · 내용). 고른 탭만 색 띠 */
+/* 탭 — 배너 교환(입주 신청 · 받은 신청) · 이웃집 고치기(집 · 내용). 고른 탭만 색 띠 */
 .nbh-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.nbh-tabs[hidden] { display: none; }
 .nbh-tabs__tab { border: 0; color: var(--hsh-text); cursor: pointer; }
 .nbh-tabs__tab[aria-selected="false"] { background: transparent; color: var(--hsh-note); rotate: 0deg; }
 @media (hover: hover) {
@@ -560,6 +547,7 @@
 
 /* 신청 · 걸기 폼 */
 .nbh-form { display: grid; gap: 12px; }
+.nbh-form[hidden] { display: none; } /* 집 고치기 · 내용 고치기 탭은 하나씩 */
 .nbh-field { display: grid; gap: 5px; }
 .nbh-field__k { font-size: 12.5px; color: var(--hsh-text); }
 .nbh-field__k em { margin-left: 4px; font-style: normal; font-size: 11.5px; color: var(--hsh-note); }

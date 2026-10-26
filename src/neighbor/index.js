@@ -12,7 +12,7 @@
 import { fetchBanners, fetchHome, siteLabel, httpUrl, MY_BANNER } from './data.js';
 import { createVillage } from './village.js';
 import { mountPanel } from './panel.js';
-import { BOIL } from './house-art.js';
+import { BOIL, HOME_NAME } from './house-art.js';
 import { starSvg } from '../shared/star.js';
 import { getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError, rememberReturnPath } from '../content/supabase.js';
 
@@ -169,7 +169,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   const openHouse = (from) => {
     village?.close();
     if (editing) {
-      panel.open('house', from, { item: { id: 'home', home: true, label: '홍차네 집', image: MY_BANNER.image, house: homeHouse } });
+      panel.open('house', from, { item: { id: 'home', home: true, label: HOME_NAME, image: MY_BANNER.image, house: homeHouse } });
       return;
     }
     if (panel.mode === 'mine') return;

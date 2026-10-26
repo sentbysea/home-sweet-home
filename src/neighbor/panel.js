@@ -1,7 +1,7 @@
 // neighbor 패널 — 우체통(주소 /neighbor/banner)은 배너 교환, 홍차네 집(/neighbor/mine)은 내 배너.
 //   ① 내 배너(mode 'mine'): 바이브.me 배너 미리보기 · 이름 · 주소 · 이미지 주소 · 삽입 코드(각각 복사).
 //      주인에게는 '배너 바꾸기'(파일) — 바이브.me 전용 경로에 덮어쓴다(data.js uploadMyBanner). 아직 없으면 안내 글.
-//   ② 교환 신청: 사이트 이름 · 주소 · 배너 이미지 주소 · 메시지(선택) → submit_banner_request.
+//   ② 입주 신청: 사이트 이름 · 주소 · 배너 이미지 주소 · 메시지(선택) → submit_banner_request.
 //      신청은 대기 목록으로만 — 공개 이웃 목록에는 주인이 승인해야 걸린다.
 //      입력 검사(칸마다 안내) · 이미지가 실제로 열리는지 · 보내는 동안 다시 못 누름 · 실패하면 그대로 두고 다시 시도 안내.
 //   ③ 받은 신청(주인만): 미리보기 · 메시지 · 승인 / 거절.
@@ -12,7 +12,7 @@
 
 import { MY_BANNER, uploadMyBanner, bannerCode, httpUrl, siteLabel, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, setHomeHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
 import { mountCustomizer } from './customizer.js';
-import { houseSvg, normalizeHouse, defaultHouse, randomHouse, HOME_HOUSE } from './house-art.js';
+import { houseSvg, normalizeHouse, defaultHouse, randomHouse, HOME_HOUSE, HOME_NAME } from './house-art.js';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const SENT_KEY = 'hsh:nbh-sent';
@@ -72,7 +72,7 @@ function markup() {
       </header>
       <div class="nbh-panel__body">
         <div class="nbh-tabs" data-mode="exchange" role="tablist" aria-label="배너 교환">
-          <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-apply" aria-controls="nbh-ex-apply" aria-selected="true" data-ex-tab="apply" style="--c:var(--hsh-pink)">교환 신청</button>
+          <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-apply" aria-controls="nbh-ex-apply" aria-selected="true" data-ex-tab="apply" style="--c:var(--hsh-pink)">입주 신청</button>
           <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-review" aria-controls="nbh-ex-review" aria-selected="false" tabindex="-1" data-ex-tab="review" data-owner hidden style="--c:var(--hsh-butter)">받은 신청 <span class="nbh-review__n"></span></button>
         </div>
         <section class="nbh-sec" data-mode="exchange" data-ex="apply" id="nbh-ex-apply" role="tabpanel" aria-labelledby="nbh-extab-apply">
@@ -332,7 +332,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     pending: ['이미 신청된 사이트예요. 주인이 확인할 때까지 기다려 주세요.', 'done'],
     listed: ['이미 이웃 목록에 걸려 있는 사이트예요.', 'done'],
     busy: ['지금은 신청이 많아요. 잠시 뒤 다시 보내 주세요.', 'error'],
-    unavailable: ['아직 신청을 저장할 수 없어요 — 교환 신청을 준비하는 중이에요. 위의 내 배너 정보 복사는 지금도 쓸 수 있어요.', 'error'],
+    unavailable: ['아직 신청을 저장할 수 없어요 — 입주 신청을 준비하는 중이에요. 홍차네 집의 내 배너 복사는 지금도 쓸 수 있어요.', 'error'],
   };
 
   apply.addEventListener('submit', async (e) => {
@@ -578,7 +578,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     next.focus();
   });
 
-  // ---------- 배너 교환 탭(교환 신청 · 내 배너 · 받은 신청) ----------
+  // ---------- 배너 교환 탭(입주 신청 · 받은 신청) ----------
 
   const exBar = root.querySelector('.nbh-tabs[data-mode="exchange"]');
   let exNow = 'apply';
@@ -649,7 +649,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
 
   info.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!editing) return;
+    if (!editing || editing.home) return; // 홍차네 집은 모양만(내 배너는 홍차네 집 → 내 배너에서)
     const s = session();
     const b = editing.banner;
     const url = httpUrl(withScheme(info.url.value));
@@ -747,7 +747,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
       if (mode === 'add' && next !== 'add') discardUpload();
       mode = next;
       back = from;
-      title.textContent = next === 'add' ? '이웃집 짓기' : next === 'house' ? (editing.home ? '홍차네 집 고치기' : '이웃집 고치기') : next === 'mine' ? '내 배너' : '배너 교환';
+      title.textContent = next === 'add' ? '이웃집 짓기' : next === 'house' ? (editing.home ? `${HOME_NAME} 고치기` : '이웃집 고치기') : next === 'mine' ? '내 배너' : '배너 교환';
       root.querySelectorAll('[data-mode]').forEach((s) => { s.hidden = s.dataset.mode !== next || (s.hasAttribute('data-owner') && !session().owner); });
       say(addMsg, '');
       root.hidden = false;

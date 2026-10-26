@@ -75,7 +75,7 @@ ready.resolve();
 | `/about` `/teatime` `/notice` | 방 버튼 창(about __VE — 아스키 집 · 짧은 글 · teatime? · notice) |
 | `/neighbor` | 이웃 마을(창 대신 아이보리 화면 — 아래 "neighbor") |
 | `/archive` | 열쇠꾸러미(창 대신 아이보리 화면 — 아래 "archive") |
-| `/neighbor/banner` | neighbor 우체통의 배너 교환 패널(교환 신청 · 주인은 받은 신청) |
+| `/neighbor/banner` | neighbor 우체통의 배너 교환 패널(입주 신청 · 주인은 받은 신청) |
 | `/neighbor/mine` | neighbor 홍차네 집의 내 배너(이미지 · 주소 · 삽입 코드 복사) — 바이브.me 전용 이미지 `user-banners/{owner}/vibe-banner`(hongjiwon.love 는 `/banner`), 주인은 여기서 바꾼다 |
 | `/pair` | about __VE 방 창에 Vibe · Echo 카드 두 장(예전 about 내용) |
 | `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
@@ -127,7 +127,7 @@ src/styles/archive.css
 src/neighbor/house-art.js   집 렌더러(마을 · 신청 미리보기 · 집 고치기 공통) — 몸체 · 지붕 · 문 · 창 · 장식 조합, 손그림 선, 기본 모양, 배너 색 뽑기
 src/neighbor/village.js     마을 — 배치 · 둥실 · 배너 미리보기(올리기 · 포커스 · 탭) · 우체통
 src/neighbor/customizer.js  우리 집 꾸미기 — 아이콘 · 색 칩 · 랜덤 · 배너 색으로
-src/neighbor/panel.js       패널 — 내 배너(복사) · 교환 신청 + 꾸미기 · 받은 신청(주인) · 간판 걸기 · 이웃집 고치기
+src/neighbor/panel.js       패널 — 내 배너(복사) · 입주 신청 + 꾸미기 · 받은 신청(주인) · 간판 걸기 · 이웃집 고치기
 src/neighbor/data.js        배너 목록(house 포함) · 내 배너(MY_BANNER) · 신청 · 주인 RPC
 src/neighbor/index.js       화면 — ← home · 데이터 · 주인 edit(Google 로그인) · 위글 박자 · 닫으면 정리
 src/styles/neighbor.css
@@ -144,8 +144,8 @@ src/styles/neighbor.css
 - 배너 보기: PC 는 집에 올리거나 Tab 포커스하면 집 위로 사라락(240ms), 집에서 배너로 옮겨도 그대로, 집을 누르면 새 탭.
   휴대폰은 한 번 누르면 배너 · 이름 · '방문하기 ↗', 방문하기를 눌러야 이동, 바깥 · 다른 집을 누르면 닫힘. 키보드 Enter → 방문하기, Esc → 닫기.
   한 번에 하나, 5:1 칸(비율이 다르면 가운데를 잘라 채움 · 주인이 올리는 파일은 올릴 때 5:1 로 잘림 — 움직이는 GIF 는 그대로), 화면 가장자리에서 잘리지 않게 자리를 고친다(위에 자리가 없으면 아래로).
-- 우체통(위에 통통 튀는 화살표 · 떠는 빨간 깃발) → 배너 교환 패널(`/neighbor/banner`) — 탭 하나씩: 교환 신청 + 우리 집 꾸미기 · 내 배너(이미지 · 주소 ·
-  이미지 주소 · 삽입 코드 복사) · 받은 신청(주인만). 신청 이름은 선택 — 비우면 그 사이트 탭 제목(Edge Function `site-title`, 없으면 주소)
+- 우체통(위에 통통 튀는 화살표 · 떠는 빨간 깃발) → 배너 교환 패널(`/neighbor/banner`) — 탭 하나씩: 입주 신청 + 우리 집 꾸미기 · 받은 신청(주인만).
+  내 배너(이미지 · 주소 · 이미지 주소 · 삽입 코드 복사)는 홍차네 집을 누르면(`/neighbor/mine`). 신청 이름은 선택 — 비우면 그 사이트 탭 제목(Edge Function `site-title`, 없으면 주소)
   (고르면 바로 미리보기, '랜덤으로 만들기', '배너 색으로 만들기' — 누를 때마다 같은 배너 색으로 다른 조합). 배너 색은 투명 픽셀을 빼고 뽑아 벽은 밝게 ·
   문은 벽과 대비 나게. 그 배너를 읽을 수 없으면 쉬운 말로 알리고 직접 고르기 · 랜덤은 그대로. 신청은 대기 목록에만 — **주인이 승인해야** 그 모습으로 마을에.
 - 주인: 아래 `edit` → Google 로그인 → 집을 누르면 이웃집 고치기 — 탭 둘: 집 고치기(모양 · 색 · 기본 모양으로 · 내리기) · 내용 고치기(이름 · 주소 · 배너 이미지/파일), `+ add banner`(집 모양까지), `받은 신청 N`(신청한 집 미리보기 · 승인 · 거절).

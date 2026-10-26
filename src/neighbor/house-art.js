@@ -36,6 +36,9 @@ const INK = '#54585c';
 const DOG_ROOF = '#e0675c'; // 개집 지붕 — 집 색과 상관없이 늘 붉은색
 export const BOIL = 4;
 
+/** 가운데 집(홍차네 집) 이름표 */
+export const HOME_NAME = 'homesweethome';
+
 /** 홍차네 집 기본 모양 — 주인이 고쳐 저장한 게 없을 때(neighbor_home.house) */
 export const HOME_HOUSE = { v: 2, body: 'cozy', roof: 'tri', roofPattern: 'solid', door: 'arch', window: 'cross', deco: ['chimney'], wall: '#fffaf0', roofColor: '#e88a8a', doorColor: '#c9a27e' };
 

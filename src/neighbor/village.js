@@ -6,7 +6,7 @@
 //   · 집마다 다른 주기로 2~4px 둥실(CSS). 외곽선 위글은 .nbh 의 data-boil(index.js)이 돌린다.
 //   · 배너: 평소엔 숨기고, 집을 고르면 집 위로 하나만 — PC 는 올리기 · 포커스(집 → 배너로 옮겨도 그대로), 누르면 새 탭.
 //     휴대폰은 한 번 누르면 배너 · 이름이 뜨고, 그 배너를 눌러야 이동. 바깥 · 다른 집을 누르면 닫힌다. Esc 로 닫기.
-//     배너 말풍선은 집과 같은 손그림 외곽선(위글 변형 4장) — 그림자 없이.
+//     배너 말풍선은 집과 같은 손그림 외곽선(위글 변형 4장) — 그림자 없이, 안에는 가로로 긴 배너만(이름은 집 아래 이름표).
 //     배너는 화면 가장자리에서 잘리지 않게 자리를 고친다(위에 자리가 없으면 아래로).
 //   · 집마다 바로 아래 이름표(사이트 이름) — 홈 라벨 같은 색종이. 종이 색은 그 집에 쓴 색 중 하나(진하면 밝혀서, house-art.js tagTone),
 //     배너 링크를 올렸을 때 밑줄도 같은 색. 긴 이름은 줄을 바꾸고, 화면 밖으로 나가지 않게 폭을 정한다.
@@ -14,7 +14,7 @@
 //   · 홍차네 집 — 주인이 고친 모양(neighbor_home, 없으면 HOME_HOUSE). 누르면 내 배너(onHouse), 주인 고치기 중이면 홍차네 집 고치기.
 //   · 주인 고치기 중에는 집을 누르면 그 집 고치기(onEdit).
 
-import { houseSvg, houseKey, normalizeHouse, defaultHouse, tagTone, HOME_HOUSE, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
+import { houseSvg, houseKey, normalizeHouse, defaultHouse, tagTone, HOME_HOUSE, HOME_NAME, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
 
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -84,7 +84,6 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     <svg class="nbh-pop__frame" aria-hidden="true" focusable="false"></svg>
     <a class="nbh-pop__link" target="_blank" rel="noopener noreferrer">
       <span class="nbh-pop__banner"><img alt="" decoding="async"><span class="nbh-pop__alt"></span></span>
-      <span class="nbh-pop__name"></span>
     </a>`;
   stage.append(town, pop);
   let items = [];
@@ -136,8 +135,8 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     home.type = 'button';
     home.className = 'nbh-center';
     home.dataset.house = houseKey(homeSpec);
-    home.setAttribute('aria-label', `홍차네 집 — ${editing ? '집 고치기' : '내 배너'}`);
-    home.innerHTML = `<span class="nbh-home__art">${hs.svg}</span><span class="nbh-center__tag nbh-label" aria-hidden="true">홍차네 집</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
+    home.setAttribute('aria-label', `${HOME_NAME} — ${editing ? '집 고치기' : '내 배너'}`);
+    home.innerHTML = `<span class="nbh-home__art">${hs.svg}</span><span class="nbh-center__tag nbh-label" aria-hidden="true">${HOME_NAME}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
     home.addEventListener('click', () => onHouse(home));
     const cbase = (center.r + 0.82) * g.rowH;
     const cx = g.left + (center.c + 0.5) * g.cw - g.cw * (g.cols === 3 ? 0.12 : 0.08);
@@ -192,7 +191,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     mailBtn = document.createElement('button');
     mailBtn.type = 'button';
     mailBtn.className = 'nbh-mailbox';
-    mailBtn.setAttribute('aria-label', '배너교환은 여기에서 — 내 배너 정보 · 교환 신청');
+    mailBtn.setAttribute('aria-label', '배너교환은 여기에서 — 입주 신청');
     mailBtn.innerHTML = `<span class="nbh-mailbox__arrow" aria-hidden="true">${arrow(g.scale)}</span>${mailbox(g.scale)}`;
     const ms = 34 * g.scale;
     const mx = cx + hs.w / 2 + 4;
@@ -280,7 +279,6 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   const popLink = pop.querySelector('.nbh-pop__link');
   const popFrame = pop.querySelector('.nbh-pop__frame');
   const popAlt = pop.querySelector('.nbh-pop__alt');
-  const popName = pop.querySelector('.nbh-pop__name');
   popImg.addEventListener('error', () => pop.classList.add('is-broken'));
   popImg.addEventListener('load', () => pop.classList.remove('is-broken'));
 
@@ -330,8 +328,6 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       pop.classList.toggle('is-broken', !it.image);
       if (it.image) popImg.src = it.image; else popImg.removeAttribute('src');
       popAlt.textContent = it.label;
-      popName.textContent = it.label;
-      pop.style.setProperty('--hl', homes[i].style.getPropertyValue('--hl'));
       if (it.href) popLink.href = it.href; else popLink.removeAttribute('href');
       popLink.setAttribute('aria-label', `${it.label} 방문하기 — 새 탭`);
       pop.setAttribute('aria-label', `${it.label} 배너`);
