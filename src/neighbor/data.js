@@ -12,11 +12,14 @@ import { SUPABASE_URL, SUPABASE_KEY, getClient } from '../content/supabase.js';
 export const CATEGORY_ID = 4; // hongjiwon.love 배너 카테고리 — 신청 승인 RPC 도 같은 값
 export const BUCKET = 'user-banners';
 
-// 내 배너 — 바이브.me. 이미지는 늘 같은 주소(admin MY BANNER 가 같은 자리에 덮어써서 남의 사이트에 심은 코드가 그대로 산다)
+// 내 배너 — 바이브.me 전용(hongjiwon.love 배너 {owner}/banner 와 따로). 이미지는 늘 같은 주소 {owner}/vibe-banner —
+//   주인이 neighbor 내 배너 창에서 올리면 같은 자리에 덮어써서, 남의 사이트에 심은 코드가 그대로 산다.
+const OWNER_FOLDER = 'cfe0dc66-7fa2-450e-8817-44073a4a5aab';
+export const MY_BANNER_PATH = 'vibe-banner';
 export const MY_BANNER = {
   name: '바이브.me',
   site: 'https://xn--9g3b29an0p.me', // 한글 주소를 못 받는 곳도 있어서 퓨니코드로
-  image: `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/cfe0dc66-7fa2-450e-8817-44073a4a5aab/banner`, // 3000×600
+  image: `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${OWNER_FOLDER}/${MY_BANNER_PATH}`,
 };
 
 /** 남의 사이트에 붙일 배너 코드 — 200×40(5:1) */
@@ -146,6 +149,18 @@ export async function uploadImage(userId, input, path = crypto.randomUUID()) {
   const { error } = await client.storage.from(BUCKET).upload(full, file, { upsert: true, contentType: file.type, cacheControl: '60' });
   if (error) throw error;
   return { path, url: `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${full}` };
+}
+
+/**
+ * 주인 — 바이브.me 배너 바꾸기. 늘 같은 경로({user_id}/vibe-banner)에 덮어쓴다(5:1 로 잘라서 · 움직이는 GIF 는 그대로).
+ * 캐시는 1분 — 바꾼 배너가 오래 남지 않게(admin MY BANNER 와 같다). @returns {string} 바로 보일 주소(?v=)
+ */
+export async function uploadMyBanner(userId, input) {
+  const file = await cropBanner(input);
+  const client = await getClient();
+  const { error } = await client.storage.from(BUCKET).upload(`${userId}/${MY_BANNER_PATH}`, file, { upsert: true, contentType: file.type, cacheControl: '60' });
+  if (error) throw error;
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${userId}/${MY_BANNER_PATH}?v=${Date.now()}`;
 }
 
 export async function removeImage(userId, path) {

@@ -507,7 +507,14 @@
 .nbh-tabs__tab:focus-visible { outline: 1.5px solid var(--nbh-ink); outline-offset: 2px; }
 
 /* 내 배너 */
-.nbh-mine__preview { border: 1px solid var(--nbh-ink); background: #fff; }
+.nbh-mine__preview { position: relative; border: 1px solid var(--nbh-ink); background: #fff; }
+/* 아직 바이브.me 배너를 올리지 않았을 때 */
+.nbh-mine__empty { display: none; position: absolute; inset: 0; place-items: center; font-size: 12.5px; color: var(--hsh-note); }
+.nbh-mine__preview.is-empty img { visibility: hidden; }
+.nbh-mine__preview.is-empty .nbh-mine__empty { display: grid; }
+.nbh-mine__owner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.nbh-mine__owner[hidden] { display: none; }
+.nbh-mine__owner .nbh-form__msg { margin: 0; }
 .nbh-mine__preview img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 1; object-fit: contain; }
 .nbh-mine__rows { display: grid; gap: 8px; margin: 0; }
 .nbh-mine__row { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 8px; }

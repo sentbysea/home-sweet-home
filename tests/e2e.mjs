@@ -1107,7 +1107,7 @@ async function archive() {
 //   우체통 → 배너 교환(내 배너 복사 · 신청 + 우리 집 꾸미기 · 배너 색 · 다시 시도) · 주인(승인하면 그 모양 · 집 고치기 · 내리기 · 걸기) ·
 //   3 · 12 · 30 집 · 모션 줄이기. 모두 흉내 DB — 운영에 쓰지 않는다.
 
-const MY_IMAGE = `https://iokdgqzfprtggsnrusez.supabase.co/storage/v1/object/public/user-banners/${OWNER_ID}/banner`;
+const MY_IMAGE = `https://iokdgqzfprtggsnrusez.supabase.co/storage/v1/object/public/user-banners/${OWNER_ID}/vibe-banner`; // 바이브.me 전용(hongjiwon.love 는 /banner)
 const watchLoader = (context) => context.addInitScript(() => {
   window.__loaderSeen = false;
   const look = () => {
@@ -1309,7 +1309,8 @@ async function neighborVillage(device, name) {
     code: document.querySelector('.nbh-mine__code').textContent,
     copies: [...document.querySelectorAll('.nbh-mine__rows [data-copy]')].map((b) => b.dataset.copy),
   }));
-  check(`${name} — 내 배너: 실제 이미지 · 이름 · 주소 · 이미지 주소 · 삽입 코드`, mine.img === MY_IMAGE && mine.vals.join('|') === `바이브.me|https://xn--9g3b29an0p.me|${MY_IMAGE}`
+  check(`${name} — 내 배너: 방문자에게는 바꾸기 없음 · 아직 없으면 안내`, (await page.$eval('.nbh-mine__owner', (x) => x.hidden)) && (await page.$eval('.nbh-mine__preview', (x) => x.classList.contains('is-empty'))));
+  check(`${name} — 내 배너: 바이브.me 전용 이미지 · 이름 · 주소 · 이미지 주소 · 삽입 코드`, mine.img === MY_IMAGE && mine.vals.join('|') === `바이브.me|https://xn--9g3b29an0p.me|${MY_IMAGE}`
     && mine.code === `<a href="https://xn--9g3b29an0p.me" target="_blank" rel="noopener"><img src="${MY_IMAGE}" alt="바이브.me" width="200" height="40"></a>` && mine.copies.length === 4, JSON.stringify(mine));
   if (!device && BROWSER === 'chromium') {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: VIBE_ORIGIN });
@@ -1541,6 +1542,18 @@ async function neighborOwner() {
   check('주인 — + add banner → 맨 뒤에 그 집 모양으로 · 이름을 비우면 사이트 제목', added?.house?.body === 'tall' && added.name === '추가된 사이트' && (await page.$eval('.nbh-home[data-i="3"]', (b) => b.dataset.house)).startsWith('tall/'), JSON.stringify(added));
   await page.click('.nbh__owner [data-act="edit"]');
   check('주인 — done → 고치기 표시 사라짐', (await page.$$('.nbh-home__edit')).length === 0);
+  // 바이브.me 배너 바꾸기 — 홍차네 집 → 내 배너 → 파일 → {owner}/vibe-banner 에 덮어쓰기(hongjiwon.love /banner 는 그대로)
+  await page.waitForTimeout(300);
+  const hm = (await rects(page, '.nbh-center .nbh-art'))[0];
+  await page.mouse.click(hm.x + hm.w / 2, hm.y + hm.h / 2);
+  await page.waitForSelector('.nbh-panel.is-open [data-mode="mine"]:not([hidden])', { timeout: 5000 });
+  check('주인 — 내 배너에 배너 바꾸기', !(await page.$eval('.nbh-mine__owner', (x) => x.hidden)));
+  const hjBefore = db.storage.get(`user-banners/${OWNER_ID}/banner`);
+  await page.setInputFiles('[data-mode="mine"] [name="mybanner"]', { name: 'vibe.png', mimeType: 'image/png', buffer: png(600, 200, [180, 200, 240]) });
+  await page.waitForFunction(() => document.querySelector('.nbh-mine__msg').dataset.tone === 'done', null, { timeout: 8000 }).catch(() => {});
+  const vb = db.storage.get(`user-banners/${OWNER_ID}/vibe-banner`)?.bytes;
+  check('주인 — 바이브.me 배너 저장(전용 경로 · 5:1) · hongjiwon.love 배너는 그대로', vb && vb.readUInt32BE(16) === 600 && vb.readUInt32BE(20) === 120
+    && db.storage.get(`user-banners/${OWNER_ID}/banner`) === hjBefore && (await page.$eval('.nbh-mine__preview img', (i) => i.getAttribute('src'))).includes('/vibe-banner?v='), vb ? `${vb.readUInt32BE(16)}x${vb.readUInt32BE(20)}` : 'none');
   check('콘솔 오류 없음(neighbor 주인)', o.errors.length === 0, o.errors.join(' | '));
   await o.context.close();
 }
