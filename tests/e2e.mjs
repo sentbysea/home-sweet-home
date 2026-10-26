@@ -125,6 +125,7 @@ function seed() {
     if (name === 'site_owner_id') { await reply(route, 200, OWNER_ID); return true; }
     if (name === 'submit_banner_request') {
       db.requestCalls += 1;
+      if (db.requestsMissing) { await reply(route, 404, { code: 'PGRST202', message: 'Could not find the function public.submit_banner_request' }); return true; }
       if (db.failSubmit > 0) { db.failSubmit -= 1; await reply(route, 503, { message: 'unavailable' }); return true; }
       const bad = (m) => reply(route, 400, { code: '22023', message: m, details: null, hint: null });
       const nm = String(args.p_site_name || '').trim();
@@ -1392,6 +1393,17 @@ async function neighborApply() {
   await p2.click(`${F} [type="submit"]`);
   await p2.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'done', F, { timeout: 10000 }).catch(() => {});
   check('신청 — 이미 걸린 사이트 → 안내', (await p2.textContent(`${F} .nbh-form__msg`)).includes('이미 이웃 목록에') && db.banner_requests.length === 1);
+  // DB 변경 적용 전(신청 RPC 없음) — 성공처럼 보이지 않고, 적은 내용 그대로
+  db.requestsMissing = true;
+  await p2.click(`${F} [data-act="again"]`);
+  await p2.fill(`${F} [name="name"]`, '준비 전');
+  await p2.fill(`${F} [name="url"]`, 'https://before-db.example');
+  await p2.fill(`${F} [name="image"]`, 'https://img.test/new.png');
+  await p2.click(`${F} [type="submit"]`);
+  await p2.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'error', F, { timeout: 10000 }).catch(() => {});
+  const before = await p2.textContent(`${F} .nbh-form__msg`);
+  check('신청 — DB 적용 전이면 저장 못 함 안내(성공 표시 없음)', before.includes('저장할 수 없어요') && !before.includes('신청했어요') && (await p2.inputValue(`${F} [name="name"]`)) === '준비 전' && db.banner_requests.length === 1, before);
+  db.requestsMissing = false;
   const applyErrors = v.errors.filter((e) => !/503|submit 503/.test(e)); // 일부러 낸 503(다시 시도 안내 확인)은 빼고
   check('콘솔 오류 없음(neighbor 신청)', applyErrors.length === 0, applyErrors.join(' | '));
   await v.context.close();

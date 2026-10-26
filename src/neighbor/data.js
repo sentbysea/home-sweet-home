@@ -61,7 +61,7 @@ export async function fetchBanners() {
 
 /**
  * 배너 교환 신청 — 누구나.
- * @returns {Promise<'ok' | 'pending' | 'listed' | 'busy' | 'invalid:site_name' | 'invalid:site_url' | 'invalid:image_url' | 'invalid:message'>}
+ * @returns {Promise<'ok' | 'pending' | 'listed' | 'busy' | 'unavailable' | 'invalid:site_name' | 'invalid:site_url' | 'invalid:image_url' | 'invalid:message'>}
  *   네트워크 · 서버 오류는 throw(다시 시도 안내)
  */
 export async function submitRequest({ name, url, image, message }) {
@@ -72,6 +72,8 @@ export async function submitRequest({ name, url, image, message }) {
   const body = await res.json().catch(() => null);
   if (res.ok) return body;
   if (body?.code === '22023') return `invalid:${body.message}`;
+  // 신청 RPC 가 아직 없다(DB 변경 적용 전) — 저장하지 못했다고 알린다
+  if (res.status === 404 || body?.code === 'PGRST202') return 'unavailable';
   throw new Error(`submit ${res.status} ${body?.message || ''}`);
 }
 

@@ -243,6 +243,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     pending: ['이미 신청된 사이트예요. 주인이 확인할 때까지 기다려 주세요.', 'done'],
     listed: ['이미 이웃 목록에 걸려 있는 사이트예요.', 'done'],
     busy: ['지금은 신청이 많아요. 잠시 뒤 다시 보내 주세요.', 'error'],
+    unavailable: ['아직 신청을 저장할 수 없어요 — 교환 신청을 준비하는 중이에요. 위의 내 배너 정보 복사는 지금도 쓸 수 있어요.', 'error'],
   };
 
   apply.addEventListener('submit', async (e) => {
