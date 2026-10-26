@@ -72,20 +72,20 @@
 /* ---------- 보기 스위치 — 오른쪽 위, 마을(민트 · 집) ↔ 배너(노랑 · 배너) ----------
    부드러운 회색 선 알약. 손잡이는 통통 튀며 미끄러지고(넘쳤다 돌아옴), 넘어갈 때 눌렸다 펴지며 반짝이가 톡 */
 .nbh-view {
-  --sw-w: 108px;
-  --sw-knob: 28px;
+  --sw-w: 84px;
+  --sw-knob: 24px;
   position: fixed;
-  top: max(14px, calc(env(safe-area-inset-top) + 4px));
+  top: max(16px, calc(env(safe-area-inset-top) + 6px)); /* ← home 과 같은 높이(가운데 줄 맞춤) */
   right: max(12px, env(safe-area-inset-right));
   z-index: 3;
   width: var(--sw-w);
-  height: 36px;
+  height: 32px;
   padding: 0;
   border: 1.3px solid var(--hsh-line);
   border-radius: 999px;
   background: var(--hsh-mint);
   font-family: var(--hsh-mono);
-  font-size: 12px;
+  font-size: 10.5px;
   color: var(--hsh-text);
   cursor: pointer;
   transition: background-color 380ms ease;
@@ -100,8 +100,8 @@
   line-height: 1;
   transition: opacity 220ms ease, translate 380ms cubic-bezier(0.3, 1.5, 0.5, 1);
 }
-.nbh-view__txt.is-village { right: 12px; }
-.nbh-view__txt.is-banner { left: 12px; opacity: 0; translate: 8px -50%; }
+.nbh-view__txt.is-village { right: 9px; }
+.nbh-view__txt.is-banner { left: 9px; opacity: 0; translate: 8px -50%; }
 .nbh-view[aria-checked="true"] .nbh-view__txt.is-village { opacity: 0; translate: -8px -50%; }
 .nbh-view[aria-checked="true"] .nbh-view__txt.is-banner { opacity: 1; translate: 0 -50%; }
 
@@ -125,8 +125,8 @@
 
 .nbh-view__ico {
   grid-area: 1 / 1;
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   fill: none;
   stroke: var(--hsh-text);
   stroke-width: 1.4;
@@ -218,9 +218,9 @@
 .nbh-bl__a:focus-visible { outline: 1.5px dashed var(--nbh-ink); outline-offset: 3px; }
 .nbh-bl__note { margin: 40px 0; font-family: var(--nbh-font); font-size: 13px; color: var(--hsh-note); text-align: center; }
 
-/* 제목 — 영단어(첫 글자 대문자) + 노란 밑줄(archive 와 같다) */
+/* 제목 — 영단어(첫 글자 대문자) + 노란 밑줄(archive 와 같다). ← home · 보기 스위치와 한 줄 */
 .nbh__title {
-  margin: 44px 0 6px;
+  margin: 2px 0 6px;
   font-family: var(--hsh-mono);
   font-size: 26px;
   font-weight: 400;
@@ -785,7 +785,6 @@
 /* ---------- 휴대폰 ---------- */
 
 @media (max-width: 560px) {
-  .nbh__title { margin-top: 50px; }
   .nbh-mine__row { grid-template-columns: 64px minmax(0, 1fr); }
 }
 

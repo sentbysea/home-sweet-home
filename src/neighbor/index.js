@@ -8,7 +8,7 @@
 //   · 손그림 위글: 선 변형 4장을 190ms 마다(로딩 · 평면도와 같은 박자) — 이 화면의 모든 집(패널 미리보기까지)이 같이. 모션 줄이기면 멈춘다.
 //   · 바탕은 홈과 같은 아이보리, 여백에 홈 · archive 와 같은 작은 별(shared/star.js)을 성글게 — 자리는 고정 비율이라
 //     창 크기가 바뀌어도 그대로, 마을 뒤에 깔려 집 · 이름표를 가리거나 누르기를 막지 않는다.
-//   · 오른쪽 위 스위치 — 마을(village) ↔ 배너(banner) 보기. 배너 보기는 받은 배너만 한 줄에 하나씩(이름 없이,
+//   · 오른쪽 위 스위치(← home · 제목과 한 줄) — 마을(village) ↔ 배너(banner) 보기. 배너 보기는 맨 위 내 배너, 그 아래 받은 배너만 한 줄에 하나씩(이름 없이,
 //     누르면 그 사이트 새 탭 — 홈페이지 없는 이웃은 빠진다). 고른 보기는 이 브라우저에 기억한다(hsh:nbh-view). 주인 고치기는 마을에서만.
 //   · 닫으면 마을을 치운다.
 
@@ -125,14 +125,16 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
 
   let view = readView();
 
-  // 배너 보기 — 받은 배너만 한 줄에 하나씩(이름 없이, 누르면 그 사이트 새 탭). 홈페이지 없는 이웃은 배너가 없어 빠진다
+  // 배너 보기 — 맨 위에 내 배너(homesweethome), 그 아래 받은 배너만 한 줄에 하나씩(이름 없이, 누르면 그 사이트 새 탭).
+  //   홈페이지 없는 이웃은 배너가 없어 빠진다
   const paintBanners = () => {
     const box = $('.nbh__banners');
     if (state !== 'ready') {
       box.innerHTML = `<p class="nbh-bl__note">${state === 'error' ? '이웃을 불러오지 못했어요.' : '불러오는 중…'}</p>`;
       return;
     }
-    const list = items().filter((it) => !it.resident);
+    const mine = { href: MY_BANNER.site, image: MY_BANNER.image, label: HOME_NAME };
+    const list = [mine, ...items().filter((it) => !it.resident)];
     box.innerHTML = list.length
       ? `<ul class="nbh-bl">${list.map((it) => `
         <li><a class="nbh-bl__a"${it.href ? ` href="${esc(it.href)}" target="_blank" rel="noopener noreferrer"` : ''} aria-label="${esc(it.label)} 방문하기 — 새 탭">${it.image ? `<img src="${esc(it.image)}" alt="" loading="lazy" decoding="async">` : ''}<span class="nbh-bl__alt">${esc(it.label)}</span></a></li>`).join('')}</ul>`
