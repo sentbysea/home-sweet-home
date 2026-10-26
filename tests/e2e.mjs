@@ -1216,9 +1216,9 @@ async function neighborVillage(device, name) {
     // PC — 올리면 배너, 배너로 옮겨도 그대로, 벗어나면 닫힘, 누르면 새 탭
     const h0 = await tapOrHover(0);
     const pb = await popBox();
-    const pop = await page.evaluate(() => ({ link: document.querySelector('.nbh-pop__link').getAttribute('href'), shadow: getComputedStyle(document.querySelector('.nbh-pop')).boxShadow, frame: document.querySelectorAll('.nbh-pop__frame .nbh-v').length, src: document.querySelector('.nbh-pop__banner img').getAttribute('src'), name: document.querySelector('.nbh-pop__name').textContent, ratio: (() => { const b = document.querySelector('.nbh-pop__banner').getBoundingClientRect(); return b.width / b.height; })(), fit: getComputedStyle(document.querySelector('.nbh-pop__banner img')).objectFit }));
-    check('PC — 집에 올리면 그 배너가 집 위로(5:1 칸 · 비율이 달라도 꽉 채워 자름 · 이름 · 손그림 말풍선 · 방문하기 버튼 없음)', (await popOpen(page)) && pop.link === 'https://hongjiwon.love/' && pop.shadow === 'none' && pop.frame === 4 && !(await page.$('.nbh-pop__go')) && pop.src === 'https://img.test/love.png' && pop.name === 'hongjiwon.love' && Math.abs(pop.ratio - 5) < 0.1 && pop.fit === 'cover' && pb.b <= h0.y, JSON.stringify(pop));
-    check('PC — 배너가 화면 안 · 읽을 만한 크기', pb.x >= 0 && pb.r <= vw && pb.y >= 0 && pb.w >= 220, JSON.stringify(pb));
+    const pop = await page.evaluate(() => ({ link: document.querySelector('.nbh-pop__link').getAttribute('href'), shadow: getComputedStyle(document.querySelector('.nbh-pop')).boxShadow, frame: document.querySelectorAll('.nbh-pop__frame .nbh-v').length, src: document.querySelector('.nbh-pop__banner img').getAttribute('src'), name: Boolean(document.querySelector('.nbh-pop__name')), label: document.querySelector('.nbh-pop__link').getAttribute('aria-label'), ratio: (() => { const b = document.querySelector('.nbh-pop__banner').getBoundingClientRect(); return b.width / b.height; })(), fit: getComputedStyle(document.querySelector('.nbh-pop__banner img')).objectFit }));
+    check('PC — 집에 올리면 그 배너가 집 위로(5:1 칸 · 비율이 달라도 꽉 채워 자름 · 배너만(이름 글 없음) · 손그림 말풍선 · 방문하기 버튼 없음)', (await popOpen(page)) && pop.link === 'https://hongjiwon.love/' && pop.shadow === 'none' && pop.frame === 4 && !(await page.$('.nbh-pop__go')) && pop.src === 'https://img.test/love.png' && !pop.name && pop.label.startsWith('hongjiwon.love') && Math.abs(pop.ratio - 5) < 0.1 && pop.fit === 'cover' && pb.b <= h0.y, JSON.stringify(pop));
+    check('PC — 배너가 화면 안 · 가로로 길게', pb.x >= 0 && pb.r <= vw && pb.y >= 0 && pb.w >= 380, JSON.stringify(pb));
     // 집 → 배너로 천천히 옮겨도 그대로
     for (let k = 1; k <= 8; k++) { await page.mouse.move(h0.x, h0.y - ((h0.y - (pb.y + pb.h / 2)) * k) / 8); await page.waitForTimeout(25); }
     await page.waitForTimeout(400);
@@ -1228,7 +1228,7 @@ async function neighborVillage(device, name) {
     check('PC — 벗어나면 닫힘', !(await popOpen(page)));
     await tapOrHover(1);
     await tapOrHover(0);
-    check('PC — 배너는 한 번에 하나', (await page.$$eval('.nbh-home.is-open', (x) => x.length)) === 1 && (await page.$eval('.nbh-pop__name', (n) => n.textContent)) === 'hongjiwon.love');
+    check('PC — 배너는 한 번에 하나', (await page.$$eval('.nbh-home.is-open', (x) => x.length)) === 1 && (await page.$eval('.nbh-pop__link', (n) => n.getAttribute('aria-label'))).startsWith('hongjiwon.love'));
     const h1 = center((await rects(page, '.nbh-home[data-i="1"] .nbh-art'))[0]);
     await page.mouse.click(h1.x, h1.y);
     await until(() => popups.length > 0, 6000);
@@ -1259,7 +1259,7 @@ async function neighborVillage(device, name) {
     // 휴대폰 — 한 번 누르면 배너, 그 배너를 눌러야 이동, 바깥을 누르면 닫힘
     await tapOrHover(0);
     const pb = await popBox();
-    check(`${name} — 한 번 누르면 배너 · 이름(이동은 아직)`, (await popOpen(page)) && popups.length === 0 && (await page.textContent('.nbh-pop__name')) === 'hongjiwon.love' && pb.x >= 0 && pb.r <= vw, JSON.stringify(pb));
+    check(`${name} — 한 번 누르면 배너만(이동은 아직) · 화면 폭에 맞게 가로로`, (await popOpen(page)) && popups.length === 0 && !(await page.$('.nbh-pop__name')) && pb.x >= 0 && pb.r <= vw && pb.w >= 300, JSON.stringify(pb));
     await tapOrHover(2);
     check(`${name} — 다른 집을 누르면 그 배너로(하나만) · 이미지 실패 → 이름`, (await page.$$eval('.nbh-home.is-open', (x) => x.length)) === 1 && (await page.$eval('.nbh-pop', (p) => p.classList.contains('is-broken'))) && (await page.textContent('.nbh-pop__alt')) === 'broken.example/home');
     const go = center((await rects(page, '.nbh-pop__banner'))[0]);
