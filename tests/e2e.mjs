@@ -72,8 +72,8 @@ function houseOk(h) {
   const hex = (c) => /^#[0-9a-f]{6}$/i.test(c || '');
   const deco = typeof h.deco === 'string' ? ['chimney', 'dormer', 'pot', 'none'].includes(h.deco)
     : Array.isArray(h.deco) && h.deco.length <= 5 && new Set(h.deco).size === h.deco.length && h.deco.every((d) => ['chimney', 'pot', 'dog', 'mailbox', 'tree'].includes(d));
-  return Object.keys(h).every((k) => keys.includes(k)) && ['cozy', 'tall', 'wide', 'two', 'tiny'].includes(h.body) && ['tri', 'round', 'trap', 'barn'].includes(h.roof)
-    && (h.roofPattern === undefined || ['solid', 'dot', 'halftone', 'stripe', 'gingham'].includes(h.roofPattern))
+  return Object.keys(h).every((k) => keys.includes(k)) && ['cozy', 'tall', 'wide', 'two', 'tiny'].includes(h.body) && ['tri', 'round', 'trap', 'gable', 'twin', 'barn'].includes(h.roof)
+    && (h.roofPattern === undefined || ['solid', 'halftone', 'hstripe', 'vstripe', 'gingham', 'dot', 'stripe'].includes(h.roofPattern))
     && ['arch', 'square', 'side'].includes(h.door) && ['one', 'two', 'round', 'cross', 'band'].includes(h.window) && deco
     && hex(h.wall) && hex(h.roofColor) && hex(h.doorColor);
 }
@@ -1130,7 +1130,7 @@ const overlaps = (page) => page.evaluate(() => {
 /** 그림 상자들이 화면 폭 안 */
 const inWidth = (page) => page.evaluate(() => [...document.querySelectorAll('.nbh-art, .nbh-mailbox__art, .nbh-deco')]
   .every((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= document.documentElement.clientWidth; }));
-const layoutOf = (page) => page.$eval('.nbh__village', (v) => v.hshVillage.layout.map((l) => [l.kind, Math.round(l.x), Math.round(l.base)].join(':')).join('|'));
+const layoutOf = (page) => page.$eval('.nbh__village', (v) => v.hshVillage.layout.filter((l) => !['tree', 'fence'].includes(l.kind)).map((l) => [l.kind, Math.round(l.x), Math.round(l.base)].join(':')).join('|'));
 
 async function neighborVillage(device, name) {
   const d = await open(null, device ? undefined : { width: 1280, height: 860 }, device || {});
@@ -1158,9 +1158,29 @@ async function neighborVillage(device, name) {
   check(`${name} — 집은 누르기 편한 크기`, homeRects.every((h) => h.w >= 44 && h.h >= 44), homeRects.map((h) => Math.round(h.w)).join(','));
   check(`${name} — 배너는 평소 숨김 · 카드 테두리 없음`, (await page.$eval('.nbh-pop', (p) => p.hidden)) && (await page.$eval('.nbh-home', (b) => getComputedStyle(b).borderTopWidth === '0px' && getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)')));
   check(`${name} — 저장된 집 모양 그대로(럭키)`, (await page.$eval('.nbh-home[data-i="1"]', (b) => b.dataset.house)) === 'wide/round/solid/side/two/pot/#cfe0fb/#7fa7d9/#e2b36b');
-  const tags = await page.$$eval('.nbh-home', (b) => b.map((x) => ({ text: x.querySelector('.nbh-home__tag')?.textContent, hl: x.style.getPropertyValue('--hl'), house: x.dataset.house })));
+  const tags = await page.$$eval('.nbh-home', (b) => b.map((x) => ({ text: x.querySelector('.nbh-home__tag')?.textContent, hl: x.style.getPropertyValue('--hl'), bg: x.style.getPropertyValue('--tag-bg'), house: x.dataset.house })));
   check(`${name} — 집마다 아래 이름표(이름 · 없으면 주소)`, tags.map((t) => t.text).join('|') === 'hongjiwon.love|럭키|broken.example/home', JSON.stringify(tags));
-  check(`${name} — 이름표 밑줄 색은 그 집에 쓴 색 중 하나`, tags.every((t) => t.hl && t.house.split('/').slice(6).includes(t.hl)), JSON.stringify(tags));
+  // 이름표 종이 색 — 그 집 색 중 하나(같은 색조), 진하면 명도 80 까지 밝힌 것. 배너 링크 밑줄도 같은 색
+  const hsl = (hex) => { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => v / 255); const mx = Math.max(...c); const mn = Math.min(...c); const l = (mx + mn) / 2; const d = mx - mn; let h = 0; if (d) h = (mx === c[0] ? (c[1] - c[2]) / d + (c[1] < c[2] ? 6 : 0) : mx === c[1] ? (c[2] - c[0]) / d + 2 : (c[0] - c[1]) / d + 4) * 60; return [h, l * 100]; };
+  check(`${name} — 이름표 종이 색은 그 집 색에서(밝기 80 이상) · 링크 밑줄과 같은 색`, tags.every((t) => t.bg && t.bg === t.hl && hsl(t.bg)[1] >= 79.5
+    && t.house.split('/').slice(6).some((c) => c === t.bg || Math.abs(hsl(c)[0] - hsl(t.bg)[0]) < 3)), JSON.stringify(tags));
+  const look = await page.evaluate(() => {
+    const cs = (q) => getComputedStyle(document.querySelector(q));
+    const vw = document.documentElement.clientWidth;
+    const labels = [...document.querySelectorAll('.nbh-label')].map((t) => { const b = t.getBoundingClientRect(); return { l: b.left, r: b.right, cut: t.scrollWidth > t.clientWidth + 1, deco: getComputedStyle(t).backgroundImage }; });
+    const outer = document.querySelector('.nbh-home .nbh-v0 path:not(.d)');
+    const inner = document.querySelector('.nbh-home .nbh-v0 path.d');
+    return {
+      title: [cs('.nbh__title').color, cs('.nbh__title').backgroundColor, cs('.nbh__title').fontStyle],
+      stars: document.querySelectorAll('.nbh__stars .hsh-star').length, starsPass: cs('.nbh__stars').pointerEvents,
+      labelsIn: labels.every((b) => b.l >= 0 && b.r <= vw && !b.cut && b.deco === 'none'),
+      line: [getComputedStyle(outer).stroke, parseFloat(getComputedStyle(outer).strokeWidth), parseFloat(getComputedStyle(inner).strokeWidth)],
+    };
+  });
+  check(`${name} — 제목은 홈 Neighbor 라벨처럼(연두 종이 · 분홍 이탤릭)`, look.title.join('|') === 'rgb(230, 93, 152)|rgb(205, 238, 214)|italic', look.title.join('|'));
+  check(`${name} — 여백 별(누르기를 막지 않음)`, look.stars >= 8 && look.starsPass === 'none', JSON.stringify(look));
+  check(`${name} — 이름표: 화면 안 · 잘리지 않음 · 밑줄 없음`, look.labelsIn, JSON.stringify(look));
+  check(`${name} — 선은 홈처럼 부드러운 회색 · 안쪽 선이 더 얇다`, look.line[0] === 'rgb(143, 148, 151)' && look.line[1] < 1.6 && look.line[2] < look.line[1], JSON.stringify(look.line));
   check(`${name} — 우체통: 글 없이 화살표 · 빨간 깃발이 움직인다`, !(await page.$('.nbh-mailbox__tip')) && (await page.$eval('.nbh-mailbox__arrow', (a) => getComputedStyle(a).animationName === 'nbh-boing'))
     && (await page.$eval('.nbh-mailbox__pennant', (g) => getComputedStyle(g).animationName === 'nbh-flutter')));
   const looks = await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house));
@@ -1333,6 +1353,10 @@ async function neighborApply() {
   check('꾸미기 — 굴뚝도 지붕 무늬를 따른다', await page.$eval(`${D} .nbh-diy__preview svg .nbh-v0`, (g) => g.querySelectorAll('path[fill^="url(#"]').length === 2), await chosen());
   check('꾸미기 — 색은 칩만(직접 고르기 없음)', !(await page.$(`${D} input[type="color"]`)) && !(await page.$(`${D} .nbh-diy__custom`)));
   check('꾸미기 — 마을과 같은 렌더러(.nbh-art · 위글 변형 4장)', await page.$eval(`${D} .nbh-diy__preview svg`, (s) => s.classList.contains('nbh-art') && s.querySelectorAll('.nbh-v').length === 4));
+  const opts = (key) => page.$$eval(`${D} [data-key="${key}"] [data-v]`, (b) => b.map((x) => x.dataset.v).join('|'));
+  check('꾸미기 — 지붕(처마 · 쌍둥이 박공, 헛간 없음) · 무늬 순서(단색-망점-가로-세로-깅엄)', (await opts('roof')) === 'tri|round|trap|gable|twin' && (await opts('roofPattern')) === 'solid|halftone|hstripe|vstripe|gingham', `${await opts('roof')} / ${await opts('roofPattern')}`);
+  const previewName = () => page.$eval(`${D} .nbh-diy__name`, (t) => t.textContent);
+  check('꾸미기 — 미리보기 집 아래 이름표(비면 안내)', (await previewName()) === '사이트 이름');
   const r1 = await chosen();
   await page.click(`${D} [data-diy="random"]`);
   const r2 = await chosen();
@@ -1345,6 +1369,7 @@ async function neighborApply() {
   await page.click(`${F} [type="submit"]`);
   check('신청 — 빈 칸이면 칸마다 안내 · 보내지 않음(이름은 선택)', (await err('name')) === '' && (await err('url')).length > 0 && (await err('image')).length > 0 && db.requestCalls === 0);
   await page.fill(`${F} [name="name"]`, '새 이웃');
+  check('꾸미기 — 이름을 적으면 미리보기 이름표도 바로', (await previewName()) === '새 이웃', await previewName());
   await page.fill(`${F} [name="url"]`, 'javascript:alert(1)');
   await page.fill(`${F} [name="image"]`, `${PLAIN_ORIGIN}/share-card-default.png`); // 다른 출처 · 읽기 허용 없음
   await page.click(`${F} [type="submit"]`);

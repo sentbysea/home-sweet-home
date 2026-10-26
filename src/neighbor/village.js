@@ -1,32 +1,27 @@
 // neighbor 마을 — 가운데 홍차네 집, 둘레에 배너를 교환한 이웃집들이 느슨하게 모인 손그림 동네(house-art.js 로 그린다).
 //   · 배치: 칸(PC 5 · 휴대폰 3)으로 나눈 동네에서 홍차네 집 둘레 칸부터 가까운 순서로 채우고, 넘치면 아래로 줄을 늘린다
 //     (집을 줄이지 않는다). 칸 안 자리 · 높낮이는 칸 번호로 정한 작은 어긋남 — 새로고침 · 고르기에도 그대로.
-//     둘레에 남는 칸 몇 곳에만 나무 · 울타리.
+//     나무 · 울타리는 집이 없는 빈 칸 몇 곳에 — 어느 칸 · 칸 안 어디 · 무엇인지는 새로고침마다 무작위(화면 크기가 바뀌어도 그대로),
+//     칸 가장자리에서 떼어 이웃집과 간격을 둔다.
 //   · 집마다 다른 주기로 2~4px 둥실(CSS). 외곽선 위글은 .nbh 의 data-boil(index.js)이 돌린다.
 //   · 배너: 평소엔 숨기고, 집을 고르면 집 위로 하나만 — PC 는 올리기 · 포커스(집 → 배너로 옮겨도 그대로), 누르면 새 탭.
 //     휴대폰은 한 번 누르면 배너 · 이름이 뜨고, 그 배너를 눌러야 이동. 바깥 · 다른 집을 누르면 닫힌다. Esc 로 닫기.
 //     배너 말풍선은 집과 같은 손그림 외곽선(위글 변형 4장) — 그림자 없이.
 //     배너는 화면 가장자리에서 잘리지 않게 자리를 고친다(위에 자리가 없으면 아래로).
-//   · 집마다 아래 이름표(사이트 이름). 이름표 밑줄 색은 그 집에 쓴 색(벽 · 지붕 · 문) 중 하나 — 배너 링크를 올렸을 때 밑줄도 같은 색.
+//   · 집마다 바로 아래 이름표(사이트 이름) — 홈 라벨 같은 색종이. 종이 색은 그 집에 쓴 색 중 하나(진하면 밝혀서, house-art.js tagTone),
+//     배너 링크를 올렸을 때 밑줄도 같은 색. 긴 이름은 줄을 바꾸고, 화면 밖으로 나가지 않게 폭을 정한다.
 //   · 우체통 위에 통통 튀는 화살표 · 바람에 떠는 빨간 세모 깃발로 누르기를 이끈다.
 //   · 주인 고치기 중에는 집을 누르면 그 집 고치기(onEdit).
 
-import { houseSvg, houseKey, normalizeHouse, defaultHouse, rng, hash, sketch, sketchEllipse, BOIL } from './house-art.js';
+import { houseSvg, houseKey, normalizeHouse, defaultHouse, tagTone, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
 
 const HOME_HOUSE = { v: 2, body: 'cozy', roof: 'tri', roofPattern: 'solid', door: 'arch', window: 'cross', deco: ['chimney'], wall: '#fffaf0', roofColor: '#e88a8a', doorColor: '#c9a27e' };
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const f = (n) => Math.round(n * 10) / 10;
 
-/** 이름표 밑줄 색 — 그 집 색 중 하나(너무 밝아 안 보이는 색은 빼고, 집마다 늘 같은 것) */
-function tagColor(spec, key) {
-  const seen = (c) => {
-    const n = parseInt(c.slice(1), 16);
-    return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 < 0.95;
-  };
-  const list = [spec.wall, spec.roofColor, spec.doorColor].filter(seen);
-  return list.length ? list[hash(`tag:${key}`) % list.length] : '#fbefae';
-}
+// 나무 · 울타리 자리 — 이 화면을 연 동안은 같은 씨앗(다시 그려도 그대로), 새로고침하면 새로
+const DECO_SEED = Math.floor(Math.random() * 2 ** 31);
 
 /** 위글 변형 4장으로 그린 작은 그림(나무 · 울타리 · 우체통) */
 function boiled(viewBox, w, h, draw, cls) {
@@ -46,7 +41,7 @@ const fence = (s, seed) => boiled('-2 -16 46 18', 46 * s, 18 * s, (v) =>
 const mailbox = (s) => boiled('-14 -44 34 46', 34 * s, 46 * s, (v) =>
   `<path d="${sketch([[0, 0], [0, -22]], { seed: 61, v })}" fill="none"/>` +
   `<path d="${sketch([[-10, -22], [-10, -34], [-7, -38], [7, -38], [10, -34], [10, -22]], { seed: 62, v, closed: true, radius: 2 })}" fill="#fbd5e3"/>` +
-  `<path d="${sketch([[-5, -31], [5, -31]], { seed: 63, v })}" fill="none"/>` +
+  `<path class="d" d="${sketch([[-5, -31], [5, -31]], { seed: 63, v })}" fill="none"/>` +
   `<g class="nbh-mailbox__flag"><path d="${sketch([[10, -24], [10, -42]], { seed: 64, v })}" fill="none"/>` +
   `<g class="nbh-mailbox__pennant"><path d="${sketch([[10, -42], [17, -40], [10, -37]], { seed: 65, v, closed: true, radius: 1 })}" fill="#e5604f"/></g></g>` +
   `<path class="nbh-mailbox__letter" d="${sketch([[-6, -36], [6, -36], [6, -44], [-6, -44]], { seed: 66, v, closed: true, radius: 1 })}" fill="#ffffff"/>`, 'nbh-mailbox__art');
@@ -58,7 +53,7 @@ function grid(width) {
   const pad = 12;
   const cw = Math.min((W - pad * 2) / cols, cols === 3 ? 180 : 150);
   const scale = cols === 3 ? Math.min(1.15, cw / 114) : 1.25; // 114 — 장식을 다 단 가장 넓은 집(넓은 집 + 개집 · 우체통)도 칸 안에
-  const rowH = Math.round(112 * scale + 46); // 이름표 자리까지
+  const rowH = Math.round(112 * scale + 64); // 이름표 자리까지(긴 이름은 두세 줄)
   const mid = (cols - 1) / 2;
   const r0 = rng(7);
   const ring = [];
@@ -112,7 +107,6 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   const build = () => {
     closePop(true);
     const g = grid(stage.clientWidth || window.innerWidth);
-    const r = rng(11);
     town.textContent = '';
     town.style.width = `${f(g.W)}px`;
     homes = [];
@@ -136,9 +130,14 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     const hs = houseSvg(HOME_HOUSE, { scale: g.scale * 1.35, seed: 3 });
     const home = document.createElement('div');
     home.className = 'nbh-center';
-    home.innerHTML = `<div class="nbh-home__art">${hs.svg}</div><span class="nbh-center__tag">홍차네 집</span>`;
+    home.innerHTML = `<div class="nbh-home__art">${hs.svg}</div><span class="nbh-center__tag nbh-label">홍차네 집</span>`;
     const cbase = (center.r + 0.82) * g.rowH;
     const cx = g.left + (center.c + 0.5) * g.cw - g.cw * (g.cols === 3 ? 0.12 : 0.08);
+    // 이름표 폭 — 이름 길이만큼, 단 화면(동네) 밖으로 나가지 않게
+    const tagMax = (x) => `${f(Math.max(60, Math.min(170, 2 * Math.min(x - 4, g.W - x - 4))))}px`;
+    home.style.setProperty('--tag-bg', tagTone(HOME_HOUSE));
+    home.style.setProperty('--tag-max', tagMax(cx));
+    home.style.setProperty('--tilt', '-2deg');
     home.style.left = `${f(cx - hs.w / 2)}px`;
     home.style.top = `${f(cbase - hs.h)}px`;
     home.style.setProperty('--dur', '5.6s');
@@ -159,10 +158,13 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       b.dataset.i = String(i);
       b.dataset.house = houseKey(spec);
       b.setAttribute('aria-label', `${it.label} — ${editing ? '집 고치기' : '배너 보기'}`);
-      b.style.setProperty('--hl', tagColor(spec, it.id ?? it.href));
+      const tone = tagTone(spec);
+      b.style.setProperty('--tag-bg', tone);
+      b.style.setProperty('--hl', tone);
+      b.style.setProperty('--tag-max', tagMax(x));
       b.setAttribute('aria-haspopup', 'dialog');
       b.setAttribute('aria-expanded', 'false');
-      b.innerHTML = `<span class="nbh-home__art">${art.svg}</span><span class="nbh-home__tag" aria-hidden="true">${esc(it.label)}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
+      b.innerHTML = `<span class="nbh-home__art">${art.svg}</span><span class="nbh-home__tag nbh-label" aria-hidden="true">${esc(it.label)}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
       b.style.left = `${f(x - art.w / 2)}px`;
       b.style.top = `${f(base - art.h)}px`;
       b.style.width = `${f(art.w)}px`;
@@ -171,6 +173,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       b.style.setProperty('--dur', `${f(3.8 + hr() * 2.6)}s`);
       b.style.setProperty('--delay', `${f(-hr() * 5)}s`);
       b.style.setProperty('--bob', `${f(2 + hr() * 2)}px`);
+      b.style.setProperty('--tilt', `${f((hr() * 2 - 1) * 2.5)}deg`);
       town.append(b);
       homes.push(b);
       layout.push({ kind: 'home', i, x, base, w: art.w, h: art.h, slot: `${slot.r}:${slot.c}` });
@@ -191,21 +194,31 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     layout.push({ kind: 'mail', x: mx + ms / 2, base: cbase, w: ms, h: 46 * g.scale });
 
 
-    // 장식 — 둘레에 남은 칸 몇 곳(많으면 맨 아래 줄 빈 칸 하나)
+    // 장식 — 집이 없는 빈 칸(둘레 · 마지막 줄)에서 무작위로 2~4곳, 칸 가장자리에서 GAP 만큼 떼어
     const used = new Set(layout.filter((l) => l.slot).map((l) => l.slot));
-    const empty = g.ring.filter((s) => !used.has(`${s.r}:${s.c}`)).slice(-3);
-    if (!empty.length && shown.length > g.ring.length) {
-      const k = shown.length - g.ring.length;
-      if (k % g.cols) empty.push({ r: 3 + Math.floor(k / g.cols), c: g.cols - 1 });
+    const rowsUsed = shown.length > g.ring.length ? 3 + Math.ceil((shown.length - g.ring.length) / g.cols) : 3;
+    const free = [];
+    for (let rr = 0; rr < rowsUsed; rr++) {
+      for (let c = 0; c < g.cols; c++) {
+        if (rr === 1 && (c === g.mid || c === g.mid + 1)) continue; // 홍차네 집 · 우체통
+        if (rr === 2 && c === g.mid && !shown.length) continue; // 빈 동네 안내 자리
+        if (!used.has(`${rr}:${c}`)) free.push({ r: rr, c });
+      }
     }
-    empty.slice(0, 3).forEach((s, i) => {
+    const dr = rng(DECO_SEED);
+    for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(dr() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
+    const GAP = 14;
+    free.slice(0, 2 + Math.floor(dr() * 3)).forEach((s, i) => {
       const d = document.createElement('div');
       d.className = 'nbh-deco-wrap';
-      const isFence = i === 1;
-      d.innerHTML = isFence ? fence(g.scale, 80 + i * 10) : tree(g.scale * (0.85 + r() * 0.3), 40 + i * 10);
-      const w = (isFence ? 46 : 32) * g.scale;
-      const h = (isFence ? 18 : 48) * g.scale;
-      const { x, base } = place(s, w, h, 5);
+      const isFence = dr() < 0.35;
+      const ts = g.scale * (0.85 + dr() * 0.3);
+      d.innerHTML = isFence ? fence(g.scale, 80 + i * 10) : tree(ts, 40 + i * 10);
+      const w = isFence ? 46 * g.scale : 32 * ts;
+      const h = isFence ? 18 * g.scale : 48 * ts;
+      const span = Math.max(0, g.cw - w - GAP * 2);
+      const x = g.left + s.c * g.cw + GAP + w / 2 + dr() * span;
+      const base = (s.r + 0.82) * g.rowH + (dr() * 2 - 1) * g.rowH * 0.06;
       d.style.left = `${f(x - w / 2)}px`;
       d.style.top = `${f(base - h)}px`;
       town.append(d);

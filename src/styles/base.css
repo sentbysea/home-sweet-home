@@ -6,6 +6,16 @@
   src: url("../fonts/nanum-gothic-coding-latin.woff2") format("woff2");
 }
 
+/* 타자기 라틴만 — 영문은 타자기, 한글은 다음 글꼴(Pretendard)로 넘기는 이름표용(Nanum 한글 서브셋을 건너뛴다) */
+@font-face {
+  font-family: "HSH Type Latin";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/nanum-gothic-coding-latin.woff2") format("woff2");
+  unicode-range: U+0000-024F, U+2000-206F, U+20AC, U+2190-21FF;
+}
+
 *,
 *::before,
 *::after {
@@ -44,6 +54,10 @@
      손글씨(로딩 home sweet home · 시계 단어)와 타자기(제목 · 짧은 영문 · 링크 이름 · 한글 안내)는 같은 Nanum Gothic Coding */
   --hsh-hand: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --hsh-mono: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* 홈 방 라벨(색종이) 글자 — 둥근 이탤릭. neighbor 제목도 같은 것 */
+  --hsh-tag-font: "Varela Round", "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  /* 이름표 — 영문은 타자기, 한글은 Pretendard */
+  --hsh-label-font: "HSH Type Latin", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
 
   /* 손그림 위글 박자 — loader/wobble.js · plan/index.js · archive/keyring.js 가 같은 190ms */
   --hsh-wobble: 190ms;
