@@ -1,23 +1,27 @@
 // 손그림 집 렌더러 — 마을의 집 · 신청 미리보기 · 주인 집 고치기가 모두 이 하나로 그린다.
-//   집 모양(house) = 몸체 · 지붕 · 문 · 창문 · 장식 + 벽 · 지붕 · 문 색. banners.house · banner_requests.house 에 그대로 저장
+//   집 모양(house) = 몸체 · 지붕 · 지붕 무늬 · 문 · 창문 · 장식 + 벽 · 지붕 · 문 색. banners.house · banner_requests.house 에 그대로 저장
 //   (web 저장소 supabase/migrations/20261027100000_neighbor_houses.sql 의 banner_house_ok 와 같은 꼴).
 //   · 선: 살짝 휘고 끝 · 모서리가 둥근 손그림. 선 변형 4장(.nbh-v0~3)을 그려 두고 화면이 190ms 마다 하나씩 보인다(로딩 · 평면도 위글과 같은 박자).
 //     꼭짓점은 그대로라 선이 벌어지지 않는다. 굵기는 집 크기와 상관없이 같다(vector-effect).
 //   · 기존 이웃은 house 가 비어 있으면 배너 id 로 정한 기본 모양 — 새로고침해도 같다.
 //   · 배너 색으로 만들기: 배너 이미지에서 대표 색을 뽑아(투명 픽셀 빼고) 벽은 밝게 · 지붕은 또렷하게 · 문은 벽과 대비 나게.
+//   · 장식(deco)은 여러 개 — 배열(비면 장식 없음). 지붕 무늬(roofPattern)는 사이트 스티커 무늬(plan/room-window.js)와 같은 결.
+//   · 옛 꼴(v1 — deco 가 글자 하나, roofPattern 없음)도 읽는다: 다락창 · 없음은 장식 없음으로, 무늬는 민무늬로.
 
-export const BODIES = ['cozy', 'tall', 'wide', 'two'];
-export const ROOFS = ['tri', 'round', 'trap'];
+export const BODIES = ['cozy', 'tall', 'wide', 'two', 'tiny'];
+export const ROOFS = ['tri', 'round', 'trap', 'barn'];
+export const PATTERNS = ['solid', 'dot', 'halftone', 'stripe', 'gingham'];
 export const DOORS = ['arch', 'square', 'side'];
-export const WINDOWS = ['one', 'two', 'round', 'cross'];
-export const DECOS = ['chimney', 'dormer', 'pot', 'none'];
+export const WINDOWS = ['one', 'two', 'round', 'cross', 'band'];
+export const DECOS = ['chimney', 'pot', 'dog', 'mailbox', 'tree'];
 
 export const LABELS = {
-  body: { cozy: '아담한 집', tall: '길쭉한 집', wide: '넓은 집', two: '2층집' },
-  roof: { tri: '삼각 지붕', round: '둥근 지붕', trap: '사다리꼴 지붕' },
+  body: { cozy: '아담한 집', tall: '길쭉한 집', wide: '넓은 집', two: '2층집', tiny: '오두막' },
+  roof: { tri: '삼각 지붕', round: '둥근 지붕', trap: '사다리꼴 지붕', barn: '헛간 지붕' },
+  roofPattern: { solid: '민무늬', dot: '도트', halftone: '망점', stripe: '사선 줄무늬', gingham: '체크' },
   door: { arch: '둥근 문', square: '네모 문', side: '옆 문' },
-  window: { one: '창 하나', two: '창 둘', round: '동그란 창', cross: '격자 창' },
-  deco: { chimney: '굴뚝', dormer: '다락창', pot: '화분', none: '없음' },
+  window: { one: '창 하나', two: '창 둘', round: '동그란 창', cross: '격자 창', band: '긴 창' },
+  deco: { chimney: '굴뚝', pot: '화분', dog: '개집', mailbox: '우체통', tree: '작은 나무' },
 };
 
 // 파스텔 — 홈 라벨 색(base.css)과 같은 결
@@ -48,24 +52,36 @@ export function hash(text) {
 const pick = (list, r) => list[Math.floor(r() * list.length) % list.length];
 const f = (n) => Math.round(n * 10) / 10;
 
-/** 저장된 모양이 정해진 꼴이면 그대로(복사), 아니면 null */
+const OLD_DECOS = ['chimney', 'dormer', 'pot', 'none'];
+
+/** 저장된 모양이 정해진 꼴이면 v2 꼴로(복사 · 장식은 DECOS 순서), 아니면 null */
 export function normalizeHouse(h) {
   if (!h || typeof h !== 'object' || Array.isArray(h)) return null;
   const hex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
-  if (!BODIES.includes(h.body) || !ROOFS.includes(h.roof) || !DOORS.includes(h.door) || !WINDOWS.includes(h.window) || !DECOS.includes(h.deco)) return null;
+  if (!BODIES.includes(h.body) || !ROOFS.includes(h.roof) || !DOORS.includes(h.door) || !WINDOWS.includes(h.window)) return null;
   if (!hex(h.wall) || !hex(h.roofColor) || !hex(h.doorColor)) return null;
-  return { v: 1, body: h.body, roof: h.roof, door: h.door, window: h.window, deco: h.deco, wall: h.wall.toLowerCase(), roofColor: h.roofColor.toLowerCase(), doorColor: h.doorColor.toLowerCase() };
+  let deco;
+  if (typeof h.deco === 'string' && OLD_DECOS.includes(h.deco)) deco = DECOS.includes(h.deco) ? [h.deco] : [];
+  else if (Array.isArray(h.deco) && h.deco.every((d) => DECOS.includes(d))) deco = DECOS.filter((d) => h.deco.includes(d));
+  else return null;
+  const roofPattern = h.roofPattern ?? 'solid';
+  if (!PATTERNS.includes(roofPattern)) return null;
+  return { v: 2, body: h.body, roof: h.roof, roofPattern, door: h.door, window: h.window, deco, wall: h.wall.toLowerCase(), roofColor: h.roofColor.toLowerCase(), doorColor: h.doorColor.toLowerCase() };
 }
 
-/** 무작위 집(r 를 넘기면 그 난수로) */
+/** 집 모양 → 짧은 글자(data-house · 시험용): 몸체/지붕/무늬/문/창/장식+장식(없으면 -)/벽/지붕 색/문 색 */
+export const houseKey = (h) => `${h.body}/${h.roof}/${h.roofPattern}/${h.door}/${h.window}/${h.deco.join('+') || '-'}/${h.wall}/${h.roofColor}/${h.doorColor}`;
+
+/** 무작위 집(r 를 넘기면 그 난수로) — 무늬는 절반쯤 민무늬, 장식은 0~2개쯤 */
 export function randomHouse(r = Math.random) {
   return {
-    v: 1,
+    v: 2,
     body: pick(BODIES, r),
     roof: pick(ROOFS, r),
+    roofPattern: r() < 0.5 ? 'solid' : pick(PATTERNS.slice(1), r),
     door: pick(DOORS, r),
     window: pick(WINDOWS, r),
-    deco: pick(DECOS, r),
+    deco: DECOS.filter(() => r() < 0.28),
     wall: pick(WALLS, r),
     roofColor: pick(ROOF_COLORS, r),
     doorColor: pick(DOOR_COLORS, r),
@@ -156,96 +172,144 @@ function archPts(x, y, w, h, steps = 6) {
 
 // ---------- 집 ----------
 
-const BODY = { cozy: [56, 44], tall: [44, 70], wide: [78, 40], two: [60, 72] };
+const BODY = { cozy: [56, 44], tall: [44, 70], wide: [78, 40], two: [60, 72], tiny: [50, 34] };
 
 /**
  * 집 모양 → 도형 목록(변형 v 와 상관없이 같은 뼈대). 좌표는 바닥 가운데가 (0, 0), 위가 -y.
- * @returns {{ shapes: Array<{ kind: 'poly' | 'ellipse', pts?: number[][], e?: number[], fill?: string, closed?: boolean, seed: number, r?: number }>, box: { x: number, y: number, w: number, h: number } }}
+ * @returns {{ shapes: Array<{ kind: 'poly' | 'ellipse', pts?: number[][], e?: number[], fill?: string, roof?: boolean, closed?: boolean, seed: number, r?: number }>, box: { x: number, y: number, w: number, h: number } }}
  */
 function plan(h) {
   const [w, bh] = BODY[h.body];
   const x0 = -w / 2;
   const top = -bh;
+  const has = (d) => h.deco.includes(d);
+  const side = h.door === 'side';
   const shapes = [];
   let seed = 1;
   const add = (o) => shapes.push({ seed: seed++, closed: true, ...o });
   // 지붕
   const over = 5;
-  let roofTop = top;
+  let rh;
   let roofPts;
   if (h.roof === 'tri') {
-    const rh = w * 0.52;
-    roofTop = top - rh;
-    roofPts = [[x0 - over, top + 1], [0, roofTop], [-x0 + over, top + 1]];
+    rh = w * 0.52;
+    roofPts = [[x0 - over, top + 1], [0, top - rh], [-x0 + over, top + 1]];
   } else if (h.roof === 'round') {
-    const rh = (w + over * 2) / 2 * 0.78;
-    roofTop = top - rh;
+    rh = (w + over * 2) / 2 * 0.78;
     roofPts = [];
     const steps = 8;
     for (let i = 0; i <= steps; i++) {
       const a = Math.PI - (i / steps) * Math.PI;
       roofPts.push([Math.cos(a) * (w / 2 + over), top + 1 - Math.sin(a) * rh]);
     }
+  } else if (h.roof === 'barn') {
+    // 헛간 지붕 — 아래는 가파르고 위는 완만하게 꺾인다
+    rh = w * 0.5;
+    roofPts = [[x0 - over, top + 1], [x0 - over + w * 0.1, top - rh * 0.58], [0, top - rh], [-x0 + over - w * 0.1, top - rh * 0.58], [-x0 + over, top + 1]];
   } else {
-    const rh = w * 0.34;
-    roofTop = top - rh;
-    roofPts = [[x0 - over, top + 1], [x0 + w * 0.2, roofTop], [-x0 - w * 0.2, roofTop], [-x0 + over, top + 1]];
+    rh = w * 0.34;
+    roofPts = [[x0 - over, top + 1], [x0 + w * 0.2, top - rh], [-x0 - w * 0.2, top - rh], [-x0 + over, top + 1]];
   }
-  // 장식 — 굴뚝(지붕 뒤) · 다락창(지붕 위) · 화분(문 옆 바닥)
-  if (h.deco === 'chimney') {
+  const roofTop = top - rh;
+  // 지붕 윗변 높이(x 자리에서) — 굴뚝이 지붕에 걸치게
+  const roofAt = (x) => {
+    let y = top;
+    for (let i = 0; i < roofPts.length - 1; i++) {
+      const [ax, ay] = roofPts[i];
+      const [bx, by] = roofPts[i + 1];
+      if (ax !== bx && (x - ax) * (x - bx) <= 0) y = Math.min(y, ay + (by - ay) * (x - ax) / (bx - ax));
+    }
+    return y;
+  };
+  // 작은 나무 — 집 왼쪽 뒤(먼저 그려 집 · 개집에 살짝 가린다)
+  const tx = x0 - 4;
+  if (has('tree')) {
+    add({ kind: 'poly', pts: [[tx, -1], [tx, -13]], closed: false });
+    add({ kind: 'ellipse', e: [tx, -21, 8, 10], fill: '#a9d6a0' });
+  }
+  // 굴뚝(지붕 뒤)
+  if (has('chimney')) {
     const cx = x0 + w * 0.26;
-    const at = h.roof === 'tri' ? top - (w * 0.52) * (1 - Math.abs(cx) / (w / 2 + over)) : h.roof === 'round' ? top - ((w + over * 2) / 2 * 0.78) * Math.sqrt(Math.max(0, 1 - (cx / (w / 2 + over)) ** 2)) : roofTop;
+    const at = roofAt(cx);
     add({ kind: 'poly', pts: [[cx - 5, at + 3], [cx - 5, Math.min(at, roofTop + 6) - 9], [cx + 5, Math.min(at, roofTop + 6) - 9], [cx + 5, at + 3]], fill: h.roofColor, r: 1.5 });
   }
-  add({ kind: 'poly', pts: roofPts, fill: h.roofColor, r: h.roof === 'round' ? 1 : 2.5 });
+  add({ kind: 'poly', pts: roofPts, roof: true, r: h.roof === 'round' ? 1 : 2.5 });
   // 몸체
   add({ kind: 'poly', pts: [[x0, top], [-x0, top], [-x0, 0], [x0, 0]], fill: h.wall });
   if (h.body === 'two') add({ kind: 'poly', pts: [[x0 + 3, top + bh * 0.48], [-x0 - 3, top + bh * 0.48]], closed: false });
-  if (h.deco === 'dormer') {
-    const dy = (top + roofTop) / 2 + 2;
-    add({ kind: 'ellipse', e: [0, dy, 4.2, 4.2], fill: '#ffffff' });
-  }
   // 문
   const dw = h.body === 'wide' ? 13 : 11;
   const dh = Math.min(20, bh * 0.46);
-  const dx = h.door === 'side' ? x0 + 6 : -dw / 2;
+  const dx = side ? x0 + 6 : -dw / 2;
   if (h.door === 'arch') add({ kind: 'poly', pts: archPts(dx, -dh, dw, dh, 5), fill: h.doorColor, r: 1 });
   else add({ kind: 'poly', pts: [[dx, -dh], [dx + dw, -dh], [dx + dw, 0], [dx, 0]], fill: h.doorColor, r: 1.5 });
   add({ kind: 'ellipse', e: [dx + dw - 3, -dh / 2, 0.9, 0.9], fill: INK });
-  // 창 — 1층(문 옆) · 2층(2층집 · 길쭉한 집)
-  const win = (cx, cy, s) => {
+  // 창 — 1층(문 옆) · 2층(2층집 · 길쭉한 집). 긴 창은 가로로 길고 세 칸
+  const win = (cx, cy, s, bw = s) => {
     if (h.window === 'round') { add({ kind: 'ellipse', e: [cx, cy, s / 2, s / 2], fill: '#ffffff' }); return; }
-    add({ kind: 'poly', pts: [[cx - s / 2, cy - s / 2], [cx + s / 2, cy - s / 2], [cx + s / 2, cy + s / 2], [cx - s / 2, cy + s / 2]], fill: '#ffffff', r: 1.2 });
+    const hw = bw / 2;
+    const hh = (h.window === 'band' ? s * 0.8 : s) / 2;
+    add({ kind: 'poly', pts: [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]], fill: '#ffffff', r: 1.2 });
     if (h.window === 'cross') {
-      add({ kind: 'poly', pts: [[cx, cy - s / 2 + 1], [cx, cy + s / 2 - 1]], closed: false });
-      add({ kind: 'poly', pts: [[cx - s / 2 + 1, cy], [cx + s / 2 - 1, cy]], closed: false });
+      add({ kind: 'poly', pts: [[cx, cy - hh + 1], [cx, cy + hh - 1]], closed: false });
+      add({ kind: 'poly', pts: [[cx - hw + 1, cy], [cx + hw - 1, cy]], closed: false });
+    }
+    if (h.window === 'band' && bw >= 12) {
+      for (const k of [-1, 1]) add({ kind: 'poly', pts: [[cx + k * bw / 6, cy - hh + 1], [cx + k * bw / 6, cy + hh - 1]], closed: false });
     }
   };
   const ws = h.window === 'two' ? 8 : 10;
   const groundY = -dh * 0.62;
-  const free = h.door === 'side' ? [x0 + 6 + dw + 6, -x0 - 6] : [dw / 2 + 5, -x0 - 5]; // 문 오른쪽 빈 곳
-  const span = free[1] - free[0];
-  if (span > ws + 2) {
-    if (h.window === 'two' && span > ws * 2 + 5) { win(free[0] + ws / 2 + 1, groundY, ws); win(free[0] + ws * 1.5 + 4, groundY, ws); }
-    else win((free[0] + free[1]) / 2, groundY, Math.min(ws, span - 2));
-  }
-  if (h.door !== 'side' && w >= 56) {
-    const lx = (x0 + 5 + (-dw / 2 - 5)) / 2;
-    if (-dw / 2 - 5 - (x0 + 5) > ws + 2) win(lx, groundY, ws);
+  // 문 옆 빈 곳 [a, b] 에 창
+  const fill = (a, b) => {
+    const span = b - a;
+    if (h.window === 'band' && span >= 14) { win((a + b) / 2, groundY, ws, Math.min(span - 2, 24)); return; }
+    if (h.window === 'two' && span > ws * 2 + 5) { win(a + ws / 2 + 1, groundY, ws); win(a + ws * 1.5 + 4, groundY, ws); return; }
+    if (span > ws + 2 || (h.body === 'tiny' && span > 8)) win((a + b) / 2, groundY, Math.min(ws, span - 2));
+  };
+  if (side) fill(x0 + 6 + dw + 6, -x0 - 6);
+  else {
+    fill(dw / 2 + 5, -x0 - 5);
+    if (w >= 56 || h.body === 'tiny') fill(x0 + 5, -dw / 2 - 5);
   }
   if (bh >= 60) {
     const uy = top + bh * 0.25;
     if (h.window === 'two') { win(-w * 0.2, uy, ws); win(w * 0.2, uy, ws); }
+    else if (h.window === 'band') win(0, uy, ws, w * 0.5);
     else win(0, uy, ws + 1);
   }
-  if (h.deco === 'pot') {
-    const px = h.door === 'side' ? -x0 + 1 : -x0 - 1;
+  // 화분(문 옆 바닥)
+  if (has('pot')) {
+    const px = side ? -x0 + 1 : -x0 - 1;
     add({ kind: 'poly', pts: [[px - 4, -7], [px + 4, -7], [px + 3, 0], [px - 3, 0]], fill: '#e2a37e', r: 1 });
     add({ kind: 'ellipse', e: [px, -10.5, 4.2, 3.6], fill: '#9ccb8f' });
   }
-  const minX = Math.min(x0 - over, h.deco === 'pot' ? x0 : x0 - over) - 2;
-  const maxX = Math.max(-x0 + over, h.deco === 'pot' ? -x0 + 6 : 0) + 2;
-  const minY = roofTop - (h.deco === 'chimney' ? 12 : 4);
+  // 개집 — 집 왼쪽 앞
+  const da = x0 - 15;
+  const db = x0 - 2;
+  if (has('dog')) {
+    const m = (da + db) / 2;
+    add({ kind: 'poly', pts: [[da + 1, -9], [db - 1, -9], [db - 1, 0], [da + 1, 0]], fill: '#f3e6d8', r: 1 });
+    add({ kind: 'poly', pts: [[da - 1, -8], [m, -15], [db + 1, -8]], fill: h.roofColor, r: 1.2 });
+    add({ kind: 'poly', pts: archPts(m - 2.5, -5.5, 5, 5.5, 4), fill: INK, r: 0.8 });
+  }
+  // 우체통 — 집 오른쪽 앞(화분 · 옆 문이면 조금 더 밖에)
+  const mx = -x0 + (has('pot') && side ? 10 : 8);
+  if (has('mailbox')) {
+    add({ kind: 'poly', pts: [[mx, 0], [mx, -10]], closed: false });
+    add({ kind: 'poly', pts: [[mx - 4.5, -16], [mx + 4.5, -16], [mx + 4.5, -10], [mx - 4.5, -10]], fill: '#e88a8a', r: 1.5 });
+    add({ kind: 'poly', pts: [[mx - 2.2, -13], [mx + 2, -13]], closed: false });
+  }
+  let minX = x0 - over;
+  if (has('tree')) minX = Math.min(minX, tx - 8);
+  if (has('dog')) minX = Math.min(minX, da - 1);
+  let maxX = -x0 + over;
+  if (has('pot')) maxX = Math.max(maxX, -x0 + 6);
+  if (has('mailbox')) maxX = Math.max(maxX, mx + 4.5);
+  let minY = roofTop - (has('chimney') ? 12 : 4);
+  if (has('tree')) minY = Math.min(minY, -33);
+  minX -= 2;
+  maxX += 2;
   return { shapes, box: { x: minX, y: minY, w: maxX - minX, h: -minY + 2 } };
 }
 
@@ -257,6 +321,7 @@ function plan(h) {
  */
 export function houseSvg(house, { scale = 1, seed = 0, still = false, cls = 'nbh-art' } = {}) {
   const { shapes, box } = plan(house);
+  const roof = roofPaint(house.roofPattern, house.roofColor);
   const w = box.w * scale;
   const hpx = box.h * scale;
   const layer = (v) => shapes.map((s) => {
@@ -264,7 +329,7 @@ export function houseSvg(house, { scale = 1, seed = 0, still = false, cls = 'nbh
     const d = s.kind === 'ellipse'
       ? sketchEllipse(s.e[0], s.e[1], s.e[2], s.e[3], sd, v)
       : sketch(s.pts, { closed: s.closed, seed: sd, v, radius: s.r ?? 2.5 });
-    const fill = s.closed === false ? 'none' : s.fill || 'none';
+    const fill = s.closed === false ? 'none' : s.roof ? roof.fill : s.fill || 'none';
     return `<path d="${d}" fill="${fill}"/>`;
   }).join('');
   const body = still
@@ -273,8 +338,32 @@ export function houseSvg(house, { scale = 1, seed = 0, still = false, cls = 'nbh
   return {
     w,
     h: hpx,
-    svg: `<svg class="${cls}" viewBox="${f(box.x)} ${f(box.y)} ${f(box.w)} ${f(box.h)}" width="${f(w)}" height="${f(hpx)}" aria-hidden="true" focusable="false">${body}</svg>`,
+    svg: `<svg class="${cls}" viewBox="${f(box.x)} ${f(box.y)} ${f(box.w)} ${f(box.h)}" width="${f(w)}" height="${f(hpx)}" aria-hidden="true" focusable="false">${roof.defs}${body}</svg>`,
   };
+}
+
+// ---------- 지붕 무늬 ----------
+//   사이트 스티커 무늬(plan/room-window.js — 도트 · 망점 · 줄무늬 · 깅엄)와 같은 결. 줄무늬는 사선.
+//   무늬 색: 밝은 지붕엔 같은 색을 진하게, 그 밖엔 흰색 — 직접 고른 색에서도 보이게.
+
+let patternNo = 0;
+
+/** 지붕 무늬 하나 — <defs> 마크업과 fill 값(민무늬면 색 그대로) */
+export function roofPaint(kind, color) {
+  if (!kind || kind === 'solid') return { defs: '', fill: color };
+  const id = `nbh-pt-${patternNo++}`;
+  const [hh, ss, ll] = toHsl(color);
+  const ink = ll > 70 ? toHex(hh, clamp(ss, 20, 60), clamp(ll - 28, 30, 62)) : '#ffffff';
+  const op = ll > 70 ? 0.75 : 0.65;
+  const open = (w, h, extra = '') => `<pattern id="${id}" width="${w}" height="${h}" patternUnits="userSpaceOnUse"${extra}><rect width="${w}" height="${h}" fill="${color}"/>`;
+  const body = {
+    dot: open(9, 9) + `<circle cx="2.4" cy="2.4" r="1.5" fill="${ink}" fill-opacity="${op}"/><circle cx="6.9" cy="6.9" r="1.5" fill="${ink}" fill-opacity="${op}"/>`,
+    halftone: open(3.6, 3.6, ' patternTransform="rotate(45)"') + `<circle cx="1.8" cy="1.8" r="0.95" fill="${ink}" fill-opacity="${op}"/>`,
+    stripe: open(6, 6, ' patternTransform="rotate(45)"') + `<rect width="3" height="6" fill="${ink}" fill-opacity="${op}"/>`,
+    gingham: open(10, 10) + `<rect width="5" height="10" fill="${ink}" fill-opacity="0.4"/><rect width="10" height="5" fill="${ink}" fill-opacity="0.4"/>`,
+  }[kind];
+  if (!body) return { defs: '', fill: color };
+  return { defs: `<defs>${body}</pattern></defs>`, fill: `url(#${id})` };
 }
 
 // ---------- 배너 색으로 ----------

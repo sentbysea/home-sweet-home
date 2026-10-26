@@ -48,6 +48,23 @@ export function siteLabel(b) {
   }
 }
 
+/**
+ * 사이트 제목(탭에 뜨는 <title>) — 이름을 비워 두면 이걸로. 남의 사이트 HTML 은 브라우저가 바로 못 읽어서
+ * Supabase Edge Function(site-title, web 저장소 supabase/functions/site-title)이 대신 읽는다.
+ * 함수가 없거나 못 읽으면 주소(hongjiwon.love · luvlog.me/lucky)로. 늘 1~40자.
+ */
+export async function siteTitle(url) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/site-title?url=${encodeURIComponent(url)}`, {
+      headers: { apikey: SUPABASE_KEY },
+      signal: AbortSignal.timeout(6000),
+    });
+    const title = res.ok ? String((await res.json())?.title || '').replace(/\s+/g, ' ').trim() : '';
+    if (title) return [...title].slice(0, 40).join('');
+  } catch { /* 아래로 */ }
+  return [...(siteLabel({ url }) || 'neighbor')].slice(0, 40).join('');
+}
+
 const rest = (path, init = {}) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
   ...init,
   headers: { apikey: SUPABASE_KEY, ...(init.body ? { 'content-type': 'application/json' } : {}), ...init.headers },
@@ -134,6 +151,17 @@ export async function addBanner(userId, { name, url, imageUrl, imagePath, house 
     ...(house ? { house } : {}),
   });
   if (error) throw error;
+}
+
+/** 주인 — 이웃집 내용(이름 · 주소 · 배너 이미지) 고치기 */
+export async function updateBanner(userId, id, { name, url, imageUrl, imagePath }) {
+  const client = await getClient();
+  const { data, error } = await client.from('banners')
+    .update({ name: name || '', url, image_url: imageUrl, image_path: imagePath || null })
+    .eq('id', id).eq('user_id', userId).eq('category_id', CATEGORY_ID)
+    .select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error('update missing');
 }
 
 export async function deleteBanner(userId, banner) {

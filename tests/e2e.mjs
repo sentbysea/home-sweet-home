@@ -68,11 +68,19 @@ const SAVED_HOUSE = { v: 1, body: 'wide', roof: 'round', door: 'side', window: '
 function houseOk(h) {
   if (h == null) return true;
   if (typeof h !== 'object' || Array.isArray(h) || JSON.stringify(h).length > 400) return false;
-  const keys = ['v', 'body', 'roof', 'door', 'window', 'deco', 'wall', 'roofColor', 'doorColor'];
+  const keys = ['v', 'body', 'roof', 'roofPattern', 'door', 'window', 'deco', 'wall', 'roofColor', 'doorColor'];
   const hex = (c) => /^#[0-9a-f]{6}$/i.test(c || '');
-  return Object.keys(h).every((k) => keys.includes(k)) && ['cozy', 'tall', 'wide', 'two'].includes(h.body) && ['tri', 'round', 'trap'].includes(h.roof)
-    && ['arch', 'square', 'side'].includes(h.door) && ['one', 'two', 'round', 'cross'].includes(h.window) && ['chimney', 'dormer', 'pot', 'none'].includes(h.deco)
+  const deco = typeof h.deco === 'string' ? ['chimney', 'dormer', 'pot', 'none'].includes(h.deco)
+    : Array.isArray(h.deco) && h.deco.length <= 5 && new Set(h.deco).size === h.deco.length && h.deco.every((d) => ['chimney', 'pot', 'dog', 'mailbox', 'tree'].includes(d));
+  return Object.keys(h).every((k) => keys.includes(k)) && ['cozy', 'tall', 'wide', 'two', 'tiny'].includes(h.body) && ['tri', 'round', 'trap', 'barn'].includes(h.roof)
+    && (h.roofPattern === undefined || ['solid', 'dot', 'halftone', 'stripe', 'gingham'].includes(h.roofPattern))
+    && ['arch', 'square', 'side'].includes(h.door) && ['one', 'two', 'round', 'cross', 'band'].includes(h.window) && deco
     && hex(h.wall) && hex(h.roofColor) && hex(h.doorColor);
+}
+/** 집 모양 → 화면의 data-house 글자(src/neighbor/house-art.js houseKey · 옛 꼴은 새 꼴로 읽은 것) */
+function keyOf(h) {
+  const deco = typeof h.deco === 'string' ? (['chimney', 'pot'].includes(h.deco) ? h.deco : '-') : (h.deco.join('+') || '-');
+  return `${h.body}/${h.roof}/${h.roofPattern || 'solid'}/${h.door}/${h.window}/${deco}/${h.wall}/${h.roofColor}/${h.doorColor}`;
 }
 
 function seed() {
@@ -133,6 +141,13 @@ function seed() {
   // 흉내 DB 에 없는 RPC — 사이트 주인 · 배너 교환 신청(web supabase/migrations/20261026100000_banner_requests.sql 과 같은 규칙)
   const reply = (route, status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
   const key = (u) => String(u || '').trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/[/?#]+$/, '');
+  // 사이트 제목(Edge Function site-title) — 이름을 비우면 이걸로
+  db.titles = { 'https://added.example/': '추가된 사이트', 'https://new-neighbor.example/home': '새 이웃 사이트' };
+  db.hooks.beforeRequest = async ({ route, url }) => {
+    if (url.pathname !== '/functions/v1/site-title') return false;
+    await reply(route, 200, { title: db.titles[url.searchParams.get('url')] || '' });
+    return true;
+  };
   db.hooks.rpc = async ({ route, name, request, uid }) => {
     const args = JSON.parse(request.postData() || '{}');
     if (name === 'site_owner_id') { await reply(route, 200, OWNER_ID); return true; }
@@ -1142,7 +1157,12 @@ async function neighborVillage(device, name) {
   check(`${name} — 집 · 우체통 · 장식이 겹치지 않고 화면 폭 안`, (await overlaps(page)).length === 0 && (await inWidth(page)), JSON.stringify(await overlaps(page)));
   check(`${name} — 집은 누르기 편한 크기`, homeRects.every((h) => h.w >= 44 && h.h >= 44), homeRects.map((h) => Math.round(h.w)).join(','));
   check(`${name} — 배너는 평소 숨김 · 카드 테두리 없음`, (await page.$eval('.nbh-pop', (p) => p.hidden)) && (await page.$eval('.nbh-home', (b) => getComputedStyle(b).borderTopWidth === '0px' && getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)')));
-  check(`${name} — 저장된 집 모양 그대로(럭키)`, (await page.$eval('.nbh-home[data-i="1"]', (b) => b.dataset.house)) === 'wide/round/side/two/pot/#cfe0fb/#7fa7d9/#e2b36b');
+  check(`${name} — 저장된 집 모양 그대로(럭키)`, (await page.$eval('.nbh-home[data-i="1"]', (b) => b.dataset.house)) === 'wide/round/solid/side/two/pot/#cfe0fb/#7fa7d9/#e2b36b');
+  const tags = await page.$$eval('.nbh-home', (b) => b.map((x) => ({ text: x.querySelector('.nbh-home__tag')?.textContent, hl: x.style.getPropertyValue('--hl'), house: x.dataset.house })));
+  check(`${name} — 집마다 아래 이름표(이름 · 없으면 주소)`, tags.map((t) => t.text).join('|') === 'hongjiwon.love|럭키|broken.example/home', JSON.stringify(tags));
+  check(`${name} — 이름표 밑줄 색은 그 집에 쓴 색 중 하나`, tags.every((t) => t.hl && t.house.split('/').slice(6).includes(t.hl)), JSON.stringify(tags));
+  check(`${name} — 우체통: 글 없이 화살표 · 빨간 깃발이 움직인다`, !(await page.$('.nbh-mailbox__tip')) && (await page.$eval('.nbh-mailbox__arrow', (a) => getComputedStyle(a).animationName === 'nbh-boing'))
+    && (await page.$eval('.nbh-mailbox__pennant', (g) => getComputedStyle(g).animationName === 'nbh-flutter')));
   const looks = await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house));
   const lay = await layoutOf(page);
   await page.screenshot({ path: path.join(OUT, `neighbor-${name}-village.png`) });
@@ -1244,6 +1264,10 @@ async function neighborVillage(device, name) {
   const sheet = (await rects(page, '.nbh-panel__sheet'))[0];
   const vh = await page.evaluate(() => innerHeight);
   check(`${name} — 패널이 화면 안`, sheet.x >= 0 && sheet.r <= vw && sheet.y >= 0 && sheet.b <= vh + 1, JSON.stringify(sheet));
+  const tabs = await page.$$eval('.nbh-tabs[data-mode="exchange"] [role="tab"]', (b) => b.filter((x) => !x.hidden).map((x) => `${x.textContent.trim()}:${x.getAttribute('aria-selected')}`));
+  check(`${name} — 교환 탭: 교환 신청(처음) · 내 배너 — 한 번에 하나만`, tabs.join('|') === '교환 신청:true|내 배너:false' && (await page.$eval('[data-ex="mine"]', (x) => x.hidden)) && !(await page.$eval('[data-ex="apply"]', (x) => x.hidden)), tabs.join('|'));
+  await page.click('[data-ex-tab="mine"]');
+  check(`${name} — 내 배너 탭 → 내 배너만`, !(await page.$eval('[data-ex="mine"]', (x) => x.hidden)) && (await page.$eval('[data-ex="apply"]', (x) => x.hidden)));
   const mine = await page.evaluate(() => ({
     img: document.querySelector('.nbh-mine__preview img').getAttribute('src'),
     vals: [...document.querySelectorAll('.nbh-mine__val')].map((v) => v.textContent),
@@ -1284,7 +1308,7 @@ async function neighborApply() {
   const err = (n) => page.$eval(`${F} [name="${n}"]`, (i) => i.closest('.nbh-field').querySelector('.nbh-field__err').textContent);
   const msg = () => page.textContent(`${F} .nbh-form__msg`);
   const diyMsg = () => page.textContent(`${D} .nbh-diy__msg`);
-  const chosen = () => page.$$eval(`${D} [role="radio"][aria-checked="true"]`, (b) => b.map((x) => x.dataset.v).join('/'));
+  const chosen = () => page.$eval(D, (d) => d.dataset.spec);
   db.banner_requests.length = 0;
   db.requestCalls = 0;
   await page.goto(`${VIBE_ORIGIN}/neighbor/banner?${Q}`);
@@ -1298,18 +1322,28 @@ async function neighborApply() {
   await page.click(`${D} [data-key="wall"] [data-v="#cdeed6"]`);
   const after = await page.$eval(`${D} .nbh-diy__preview`, (p) => p.innerHTML);
   check('꾸미기 — 고르면 미리보기가 바로 바뀐다', before !== after && after.includes('#cdeed6') && (await chosen()).startsWith('two/trap/'), await chosen());
+  const hasDeco = async (d) => (await chosen()).split('/')[5].split('+').includes(d);
+  for (const d of ['dog', 'tree']) if (!(await hasDeco(d))) await page.click(`${D} [data-key="deco"] [data-v="${d}"]`);
+  const potBefore = await hasDeco('pot');
+  await page.click(`${D} [data-key="deco"] [data-v="pot"]`);
+  check('꾸미기 — 장식은 여러 개(개집 · 작은 나무 함께 · 누르면 켜고 끄기)', (await hasDeco('dog')) && (await hasDeco('tree')) && (await hasDeco('pot')) !== potBefore, await chosen());
+  await page.click(`${D} [data-key="roofPattern"] [data-v="gingham"]`);
+  check('꾸미기 — 지붕 무늬(체크) → 미리보기 지붕에 무늬', (await chosen()).split('/')[2] === 'gingham' && (await page.$eval(`${D} .nbh-diy__preview svg`, (s) => Boolean(s.querySelector('pattern')) && [...s.querySelectorAll('path')].some((p) => p.getAttribute('fill').startsWith('url(#')))));
+  await page.$eval(`${D} [data-custom="wall"]`, (i) => { i.value = '#123456'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.waitForTimeout(80);
+  check('꾸미기 — 벽 색 직접 고르기', (await chosen()).split('/')[6] === '#123456' && (await page.$eval(`${D} [data-key="wall"] .nbh-diy__custom`, (c) => c.classList.contains('is-on'))) && (await page.$eval(`${D} .nbh-diy__preview`, (p) => p.innerHTML.includes('#123456'))), await chosen());
   check('꾸미기 — 마을과 같은 렌더러(.nbh-art · 위글 변형 4장)', await page.$eval(`${D} .nbh-diy__preview svg`, (s) => s.classList.contains('nbh-art') && s.querySelectorAll('.nbh-v').length === 4));
   const r1 = await chosen();
   await page.click(`${D} [data-diy="random"]`);
   const r2 = await chosen();
   await page.click(`${D} [data-key="door"] [data-v="side"]`);
-  check('꾸미기 — 랜덤으로 만들기 · 그 뒤 직접 고치기', r1 !== r2 && (await chosen()).split('/')[2] === 'side', `${r1} → ${r2}`);
+  check('꾸미기 — 랜덤으로 만들기 · 그 뒤 직접 고치기', r1 !== r2 && (await chosen()).split('/')[3] === 'side', `${r1} → ${r2}`);
   await page.click(`${D} [data-diy="banner"]`);
   check('꾸미기 — 배너 이미지 없으면 안내', (await diyMsg()).includes('배너 이미지 주소'));
 
   // 입력 검사
   await page.click(`${F} [type="submit"]`);
-  check('신청 — 빈 칸이면 칸마다 안내 · 보내지 않음', (await err('name')).length > 0 && (await err('url')).length > 0 && (await err('image')).length > 0 && db.requestCalls === 0);
+  check('신청 — 빈 칸이면 칸마다 안내 · 보내지 않음(이름은 선택)', (await err('name')) === '' && (await err('url')).length > 0 && (await err('image')).length > 0 && db.requestCalls === 0);
   await page.fill(`${F} [name="name"]`, '새 이웃');
   await page.fill(`${F} [name="url"]`, 'javascript:alert(1)');
   await page.fill(`${F} [name="image"]`, `${PLAIN_ORIGIN}/share-card-default.png`); // 다른 출처 · 읽기 허용 없음
@@ -1325,15 +1359,15 @@ async function neighborApply() {
   const noColor = await diyMsg();
   check('배너 색 — 못 읽으면 쉬운 안내(기술 용어 없음)', noColor.includes('가져오지 못했어요') && !/cors|origin|canvas|taint|security/i.test(noColor), noColor);
   await page.click(`${D} [data-diy="random"]`);
-  check('배너 색 — 못 읽어도 랜덤 · 직접 고르기는 된다', (await chosen()).split('/').length === 8);
+  check('배너 색 — 못 읽어도 랜덤 · 직접 고르기는 된다', (await chosen()).split('/').length === 9);
   await page.fill(`${F} [name="image"]`, 'https://img.test/new.png');
   await page.click(`${D} [data-diy="banner"]`);
   await page.waitForFunction((D) => document.querySelector(`${D} .nbh-diy__msg`).textContent.includes('지었어요'), D, { timeout: 8000 }).catch(() => {});
   const c1 = await chosen();
   const walls = await page.$$eval(`${D} [data-key="wall"] [data-v]`, (b) => b.map((x) => x.dataset.v));
   const l = (hex) => { const n = parseInt(hex.slice(1), 16); return (Math.max(n >> 16, (n >> 8) & 255, n & 255) + Math.min(n >> 16, (n >> 8) & 255, n & 255)) / 5.1; };
-  const [, , , , , wall, , door] = c1.split('/');
-  check('배너 색 — 배너에서 뽑은 색으로(벽은 밝게 · 문은 벽과 대비)', (await diyMsg()).includes('배너 색으로 지었어요') && walls.length === 9 && l(wall) >= 80 && Math.abs(l(wall) - l(door)) >= 20, JSON.stringify({ c1, walls }));
+  const [, , , , , , wall, , door] = c1.split('/');
+  check('배너 색 — 배너에서 뽑은 색으로(벽은 밝게 · 문은 벽과 대비)', (await diyMsg()).includes('배너 색으로 지었어요') && walls.length === 8 && (await page.$eval(`${D} [data-key="wall"] .nbh-diy__custom`, (c) => c.classList.contains('is-on'))) && l(wall) >= 80 && Math.abs(l(wall) - l(door)) >= 20, JSON.stringify({ c1, walls }));
   await page.click(`${D} [data-diy="banner"]`);
   await page.waitForTimeout(150);
   check('배너 색 — 다시 뽑기 → 같은 색으로 다른 조합', (await chosen()) !== c1 && (await page.textContent(`${D} [data-diy="banner"]`)).includes('다시 뽑기'), `${c1} → ${await chosen()}`);
@@ -1350,9 +1384,8 @@ async function neighborApply() {
   await page.$eval(F, (f) => { f.requestSubmit(); f.requestSubmit(); f.requestSubmit(); });
   await page.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'done', F, { timeout: 10000 }).catch(() => {});
   const saved = db.banner_requests[0];
-  const [body, roof, dr, win, deco, wl, rc, dc] = picked.split('/');
   check('신청 — 연달아 눌러도 한 번 · 대기 목록에 집 모양까지', db.requestCalls - callsBefore === 1 && db.banner_requests.length === 1 && saved.site_url === 'https://new-neighbor.example/home'
-    && JSON.stringify(saved.house) === JSON.stringify({ v: 1, body, roof, door: dr, window: win, deco, wall: wl, roofColor: rc, doorColor: dc }), JSON.stringify(saved));
+    && saved.house.v === 2 && keyOf(saved.house) === picked, JSON.stringify(saved));
   check('신청 — 완료 안내 · 칸 잠김', (await msg()).includes('신청했어요') && (await page.$eval(`${F} [name="name"]`, (i) => i.disabled)));
   await page.click('.nbh-panel__x');
   await page.reload();
@@ -1386,7 +1419,7 @@ async function neighborOwner() {
   await until(() => db.banners.some((b) => b.url === pending.site_url), 8000);
   await page.waitForFunction(() => document.querySelectorAll('.nbh-home').length === 4, null, { timeout: 8000 }).catch(() => {});
   const h = pending.house;
-  check('주인 — 승인 → 신청한 모습 그대로 마을에(맨 뒤)', (await page.$eval('.nbh-home[data-i="3"]', (b) => b.dataset.house)) === `${h.body}/${h.roof}/${h.door}/${h.window}/${h.deco}/${h.wall}/${h.roofColor}/${h.doorColor}`);
+  check('주인 — 승인 → 신청한 모습 그대로 마을에(맨 뒤)', (await page.$eval('.nbh-home[data-i="3"]', (b) => b.dataset.house)) === keyOf(h));
   await page.click('.nbh-panel__x');
   await page.waitForTimeout(300);
 
@@ -1416,11 +1449,30 @@ async function neighborOwner() {
   await until(() => !db.banners.some((b) => b.id === 3), 8000);
   await page.waitForFunction(() => document.querySelectorAll('.nbh-home').length === 3, null, { timeout: 8000 }).catch(() => {});
   check('주인 — 내리기', !db.banners.some((b) => b.id === 3) && (await page.$$('.nbh-home')).length === 3);
-  // 간판 걸기 — 집 모양까지
+  // 내용 고치기 — 집 고치기 옆 탭에서 이름 · 주소 · 배너 이미지
+  await page.waitForTimeout(400);
+  const h1 = (await rects(page, '.nbh-home[data-i="1"] .nbh-art'))[0];
+  await page.mouse.click(h1.x + h1.w / 2, h1.y + h1.h / 2);
+  await page.waitForSelector('.nbh-panel.is-open [data-mode="house"]:not([hidden])', { timeout: 5000 });
+  const houseTabs = await page.$$eval('[data-house-tab]', (b) => b.map((x) => `${x.textContent.trim()}:${x.getAttribute('aria-selected')}`).join('|'));
+  check('주인 — 이웃집 고치기: 집 고치기(처음) · 내용 고치기 탭', houseTabs === '집 고치기:true|내용 고치기:false' && (await page.$eval('[data-house-pane="info"]', (x) => x.hidden)), houseTabs);
+  await page.click('[data-house-tab="info"]');
+  const I = '.nbh-form[data-form="info"]';
+  const filled = [await page.inputValue(`${I} [name="name"]`), await page.inputValue(`${I} [name="url"]`), await page.inputValue(`${I} [name="image"]`)].join('|');
+  check('주인 — 내용 고치기: 지금 내용이 채워져 있다 · 집 고치기는 숨김', filled === '럭키|https://luvlog.me/lucky|https://img.test/lucky.png' && (await page.$eval('[data-house-pane="shape"]', (x) => x.hidden)), filled);
+  await page.fill(`${I} [name="name"]`, '럭키네');
+  await page.fill(`${I} [name="image"]`, 'https://img.test/lucky2.png');
+  await page.click(`${I} [type="submit"]`);
+  await until(() => db.banners.find((b) => b.id === 2).name === '럭키네', 8000);
+  await page.waitForFunction(() => document.querySelector('.nbh-home[data-i="1"] .nbh-home__tag')?.textContent === '럭키네', null, { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  const b2 = db.banners.find((b) => b.id === 2);
+  check('주인 — 내용 고치기 → 저장 · 이름표 · 배너에 반영(집 모양은 그대로)', b2.name === '럭키네' && b2.image_url === 'https://img.test/lucky2.png' && b2.url === 'https://luvlog.me/lucky' && keyOf(b2.house) === keyOf(SAVED_HOUSE)
+    && (await page.textContent('.nbh-home[data-i="1"] .nbh-home__tag')) === '럭키네' && (await page.$eval('.nbh-panel', (x) => x.hidden)), JSON.stringify(b2));
+  // 간판 걸기 — 집 모양까지, 이름을 비우면 사이트 제목으로
   await page.click('.nbh__owner [data-act="add"]');
   await page.waitForSelector('.nbh-panel.is-open [data-form="add"]', { timeout: 5000 });
   const A = '.nbh-form[data-form="add"]';
-  await page.fill(`${A} [name="name"]`, '새 간판');
   await page.fill(`${A} [name="url"]`, 'https://added.example');
   await page.fill(`${A} [name="image"]`, 'https://img.test/new.png');
   await page.click(`${A} [data-diy="add"] [data-key="body"] [data-v="tall"]`);
@@ -1428,7 +1480,7 @@ async function neighborOwner() {
   await until(() => db.banners.some((b) => b.url === 'https://added.example/'), 8000);
   await page.waitForFunction(() => document.querySelectorAll('.nbh-home').length === 4, null, { timeout: 8000 }).catch(() => {});
   const added = db.banners.find((b) => b.url === 'https://added.example/');
-  check('주인 — + add banner → 맨 뒤에 그 집 모양으로', added?.house?.body === 'tall' && (await page.$eval('.nbh-home[data-i="3"]', (b) => b.dataset.house)).startsWith('tall/'), JSON.stringify(added));
+  check('주인 — + add banner → 맨 뒤에 그 집 모양으로 · 이름을 비우면 사이트 제목', added?.house?.body === 'tall' && added.name === '추가된 사이트' && (await page.$eval('.nbh-home[data-i="3"]', (b) => b.dataset.house)).startsWith('tall/'), JSON.stringify(added));
   await page.click('.nbh__owner [data-act="edit"]');
   check('주인 — done → 고치기 표시 사라짐', (await page.$$('.nbh-home__edit')).length === 0);
   check('콘솔 오류 없음(neighbor 주인)', o.errors.length === 0, o.errors.join(' | '));

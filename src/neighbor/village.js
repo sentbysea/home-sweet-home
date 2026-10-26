@@ -7,14 +7,26 @@
 //     휴대폰은 한 번 누르면 배너 · 이름이 뜨고, 그 배너를 눌러야 이동. 바깥 · 다른 집을 누르면 닫힌다. Esc 로 닫기.
 //     배너 말풍선은 집과 같은 손그림 외곽선(위글 변형 4장) — 그림자 없이.
 //     배너는 화면 가장자리에서 잘리지 않게 자리를 고친다(위에 자리가 없으면 아래로).
+//   · 집마다 아래 이름표(사이트 이름). 이름표 밑줄 색은 그 집에 쓴 색(벽 · 지붕 · 문) 중 하나 — 배너 링크를 올렸을 때 밑줄도 같은 색.
+//   · 우체통 위에 통통 튀는 화살표 · 바람에 떠는 빨간 세모 깃발로 누르기를 이끈다.
 //   · 주인 고치기 중에는 집을 누르면 그 집 고치기(onEdit).
 
-import { houseSvg, normalizeHouse, defaultHouse, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
+import { houseSvg, houseKey, normalizeHouse, defaultHouse, rng, hash, sketch, sketchEllipse, BOIL } from './house-art.js';
 
-const HOME_HOUSE = { v: 1, body: 'cozy', roof: 'tri', door: 'arch', window: 'cross', deco: 'chimney', wall: '#fffaf0', roofColor: '#e88a8a', doorColor: '#c9a27e' };
+const HOME_HOUSE = { v: 2, body: 'cozy', roof: 'tri', roofPattern: 'solid', door: 'arch', window: 'cross', deco: ['chimney'], wall: '#fffaf0', roofColor: '#e88a8a', doorColor: '#c9a27e' };
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const f = (n) => Math.round(n * 10) / 10;
+
+/** 이름표 밑줄 색 — 그 집 색 중 하나(너무 밝아 안 보이는 색은 빼고, 집마다 늘 같은 것) */
+function tagColor(spec, key) {
+  const seen = (c) => {
+    const n = parseInt(c.slice(1), 16);
+    return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 < 0.95;
+  };
+  const list = [spec.wall, spec.roofColor, spec.doorColor].filter(seen);
+  return list.length ? list[hash(`tag:${key}`) % list.length] : '#fbefae';
+}
 
 /** 위글 변형 4장으로 그린 작은 그림(나무 · 울타리 · 우체통) */
 function boiled(viewBox, w, h, draw, cls) {
@@ -24,6 +36,10 @@ function boiled(viewBox, w, h, draw, cls) {
 const tree = (s, seed) => boiled('-16 -46 32 48', 32 * s, 48 * s, (v) =>
   `<path d="${sketch([[0, 0], [0, -16]], { seed: seed + 1, v })}" fill="none"/>` +
   `<path d="${sketchEllipse(0, -28, 12, 14, seed + 2, v)}" fill="#a9d6a0"/>`, 'nbh-deco');
+// 우체통 위 화살표(아래로)
+const arrow = (s) => boiled('-8 -20 16 22', 16 * s, 22 * s, (v) =>
+  `<path d="${sketch([[0, -18], [0, -1]], { seed: 71, v })}" fill="none"/>` +
+  `<path d="${sketch([[-5, -6], [0, -1], [5, -6]], { seed: 72, v, radius: 1 })}" fill="none"/>`, 'nbh-mailbox__arrow-art');
 const fence = (s, seed) => boiled('-2 -16 46 18', 46 * s, 18 * s, (v) =>
   [0, 10, 20, 30, 40].map((x, i) => `<path d="${sketch([[x, 0], [x, -12], [x + 2, -14], [x + 4, -12], [x + 4, 0]], { seed: seed + i, v, radius: 1 })}" fill="#f3e6d8"/>`).join('') +
   `<path d="${sketch([[-1, -8], [45, -8]], { seed: seed + 9, v })}" fill="none"/>`, 'nbh-deco');
@@ -32,7 +48,7 @@ const mailbox = (s) => boiled('-14 -44 34 46', 34 * s, 46 * s, (v) =>
   `<path d="${sketch([[-10, -22], [-10, -34], [-7, -38], [7, -38], [10, -34], [10, -22]], { seed: 62, v, closed: true, radius: 2 })}" fill="#fbd5e3"/>` +
   `<path d="${sketch([[-5, -31], [5, -31]], { seed: 63, v })}" fill="none"/>` +
   `<g class="nbh-mailbox__flag"><path d="${sketch([[10, -24], [10, -42]], { seed: 64, v })}" fill="none"/>` +
-  `<path d="${sketch([[10, -42], [17, -40], [10, -37]], { seed: 65, v, closed: true, radius: 1 })}" fill="#ec8aa6"/></g>` +
+  `<g class="nbh-mailbox__pennant"><path d="${sketch([[10, -42], [17, -40], [10, -37]], { seed: 65, v, closed: true, radius: 1 })}" fill="#e5604f"/></g></g>` +
   `<path class="nbh-mailbox__letter" d="${sketch([[-6, -36], [6, -36], [6, -44], [-6, -44]], { seed: 66, v, closed: true, radius: 1 })}" fill="#ffffff"/>`, 'nbh-mailbox__art');
 
 /** 동네 칸 — 너비에 맞춰 칸 수 · 크기를 정하고, 홍차네 집 둘레부터 가까운 칸 순서 */
@@ -41,8 +57,8 @@ function grid(width) {
   const cols = W < 560 ? 3 : 5;
   const pad = 12;
   const cw = Math.min((W - pad * 2) / cols, cols === 3 ? 180 : 150);
-  const scale = cols === 3 ? Math.min(1.15, cw / 92) : 1.25;
-  const rowH = Math.round(112 * scale + 30);
+  const scale = cols === 3 ? Math.min(1.15, cw / 114) : 1.25; // 114 — 장식을 다 단 가장 넓은 집(넓은 집 + 개집 · 우체통)도 칸 안에
+  const rowH = Math.round(112 * scale + 46); // 이름표 자리까지
   const mid = (cols - 1) / 2;
   const r0 = rng(7);
   const ring = [];
@@ -141,11 +157,12 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       b.type = 'button';
       b.className = 'nbh-home';
       b.dataset.i = String(i);
-      b.dataset.house = `${spec.body}/${spec.roof}/${spec.door}/${spec.window}/${spec.deco}/${spec.wall}/${spec.roofColor}/${spec.doorColor}`;
+      b.dataset.house = houseKey(spec);
       b.setAttribute('aria-label', `${it.label} — ${editing ? '집 고치기' : '배너 보기'}`);
+      b.style.setProperty('--hl', tagColor(spec, it.id ?? it.href));
       b.setAttribute('aria-haspopup', 'dialog');
       b.setAttribute('aria-expanded', 'false');
-      b.innerHTML = `<span class="nbh-home__art">${art.svg}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
+      b.innerHTML = `<span class="nbh-home__art">${art.svg}</span><span class="nbh-home__tag" aria-hidden="true">${esc(it.label)}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
       b.style.left = `${f(x - art.w / 2)}px`;
       b.style.top = `${f(base - art.h)}px`;
       b.style.width = `${f(art.w)}px`;
@@ -164,7 +181,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     mailBtn.type = 'button';
     mailBtn.className = 'nbh-mailbox';
     mailBtn.setAttribute('aria-label', '배너교환은 여기에서 — 내 배너 정보 · 교환 신청');
-    mailBtn.innerHTML = `${mailbox(g.scale)}<span class="nbh-mailbox__tip">배너교환은 여기에서</span>`;
+    mailBtn.innerHTML = `<span class="nbh-mailbox__arrow" aria-hidden="true">${arrow(g.scale)}</span>${mailbox(g.scale)}`;
     const ms = 34 * g.scale;
     const mx = cx + hs.w / 2 + 4;
     mailBtn.style.left = `${f(mx)}px`;
@@ -211,7 +228,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     const shift = Math.max(0, minTop - 24);
     for (const el of town.children) el.style.top = `${f(parseFloat(el.style.top) - shift)}px`;
     layout.forEach((l) => { l.base -= shift; });
-    const bottom = Math.max(...layout.map((l) => l.base)) + (state === 'ready' && items.length ? 34 : 90);
+    const bottom = Math.max(...layout.map((l) => l.base)) + (state === 'ready' && items.length ? 52 : 90);
     town.style.height = `${f(bottom)}px`;
   };
 
@@ -272,6 +289,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       if (it.image) popImg.src = it.image; else popImg.removeAttribute('src');
       popAlt.textContent = it.label;
       popName.textContent = it.label;
+      pop.style.setProperty('--hl', homes[i].style.getPropertyValue('--hl'));
       if (it.href) popLink.href = it.href; else popLink.removeAttribute('href');
       popLink.setAttribute('aria-label', `${it.label} 방문하기 — 새 탭`);
       pop.setAttribute('aria-label', `${it.label} 배너`);

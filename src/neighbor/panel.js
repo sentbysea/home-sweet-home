@@ -5,9 +5,10 @@
 //      입력 검사(칸마다 안내) · 이미지가 실제로 열리는지 · 보내는 동안 다시 못 누름 · 실패하면 그대로 두고 다시 시도 안내.
 //   ③ 받은 신청(주인만): 미리보기 · 메시지 · 승인 / 거절.
 //   ④ 우리 집 꾸미기(customizer.js) — 신청에 집 모양을 같이 보낸다. 승인하면 그 모습으로 마을에.
-//   주인의 '+ add banner'(직접 걸기 · mode 'add')와 이웃집 고치기(mode 'house' — 모양 · 색 · 기본 모양으로 · 내리기)도 같은 패널.
+//   주인의 '+ add banner'(직접 걸기 · mode 'add')와 이웃집 고치기(mode 'house')도 같은 패널.
+//     이웃집 고치기는 탭 둘: 집 고치기(모양 · 색 · 기본 모양으로 · 내리기) · 내용 고치기(이름 · 주소 · 배너 이미지).
 
-import { MY_BANNER, bannerCode, httpUrl, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, deleteBanner } from './data.js';
+import { MY_BANNER, bannerCode, httpUrl, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
 import { mountCustomizer } from './customizer.js';
 import { houseSvg, normalizeHouse, defaultHouse, randomHouse } from './house-art.js';
 
@@ -68,22 +69,16 @@ function markup() {
         <button class="nbh-panel__x" type="button" data-panel-close aria-label="닫기"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2L10 10M10 2L2 10"/></svg></button>
       </header>
       <div class="nbh-panel__body">
-        <section class="nbh-sec" data-mode="exchange" aria-labelledby="nbh-mine-h">
-          <h4 class="nbh-tag" id="nbh-mine-h" style="--c:var(--hsh-sky)">내 배너</h4>
-          <div class="nbh-mine__preview"><img src="${esc(MY_BANNER.image)}" alt="${esc(MY_BANNER.name)} 배너" width="3000" height="600" decoding="async"></div>
-          <dl class="nbh-mine__rows">${rows}
-            <div class="nbh-mine__row is-code">
-              <dt>삽입 코드</dt>
-              <dd><code class="nbh-mine__code">${esc(code)}</code><button class="nbh-copy" type="button" data-copy="${esc(code)}">복사</button></dd>
-            </div>
-          </dl>
-        </section>
-        <section class="nbh-sec" data-mode="exchange" aria-labelledby="nbh-apply-h">
-          <h4 class="nbh-tag" id="nbh-apply-h" style="--c:var(--hsh-pink)">교환 신청</h4>
+        <div class="nbh-tabs" data-mode="exchange" role="tablist" aria-label="배너 교환">
+          <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-apply" aria-controls="nbh-ex-apply" aria-selected="true" data-ex-tab="apply" style="--c:var(--hsh-pink)">교환 신청</button>
+          <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-mine" aria-controls="nbh-ex-mine" aria-selected="false" tabindex="-1" data-ex-tab="mine" style="--c:var(--hsh-sky)">내 배너</button>
+          <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-review" aria-controls="nbh-ex-review" aria-selected="false" tabindex="-1" data-ex-tab="review" data-owner hidden style="--c:var(--hsh-butter)">받은 신청 <span class="nbh-review__n"></span></button>
+        </div>
+        <section class="nbh-sec" data-mode="exchange" data-ex="apply" id="nbh-ex-apply" role="tabpanel" aria-labelledby="nbh-extab-apply">
           <p class="nbh-sec__note">신청하면 주인이 확인한 뒤 마을에 이웃집으로 지어져요.</p>
           <form class="nbh-form" data-form="apply" novalidate>
-            <label class="nbh-field"><span class="nbh-field__k">사이트 이름</span>
-              <input name="name" maxlength="40" autocomplete="off" required aria-describedby="nbh-e-name"><small class="nbh-field__err" id="nbh-e-name"></small></label>
+            <label class="nbh-field"><span class="nbh-field__k">사이트 이름 <em>선택 · 마을에서 집 아래 이름표 · 비우면 사이트 제목으로</em></span>
+              <input name="name" maxlength="40" autocomplete="off" aria-describedby="nbh-e-name"><small class="nbh-field__err" id="nbh-e-name"></small></label>
             <label class="nbh-field"><span class="nbh-field__k">사이트 주소</span>
               <input name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://" required aria-describedby="nbh-e-url"><small class="nbh-field__err" id="nbh-e-url"></small></label>
             <label class="nbh-field"><span class="nbh-field__k">배너 이미지 주소</span>
@@ -99,15 +94,23 @@ function markup() {
             </div>
           </form>
         </section>
-        <section class="nbh-sec nbh-review" data-mode="exchange" data-owner hidden aria-labelledby="nbh-review-h">
-          <h4 class="nbh-tag" id="nbh-review-h" style="--c:var(--hsh-butter)">받은 신청 <span class="nbh-review__n"></span></h4>
+        <section class="nbh-sec" data-mode="exchange" data-ex="mine" id="nbh-ex-mine" role="tabpanel" aria-labelledby="nbh-extab-mine" hidden>
+          <div class="nbh-mine__preview"><img src="${esc(MY_BANNER.image)}" alt="${esc(MY_BANNER.name)} 배너" width="3000" height="600" decoding="async"></div>
+          <dl class="nbh-mine__rows">${rows}
+            <div class="nbh-mine__row is-code">
+              <dt>삽입 코드</dt>
+              <dd><code class="nbh-mine__code">${esc(code)}</code><button class="nbh-copy" type="button" data-copy="${esc(code)}">복사</button></dd>
+            </div>
+          </dl>
+        </section>
+        <section class="nbh-sec nbh-review" data-mode="exchange" data-ex="review" data-owner id="nbh-ex-review" role="tabpanel" aria-labelledby="nbh-extab-review" hidden>
           <ul class="nbh-review__list"></ul>
           <p class="nbh-review__msg" role="status" aria-live="polite"></p>
         </section>
         <section class="nbh-sec" data-mode="add" hidden aria-labelledby="nbh-add-h">
           <h4 class="nbh-tag" id="nbh-add-h" style="--c:var(--hsh-mint)">이웃집 짓기</h4>
           <form class="nbh-form" data-form="add" novalidate>
-            <label class="nbh-field"><span class="nbh-field__k">사이트 이름 <em>선택</em></span><input name="name" maxlength="40" autocomplete="off"></label>
+            <label class="nbh-field"><span class="nbh-field__k">사이트 이름 <em>선택 · 비우면 사이트 제목으로</em></span><input name="name" maxlength="40" autocomplete="off"></label>
             <label class="nbh-field"><span class="nbh-field__k">사이트 주소</span><input name="url" type="url" inputmode="url" placeholder="https://" required></label>
             <label class="nbh-field"><span class="nbh-field__k">배너 이미지 주소</span><input name="image" type="url" inputmode="url" placeholder="이미지 주소 또는 아래 파일"></label>
             <label class="nbh-file"><input name="file" type="file" accept="image/*"><span>파일 올리기</span></label>
@@ -120,16 +123,33 @@ function markup() {
             </div>
           </form>
         </section>
-        <section class="nbh-sec" data-mode="house" hidden aria-labelledby="nbh-house-h">
-          <h4 class="nbh-tag" id="nbh-house-h" style="--c:var(--hsh-lilac)">집 고치기</h4>
-          <p class="nbh-sec__note nbh-house__who"></p>
-          <div data-diy="house"></div>
-          <p class="nbh-form__msg nbh-house__msg" role="status" aria-live="polite"></p>
-          <div class="nbh-form__actions">
-            <button class="nbh-btn is-ghost" type="button" data-house="delete">내리기</button>
-            <button class="nbh-btn is-ghost" type="button" data-house="reset">기본 모양으로</button>
-            <button class="nbh-btn" type="button" data-house="save">저장</button>
+        <section class="nbh-sec" data-mode="house" hidden aria-label="이웃집 고치기">
+          <div class="nbh-tabs" role="tablist" aria-label="고칠 것">
+            <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-tab-shape" aria-controls="nbh-pane-shape" aria-selected="true" data-house-tab="shape" style="--c:var(--hsh-lilac)">집 고치기</button>
+            <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-tab-info" aria-controls="nbh-pane-info" aria-selected="false" tabindex="-1" data-house-tab="info" style="--c:var(--hsh-sky)">내용 고치기</button>
           </div>
+          <p class="nbh-sec__note nbh-house__who"></p>
+          <div class="nbh-house__pane" id="nbh-pane-shape" role="tabpanel" aria-labelledby="nbh-tab-shape" data-house-pane="shape">
+            <div data-diy="house"></div>
+            <p class="nbh-form__msg nbh-house__msg" role="status" aria-live="polite"></p>
+            <div class="nbh-form__actions">
+              <button class="nbh-btn is-ghost" type="button" data-house="delete">내리기</button>
+              <button class="nbh-btn is-ghost" type="button" data-house="reset">기본 모양으로</button>
+              <button class="nbh-btn" type="button" data-house="save">저장</button>
+            </div>
+          </div>
+          <form class="nbh-form nbh-house__pane" id="nbh-pane-info" role="tabpanel" aria-labelledby="nbh-tab-info" data-house-pane="info" data-form="info" hidden novalidate>
+            <label class="nbh-field"><span class="nbh-field__k">사이트 이름 <em>선택 · 비우면 사이트 제목으로</em></span><input name="name" maxlength="40" autocomplete="off"></label>
+            <label class="nbh-field"><span class="nbh-field__k">사이트 주소</span><input name="url" type="url" inputmode="url" placeholder="https://" required></label>
+            <label class="nbh-field"><span class="nbh-field__k">배너 이미지 주소</span><input name="image" type="url" inputmode="url" placeholder="이미지 주소 또는 아래 파일"></label>
+            <label class="nbh-file"><input name="file" type="file" accept="image/*"><span>파일 올리기</span></label>
+            <div class="nbh-form__preview" hidden><img alt="배너 미리보기"></div>
+            <p class="nbh-form__msg" role="status" aria-live="polite"></p>
+            <div class="nbh-form__actions">
+              <button class="nbh-btn is-ghost" type="button" data-panel-close>취소</button>
+              <button class="nbh-btn" type="submit">저장</button>
+            </div>
+          </form>
         </section>
       </div>
     </section>`;
@@ -182,7 +202,6 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   const add = root.querySelector('[data-form="add"]');
   const addMsg = add.querySelector('.nbh-form__msg');
   const addPreview = previewer(add.querySelector('.nbh-form__preview'));
-  const review = root.querySelector('.nbh-review');
   const reviewList = root.querySelector('.nbh-review__list');
   const reviewMsg = root.querySelector('.nbh-review__msg');
   const reviewN = root.querySelector('.nbh-review__n');
@@ -198,7 +217,11 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   const diyAdd = mountCustomizer(root.querySelector('[data-diy="add"]'), { imageUrl: () => httpUrl(withScheme(add.image.value)) || uploaded?.url || '' });
   const houseBox = root.querySelector('[data-mode="house"]');
   const houseMsg = houseBox.querySelector('.nbh-house__msg');
-  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => editing?.image || '' });
+  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => httpUrl(withScheme(info.image.value)) || infoUploaded?.url || editing?.image || '' });
+  const info = root.querySelector('[data-form="info"]');
+  const infoMsg = info.querySelector('.nbh-form__msg');
+  const infoPreview = previewer(info.querySelector('.nbh-form__preview'));
+  let infoUploaded = null; // { path, url } — 내용 고치기에서 새로 올린 파일
   apply.image.addEventListener('input', () => diyApply.bannerChanged());
   add.image.addEventListener('input', () => diyAdd.bannerChanged());
 
@@ -251,7 +274,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     const image = httpUrl(withScheme(apply.image.value));
     const message = apply.message.value.trim();
     let ok = true;
-    ok = fieldErr(apply, 'name', !name ? '사이트 이름을 적어 주세요.' : name.length > 40 ? '40자 안으로 적어 주세요.' : '') && ok;
+    ok = fieldErr(apply, 'name', name.length > 40 ? '40자 안으로 적어 주세요.' : '') && ok;
     ok = fieldErr(apply, 'url', !url ? 'http:// 또는 https:// 로 시작하는 주소를 적어 주세요.' : !/^https?:\/\/[^/?#]+\.[^/?#]+/i.test(url) ? '사이트 주소를 다시 확인해 주세요.' : '') && ok;
     ok = fieldErr(apply, 'image', !image ? 'http:// 또는 https:// 로 시작하는 이미지 주소를 적어 주세요.' : '') && ok;
     ok = fieldErr(apply, 'message', message.length > 300 ? '300자 안으로 적어 주세요.' : '') && ok;
@@ -293,6 +316,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
       apply.image.focus();
       return;
     }
+    if (!v.name) { say(applyMsg, '사이트 제목을 찾는 중…'); v.name = await siteTitle(v.url); }
     say(applyMsg, '보내는 중…');
     let result;
     try {
@@ -369,8 +393,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   };
 
   const loadRequests = async () => {
-    if (!session().owner) { review.hidden = true; return; }
-    review.hidden = mode !== 'exchange';
+    if (!session().owner) { if (exNow === 'review') exTab('apply'); return; }
     say(reviewMsg, '불러오는 중…');
     try {
       requests = await listRequests();
@@ -442,7 +465,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     const submit = add.querySelector('[type="submit"]');
     submit.disabled = true;
     try {
-      await addBanner(s.user.id, { name: add.elements.name.value.trim(), url, imageUrl, imagePath: address ? null : uploaded.path, house: diyAdd.value }, banners());
+      await addBanner(s.user.id, { name: add.elements.name.value.trim() || await siteTitle(url), url, imageUrl, imagePath: address ? null : uploaded.path, house: diyAdd.value }, banners());
     } catch (err) {
       console.error(err);
       submit.disabled = false;
@@ -464,7 +487,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
 
   const houseBusy = (on) => houseBox.querySelectorAll('[data-house]').forEach((b) => { b.disabled = on; });
   houseBox.addEventListener('click', async (e) => {
-    const act = e.target.closest('[data-house]')?.dataset.house;
+    const act = e.target.closest('button[data-house]')?.dataset.house;
     if (!act || !editing) return;
     if (act === 'reset') { diyHouse.set(defaultHouse(editing.id)); say(houseMsg, '기본 모양으로 바꿨어요. 저장을 눌러야 마을에 반영돼요.'); return; }
     if (act === 'delete' && !confirm(`'${editing.label}' 이웃집을 내릴까요?`)) return;
@@ -489,9 +512,138 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     await onChanged();
   });
 
+  // ---------- 이웃집 내용 고치기(주인) ----------
+
+  const houseTab = (tab) => {
+    houseBox.querySelectorAll('[data-house-tab]').forEach((b) => {
+      const on = b.dataset.houseTab === tab;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    houseBox.querySelectorAll('[data-house-pane]').forEach((p) => { p.hidden = p.dataset.housePane !== tab; });
+  };
+  houseBox.querySelector('[role="tablist"]').addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-house-tab]');
+    if (tab) houseTab(tab.dataset.houseTab);
+  });
+  houseBox.querySelector('[role="tablist"]').addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    const next = houseBox.querySelector('[data-house-tab][aria-selected="false"]');
+    houseTab(next.dataset.houseTab);
+    next.focus();
+  });
+
+  // ---------- 배너 교환 탭(교환 신청 · 내 배너 · 받은 신청) ----------
+
+  const exBar = root.querySelector('.nbh-tabs[data-mode="exchange"]');
+  let exNow = 'apply';
+  const exTab = (tab) => {
+    if (tab === 'review' && !session().owner) tab = 'apply';
+    exNow = tab;
+    exBar.querySelectorAll('[data-ex-tab]').forEach((b) => {
+      const on = b.dataset.exTab === tab;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+      if (b.hasAttribute('data-owner')) b.hidden = !session().owner;
+    });
+    root.querySelectorAll('[data-ex]').forEach((sec) => { sec.hidden = mode !== 'exchange' || sec.dataset.ex !== tab; });
+  };
+  exBar.addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-ex-tab]');
+    if (tab) exTab(tab.dataset.exTab);
+  });
+  exBar.addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    const all = [...exBar.querySelectorAll('[data-ex-tab]:not([hidden])')];
+    const at = all.findIndex((b) => b.dataset.exTab === exNow);
+    const next = all[(at + (e.key === 'ArrowLeft' ? -1 : 1) + all.length) % all.length];
+    exTab(next.dataset.exTab);
+    next.focus();
+  });
+
+  const discardInfoUpload = () => {
+    if (infoUploaded) removeImage(session().user.id, infoUploaded.path).catch(() => {});
+    infoUploaded = null;
+  };
+  const fillInfo = () => {
+    discardInfoUpload();
+    const b = editing.banner;
+    info.elements.name.value = b.name || '';
+    info.url.value = b.url || '';
+    info.image.value = b.image_url || '';
+    infoPreview.set(httpUrl(b.image_url) || '');
+    say(infoMsg, '');
+  };
+
+  info.file.addEventListener('change', async () => {
+    const file = info.file.files?.[0];
+    const s = session();
+    if (!file || !s.owner) return;
+    say(infoMsg, '업로드 중…');
+    try {
+      infoUploaded = await uploadImage(s.user.id, file, infoUploaded?.path);
+    } catch (err) {
+      console.error(err);
+      say(infoMsg, '업로드하지 못했어요.', 'error');
+      info.file.value = '';
+      return;
+    }
+    info.file.value = '';
+    info.image.value = ''; // 마지막에 고른 쪽이 저장된다
+    say(infoMsg, '업로드 완료 ♡', 'done');
+    infoPreview.set(`${infoUploaded.url}?t=${Date.now()}`);
+    diyHouse.bannerChanged();
+  });
+  info.image.addEventListener('input', () => {
+    const a = httpUrl(withScheme(info.image.value));
+    infoPreview.set(a === '' ? (infoUploaded ? `${infoUploaded.url}?t=1` : '') : a || '');
+    diyHouse.bannerChanged();
+  });
+
+  info.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editing) return;
+    const s = session();
+    const b = editing.banner;
+    const url = httpUrl(withScheme(info.url.value));
+    const address = httpUrl(withScheme(info.image.value));
+    if (!url) { say(infoMsg, '사이트 주소는 http:// 또는 https:// 로 시작해야 해요.', 'error'); return; }
+    if (address === null) { say(infoMsg, '이미지 주소는 http:// 또는 https:// 로 시작해야 해요.', 'error'); return; }
+    // 이미지: 적힌 주소가 그대로면 이전 것(올린 파일이면 그 경로까지), 새 주소면 주소만, 비우고 파일을 올렸으면 그 파일
+    let image;
+    if (address && address === httpUrl(b.image_url)) image = { imageUrl: b.image_url, imagePath: b.image_path };
+    else if (address) image = { imageUrl: address, imagePath: null };
+    else if (infoUploaded) image = { imageUrl: infoUploaded.url, imagePath: infoUploaded.path };
+    else { say(infoMsg, '이미지 주소를 적거나 파일을 올려 주세요.', 'error'); return; }
+    const submit = info.querySelector('[type="submit"]');
+    submit.disabled = true;
+    say(infoMsg, '저장하는 중…');
+    let name = info.elements.name.value.trim();
+    if (!name) name = await siteTitle(url);
+    try {
+      await updateBanner(s.user.id, b.id, { name, url, ...image });
+    } catch (err) {
+      console.error(err);
+      submit.disabled = false;
+      say(infoMsg, '저장하지 못했어요. 다시 눌러 주세요.', 'error');
+      return;
+    }
+    submit.disabled = false;
+    // 쓰지 않게 된 파일 — 이전에 올린 이미지 · 이번에 올렸다 안 쓴 것
+    if (b.image_path && b.image_path !== image.imagePath) removeImage(s.user.id, b.image_path).catch(() => {});
+    if (infoUploaded && infoUploaded.path !== image.imagePath) removeImage(s.user.id, infoUploaded.path).catch(() => {});
+    infoUploaded = null;
+    say(infoMsg, '');
+    close();
+    await onChanged();
+  });
+
   const discardUpload = () => {
     if (mode === 'add' && uploaded) removeImage(session().user.id, uploaded.path).catch(() => {});
     uploaded = null;
+    if (mode === 'house') discardInfoUpload();
   };
 
   // ---------- 열고 닫기 ----------
@@ -533,7 +685,10 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
      */
     open(next, from = null, extra = {}) {
       if (next === 'house') {
+        if (mode === 'house') discardInfoUpload();
         editing = extra.item;
+        houseTab(extra.tab || 'shape');
+        fillInfo();
         diyHouse.set(normalizeHouse(editing.house) || defaultHouse(editing.id));
         diyHouse.bannerChanged();
         houseBox.querySelector('.nbh-house__who').textContent = editing.label;
@@ -552,12 +707,12 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
       root.classList.add('is-open');
       sheet.scrollTop = 0;
       sheet.focus({ preventScroll: true });
-      if (next === 'exchange') loadRequests();
+      if (next === 'exchange') { exTab(extra.tab || 'apply'); loadRequests(); }
     },
     close,
     /** 받은 신청 칸까지 내려 보기 */
     showRequests() {
-      review.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' });
+      exTab('review');
     },
     /** 주인인지 바뀌었을 때 — 받은 신청 수만 다시 센다 */
     refreshCount() {
