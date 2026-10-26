@@ -1,8 +1,8 @@
 // 우리 집 꾸미기 — 신청 폼 · 주인 간판 걸기 · 주인 집 고치기가 같이 쓴다. 미리보기는 마을과 같은 렌더러(house-art.js).
 //   몸체 · 지붕 · 문 · 창문은 작은 집 아이콘(하나만), 장식은 여러 개 켜고 끄기, 지붕 무늬는 무늬 칩.
-//   벽 · 지붕 · 문 색은 색 칩 + 맨 끝 '직접 고르기'(색 고르개 — 배너에서 뽑은 색도 여기에 보인다). 바꾸면 미리보기가 바로 바뀐다.
+//   벽 · 지붕 · 문 색은 파스텔 색 칩만(마을 톤을 지키려고 직접 고르기는 없다 — 배너에서 뽑은 색은 칩 하나 더). 바꾸면 미리보기가 바로 바뀐다.
 //   '랜덤으로 만들기' · '배너 색으로 만들기'(누를 때마다 같은 배너 색으로 다른 조합). 만든 뒤에도 그대로 고칠 수 있다.
-//   배너 색을 못 읽으면(이미지를 못 받거나 그 사이트가 읽기를 막음) 쉬운 말로 알리고, 직접 고르기 · 랜덤은 그대로.
+//   배너 색을 못 읽으면(이미지를 못 받거나 그 사이트가 읽기를 막음) 쉬운 말로 알리고, 칩 고르기 · 랜덤은 그대로.
 
 import { houseSvg, houseKey, roofPaint, randomHouse, houseFromColors, bannerColors, normalizeHouse, LABELS, BODIES, ROOFS, PATTERNS, DOORS, WINDOWS, DECOS, WALLS, ROOF_COLORS, DOOR_COLORS } from './house-art.js';
 
@@ -43,9 +43,7 @@ export function mountCustomizer(root, { initial = null, imageUrl = () => '', onC
     <div class="nbh-diy__rows">
       ${SHAPES.map(([key, label]) => `<div class="nbh-diy__row"><span class="nbh-diy__k" id="${id}-${key}">${label}</span><div class="nbh-diy__opts" role="radiogroup" aria-labelledby="${id}-${key}" data-key="${key}"></div></div>`).join('')}
       <div class="nbh-diy__row"><span class="nbh-diy__k" id="${id}-deco">장식 <em>여럿</em></span><div class="nbh-diy__opts" role="group" aria-labelledby="${id}-deco" data-key="deco"></div></div>
-      ${COLORS.map(([key, label, list]) => `<div class="nbh-diy__row"><span class="nbh-diy__k" id="${id}-${key}">${label} 색</span><div class="nbh-diy__opts is-colors" role="radiogroup" aria-labelledby="${id}-${key}" data-key="${key}">${
-        list.map((c, i) => `<button type="button" role="radio" data-v="${c}" style="--chip:${c}" aria-label="${label} 색 ${i + 1}"></button>`).join('')
-      }<label class="nbh-diy__custom" title="직접 고르기"><input type="color" data-custom="${key}" aria-label="${label} 색 직접 고르기"><span aria-hidden="true"></span></label></div></div>`).join('')}
+      ${COLORS.map(([key, label]) => `<div class="nbh-diy__row"><span class="nbh-diy__k" id="${id}-${key}">${label} 색</span><div class="nbh-diy__opts is-colors" role="radiogroup" aria-labelledby="${id}-${key}" data-key="${key}"></div></div>`).join('')}
     </div>
     <div class="nbh-diy__actions">
       <button class="nbh-btn is-ghost is-small" type="button" data-diy="random">랜덤으로 만들기</button>
@@ -74,37 +72,21 @@ export function mountCustomizer(root, { initial = null, imageUrl = () => '', onC
       const icon = houseSvg({ ...house, deco: [v] }, { scale: 0.42, still: true, cls: 'nbh-diy__icon' }).svg;
       return `<button type="button" role="checkbox" aria-checked="${house.deco.includes(v)}" data-v="${v}" title="${LABELS.deco[v]}" aria-label="${LABELS.deco[v]}">${icon}<span class="nbh-diy__cap" aria-hidden="true">${LABELS.deco[v]}</span></button>`;
     }).join('');
-    // 색 줄은 다시 만들지 않는다(색 고르개가 열린 채로 바뀌게) — 고른 표시만
-    for (const [key, , list] of COLORS) {
+    for (const [key, label, list] of COLORS) {
       const box = root.querySelector(`[data-key="${key}"]`);
-      const custom = !list.includes(house[key]);
-      box.querySelectorAll('[data-v]').forEach((b) => {
-        const on = b.dataset.v === house[key];
-        b.setAttribute('aria-checked', String(on));
-        b.tabIndex = on || (custom && b === box.firstElementChild) ? 0 : -1;
-      });
-      const pickBox = box.querySelector('.nbh-diy__custom');
-      const input = pickBox.firstElementChild;
-      if (input.value !== house[key]) input.value = house[key];
-      pickBox.classList.toggle('is-on', custom);
-      pickBox.style.setProperty('--chip', house[key]);
+      const all = list.includes(house[key]) ? list : [...list, house[key]]; // 배너에서 뽑은 색은 칩을 하나 더
+      box.innerHTML = all.map((c, i) => {
+        const on = house[key] === c;
+        return `<button type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-v="${c}" style="--chip:${c}" aria-label="${label} 색 ${i + 1}${list.includes(c) ? '' : '(배너 색)'}"></button>`;
+      }).join('');
     }
   };
 
-  let frame = 0;
-  const set = (next, { silent = false, soon = false } = {}) => {
+  const set = (next, { silent = false } = {}) => {
     house = normalizeHouse(next) || house;
-    if (soon) { // 색 고르개를 끄는 동안 — 한 프레임에 한 번만 그린다
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(paint);
-    } else paint();
+    paint();
     if (!silent) onChange(house);
   };
-
-  root.addEventListener('input', (e) => {
-    const key = e.target.dataset?.custom;
-    if (key && /^#[0-9a-f]{6}$/i.test(e.target.value)) set({ ...house, [key]: e.target.value }, { soon: true });
-  });
 
   root.addEventListener('click', async (e) => {
     const opt = e.target.closest('.nbh-diy__opts [data-v]');

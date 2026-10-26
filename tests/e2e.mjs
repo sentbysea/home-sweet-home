@@ -1188,7 +1188,7 @@ async function neighborVillage(device, name) {
     const h0 = await tapOrHover(0);
     const pb = await popBox();
     const pop = await page.evaluate(() => ({ link: document.querySelector('.nbh-pop__link').getAttribute('href'), shadow: getComputedStyle(document.querySelector('.nbh-pop')).boxShadow, frame: document.querySelectorAll('.nbh-pop__frame .nbh-v').length, src: document.querySelector('.nbh-pop__banner img').getAttribute('src'), name: document.querySelector('.nbh-pop__name').textContent, ratio: (() => { const b = document.querySelector('.nbh-pop__banner').getBoundingClientRect(); return b.width / b.height; })(), fit: getComputedStyle(document.querySelector('.nbh-pop__banner img')).objectFit }));
-    check('PC — 집에 올리면 그 배너가 집 위로(5:1 전체 · 이름 · 손그림 말풍선 · 방문하기 버튼 없음)', (await popOpen(page)) && pop.link === 'https://hongjiwon.love/' && pop.shadow === 'none' && pop.frame === 4 && !(await page.$('.nbh-pop__go')) && pop.src === 'https://img.test/love.png' && pop.name === 'hongjiwon.love' && Math.abs(pop.ratio - 5) < 0.1 && pop.fit === 'contain' && pb.b <= h0.y, JSON.stringify(pop));
+    check('PC — 집에 올리면 그 배너가 집 위로(5:1 칸 · 비율이 달라도 꽉 채워 자름 · 이름 · 손그림 말풍선 · 방문하기 버튼 없음)', (await popOpen(page)) && pop.link === 'https://hongjiwon.love/' && pop.shadow === 'none' && pop.frame === 4 && !(await page.$('.nbh-pop__go')) && pop.src === 'https://img.test/love.png' && pop.name === 'hongjiwon.love' && Math.abs(pop.ratio - 5) < 0.1 && pop.fit === 'cover' && pb.b <= h0.y, JSON.stringify(pop));
     check('PC — 배너가 화면 안 · 읽을 만한 크기', pb.x >= 0 && pb.r <= vw && pb.y >= 0 && pb.w >= 220, JSON.stringify(pb));
     // 집 → 배너로 천천히 옮겨도 그대로
     for (let k = 1; k <= 8; k++) { await page.mouse.move(h0.x, h0.y - ((h0.y - (pb.y + pb.h / 2)) * k) / 8); await page.waitForTimeout(25); }
@@ -1329,9 +1329,9 @@ async function neighborApply() {
   check('꾸미기 — 장식은 여러 개(개집 · 작은 나무 함께 · 누르면 켜고 끄기)', (await hasDeco('dog')) && (await hasDeco('tree')) && (await hasDeco('pot')) !== potBefore, await chosen());
   await page.click(`${D} [data-key="roofPattern"] [data-v="gingham"]`);
   check('꾸미기 — 지붕 무늬(체크) → 미리보기 지붕에 무늬', (await chosen()).split('/')[2] === 'gingham' && (await page.$eval(`${D} .nbh-diy__preview svg`, (s) => Boolean(s.querySelector('pattern')) && [...s.querySelectorAll('path')].some((p) => p.getAttribute('fill').startsWith('url(#')))));
-  await page.$eval(`${D} [data-custom="wall"]`, (i) => { i.value = '#123456'; i.dispatchEvent(new Event('input', { bubbles: true })); });
-  await page.waitForTimeout(80);
-  check('꾸미기 — 벽 색 직접 고르기', (await chosen()).split('/')[6] === '#123456' && (await page.$eval(`${D} [data-key="wall"] .nbh-diy__custom`, (c) => c.classList.contains('is-on'))) && (await page.$eval(`${D} .nbh-diy__preview`, (p) => p.innerHTML.includes('#123456'))), await chosen());
+  if (!(await hasDeco('chimney'))) await page.click(`${D} [data-key="deco"] [data-v="chimney"]`);
+  check('꾸미기 — 굴뚝도 지붕 무늬를 따른다', await page.$eval(`${D} .nbh-diy__preview svg .nbh-v0`, (g) => g.querySelectorAll('path[fill^="url(#"]').length === 2), await chosen());
+  check('꾸미기 — 색은 칩만(직접 고르기 없음)', !(await page.$(`${D} input[type="color"]`)) && !(await page.$(`${D} .nbh-diy__custom`)));
   check('꾸미기 — 마을과 같은 렌더러(.nbh-art · 위글 변형 4장)', await page.$eval(`${D} .nbh-diy__preview svg`, (s) => s.classList.contains('nbh-art') && s.querySelectorAll('.nbh-v').length === 4));
   const r1 = await chosen();
   await page.click(`${D} [data-diy="random"]`);
@@ -1367,7 +1367,7 @@ async function neighborApply() {
   const walls = await page.$$eval(`${D} [data-key="wall"] [data-v]`, (b) => b.map((x) => x.dataset.v));
   const l = (hex) => { const n = parseInt(hex.slice(1), 16); return (Math.max(n >> 16, (n >> 8) & 255, n & 255) + Math.min(n >> 16, (n >> 8) & 255, n & 255)) / 5.1; };
   const [, , , , , , wall, , door] = c1.split('/');
-  check('배너 색 — 배너에서 뽑은 색으로(벽은 밝게 · 문은 벽과 대비)', (await diyMsg()).includes('배너 색으로 지었어요') && walls.length === 8 && (await page.$eval(`${D} [data-key="wall"] .nbh-diy__custom`, (c) => c.classList.contains('is-on'))) && l(wall) >= 80 && Math.abs(l(wall) - l(door)) >= 20, JSON.stringify({ c1, walls }));
+  check('배너 색 — 배너에서 뽑은 색으로(벽은 밝게 · 문은 벽과 대비)', (await diyMsg()).includes('배너 색으로 지었어요') && walls.length === 9 && l(wall) >= 80 && Math.abs(l(wall) - l(door)) >= 20, JSON.stringify({ c1, walls }));
   await page.click(`${D} [data-diy="banner"]`);
   await page.waitForTimeout(150);
   check('배너 색 — 다시 뽑기 → 같은 색으로 다른 조합', (await chosen()) !== c1 && (await page.textContent(`${D} [data-diy="banner"]`)).includes('다시 뽑기'), `${c1} → ${await chosen()}`);
@@ -1473,6 +1473,12 @@ async function neighborOwner() {
   await page.click('.nbh__owner [data-act="add"]');
   await page.waitForSelector('.nbh-panel.is-open [data-form="add"]', { timeout: 5000 });
   const A = '.nbh-form[data-form="add"]';
+  // 5:1 이 아닌 파일은 가운데를 잘라 5:1 로 올린다
+  await page.setInputFiles(`${A} [name="file"]`, { name: 'tall.png', mimeType: 'image/png', buffer: png(400, 200, [200, 150, 150]) });
+  await page.waitForFunction((A) => document.querySelector(`${A} .nbh-form__msg`).textContent.includes('업로드 완료'), A, { timeout: 8000 }).catch(() => {});
+  const up = [...db.storage.entries()].find(([k]) => k.startsWith(`user-banners/${OWNER_ID}/category-banners/`))?.[1]?.bytes;
+  const dims = up ? [up.readUInt32BE(16), up.readUInt32BE(20)] : null;
+  check('주인 — 5:1 이 아닌 배너 파일은 5:1 로 잘라 올린다', dims && dims[0] === 400 && dims[1] === 80, JSON.stringify(dims));
   await page.fill(`${A} [name="url"]`, 'https://added.example');
   await page.fill(`${A} [name="image"]`, 'https://img.test/new.png');
   await page.click(`${A} [data-diy="add"] [data-key="body"] [data-v="tall"]`);
