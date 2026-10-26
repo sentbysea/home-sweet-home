@@ -72,9 +72,10 @@ ready.resolve();
 | 주소 | 화면 |
 | --- | --- |
 | `/` | 홈(창 없음) |
-| `/about` `/teatime` `/notice` `/neighbor` | 방 버튼 창(about __VE · teatime? · notice · neighbor) |
+| `/about` `/teatime` `/notice` | 방 버튼 창(about __VE · teatime? · notice) |
+| `/neighbor` | 이웃 마을(창 대신 아이보리 화면 — 아래 "neighbor") |
 | `/archive` | 열쇠꾸러미(창 대신 아이보리 화면 — 아래 "archive") |
-| `/neighbor/banner` | neighbor 의 '배너교환은 여기에서'(내 배너) |
+| `/neighbor/banner` | neighbor 우체통의 배너 교환 패널(내 배너 · 교환 신청) |
 | `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
 | `/category/:id/read` · `/category/:id/folder/:fid/read` | 이어서 읽기 — 그 칸의 글을 목록 순서대로 한 화면에 |
 | `/post/:id` · `/post/:id/quote` | 글 · Quote(주인) — hongjiwon.love 와 같은 글 주소 모양 |
@@ -114,6 +115,43 @@ src/styles/archive.css
   색은 툰 3단 그늘뿐 — 금속 반짝임 없음. 라벨 글씨는 로딩 화면 글꼴(Nanum Gothic Coding).
 - three.js(`three@0.169.0`)는 jsDelivr 에서 archive 를 열 때만 받는다 — 홈 첫 화면 무게는 그대로. WebGL 이 없거나 못 받으면 같은 데이터로 목록.
 - 모션 줄이기: 저절로 흔들림 · 위글 · 관성 없이(손으로 돌리기 · 고르기는 그대로). archive 를 벗어나면 그리기를 멈추고 WebGL 자원 · 캔버스를 정리한다.
+
+## neighbor (이웃 마을)
+
+홈의 neighbor 버튼 · `/neighbor` — 아이보리 화면의 손그림 마을. 가운데 홍차네 집(옆 우체통), 둘레에 배너를 교환한 이웃집들이
+느슨하게 모여 있다. 집마다 아래 이름표(사이트 이름) — 밑줄 색은 그 집에 쓴 색(벽 · 지붕 · 문) 중 하나이고, 배너 링크를 올렸을 때 밑줄도 같은 색. 배너는 평소에 숨기고, 집을 고르면 그 집 위에 하나만 보인다.
+
+```
+src/neighbor/house-art.js   집 렌더러(마을 · 신청 미리보기 · 집 고치기 공통) — 몸체 · 지붕 · 문 · 창 · 장식 조합, 손그림 선, 기본 모양, 배너 색 뽑기
+src/neighbor/village.js     마을 — 배치 · 둥실 · 배너 미리보기(올리기 · 포커스 · 탭) · 우체통
+src/neighbor/customizer.js  우리 집 꾸미기 — 아이콘 · 색 칩 · 랜덤 · 배너 색으로
+src/neighbor/panel.js       패널 — 내 배너(복사) · 교환 신청 + 꾸미기 · 받은 신청(주인) · 간판 걸기 · 이웃집 고치기
+src/neighbor/data.js        배너 목록(house 포함) · 내 배너(MY_BANNER) · 신청 · 주인 RPC
+src/neighbor/index.js       화면 — ← home · 데이터 · 주인 edit(Google 로그인) · 위글 박자 · 닫으면 정리
+src/styles/neighbor.css
+```
+
+- 배치: 칸(PC 5 · 휴대폰 3)으로 나눈 동네에서 홍차네 집 둘레 칸부터 가까운 순서로(정렬 순서대로) 채우고, 넘치면 아래로 줄을 늘린다 —
+  집은 줄이지 않는다. 칸 안 자리 · 높낮이는 칸 번호로 정한 작은 어긋남이라 새로고침 · 고르기에도 그대로. 홍차네 집 오른쪽 칸은 우체통 자리.
+  남는 둘레 칸 몇 곳에만 나무 · 울타리.
+- 집 그림: 살짝 휘고 끝 · 모서리가 둥근 손그림 선(집 크기와 상관없이 같은 굵기) + 파스텔 단색. 선 변형 4장을 190ms 마다(로딩 · 평면도 위글과 같은 박자),
+  꼭짓점은 그대로라 선이 벌어지지 않는다. 집마다 다른 주기로 2~4px 둥실. 배너 · 이름은 흔들지 않는다.
+- 집 모양(`house`, v2): 몸체(아담 · 길쭉 · 넓은 · 2층 · 오두막) · 지붕(삼각 · 둥근 · 사다리꼴 · 헛간) · 지붕 무늬(민무늬 · 도트 · 망점 · 사선 줄무늬 · 체크 —
+  사이트 스티커 무늬와 같은 결) · 문(둥근 · 네모 · 옆) · 창(하나 · 둘 · 동그란 · 격자 · 긴 창) · 장식 여러 개(굴뚝 · 화분 · 개집 · 우체통 · 작은 나무)
+  · 벽 · 지붕 · 문 색(칩 또는 직접 고르기). 옛 꼴(v1 — 장식 하나)도 읽는다(다락창 · 없음은 장식 없음). `banners.house` 가 비어 있으면 배너 id 로 정한 기본 모양 — 새로고침해도 같다.
+- 배너 보기: PC 는 집에 올리거나 Tab 포커스하면 집 위로 사라락(240ms), 집에서 배너로 옮겨도 그대로, 집을 누르면 새 탭.
+  휴대폰은 한 번 누르면 배너 · 이름 · '방문하기 ↗', 방문하기를 눌러야 이동, 바깥 · 다른 집을 누르면 닫힘. 키보드 Enter → 방문하기, Esc → 닫기.
+  한 번에 하나, 5:1 전체(`object-fit: contain`), 화면 가장자리에서 잘리지 않게 자리를 고친다(위에 자리가 없으면 아래로).
+- 우체통(위에 통통 튀는 화살표 · 떠는 빨간 깃발) → 배너 교환 패널(`/neighbor/banner`) — 탭 하나씩: 교환 신청 + 우리 집 꾸미기 · 내 배너(이미지 · 주소 ·
+  이미지 주소 · 삽입 코드 복사) · 받은 신청(주인만). 신청 이름은 선택 — 비우면 그 사이트 탭 제목(Edge Function `site-title`, 없으면 주소)
+  (고르면 바로 미리보기, '랜덤으로 만들기', '배너 색으로 만들기' — 누를 때마다 같은 배너 색으로 다른 조합). 배너 색은 투명 픽셀을 빼고 뽑아 벽은 밝게 ·
+  문은 벽과 대비 나게. 그 배너를 읽을 수 없으면 쉬운 말로 알리고 직접 고르기 · 랜덤은 그대로. 신청은 대기 목록에만 — **주인이 승인해야** 그 모습으로 마을에.
+- 주인: 아래 `edit` → Google 로그인 → 집을 누르면 이웃집 고치기 — 탭 둘: 집 고치기(모양 · 색 · 기본 모양으로 · 내리기) · 내용 고치기(이름 · 주소 · 배너 이미지/파일), `+ add banner`(집 모양까지), `받은 신청 N`(신청한 집 미리보기 · 승인 · 거절).
+- DB: web 저장소 `supabase/migrations/20261026100000_banner_requests.sql`(신청) · `20261027100000_neighbor_houses.sql`(집 모양 — `banners.house` ·
+  `banner_requests.house` · 신청 RPC 에 `p_house` · `set_banner_house()`). **둘째는 아직 운영에 적용하지 않았다** — 적용 전에는 이웃집이 모두 기본 모양이고,
+  신청은 '아직 신청을 저장할 수 없어요' 안내로 끝난다(성공처럼 보이지 않는다). 적용 순서 · 확인은 web 저장소 `supabase/README.md` 8단계.
+  사이트 제목 읽기는 web 저장소 `supabase/functions/site-title`(`supabase functions deploy site-title --no-verify-jwt`) — 배포 전에는 이름을 비우면 주소가 이름이 된다.
+- 모션 줄이기: 둥실 · 위글 · 배너 나타남 없이(배너 보기는 그대로).
 
 ## 글 · 갤러리 · 메모 (hongjiwon.love 연동)
 
@@ -170,7 +208,7 @@ tag('living', 'pic', '사진', 582, 726, '#fbefae', '#e8893a', -2, { category: 2
 
 ```sh
 npm run e2e                     # node tests/e2e.mjs — 이웃 web 저장소(WEB_DIR, 기본 ../web)가 있어야 한다
-npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile · layout · archive (--browser=webkit)
+npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile · layout · archive · neighbor (--browser=webkit)
 ```
 
 web 저장소의 `tests/lib/harness.mjs`(Playwright · 정적 서버)와 `mock-supabase.mjs`(RLS 흉내 메모리 DB)를 쓴다 —

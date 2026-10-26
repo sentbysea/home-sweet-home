@@ -6,21 +6,22 @@
 //   뒤의 홈 화면은 반투명 덮개로 살짝 가린다. 닫기: ×, 덮개 누르기, Esc.
 //   주소창: 지금 사이트 주소 / 방 이름. 하트: 누르면 채워지고 이 브라우저에 기억한다(방마다).
 //   about __VE 방은 Vibe · Echo 카드 두 장(about.js).
-//   neighbor 방의 칩은 '배너교환은 여기에서' 버튼 — 누르면 hsh:banner 이벤트, 지금은 배너 정보 자리로 바꿔 보여 준다.
 //   버튼에 data-category(hongjiwon.love 카테고리 id 또는 slug)가 있으면 그 카테고리의 글 · 갤러리 · 메모 창
 //   (content/viewer.js). 목록 → 폴더 → 글로 갈 때마다 창 기록을 한 칸씩 쌓는다 — < > · 휴대폰 뒤로 가기가 그대로 오간다.
 //   화면마다 주소가 있다(routes.js) — 직접 들어오거나 새로고침해도 그 창이 열리고, 닫으면(×) 홈(/)으로 돌아간다.
-//   archive 버튼만 브라우저 창 대신 흰 화면 가운데 열쇠꾸러미(archive/index.js) — 주소 · 뒤로/앞으로 · 닫기는 같은 길.
+//   archive · neighbor 버튼은 브라우저 창 대신 흰 화면 — 열쇠꾸러미(archive/index.js) · 이웃 간판 집(neighbor/index.js).
+//   주소 · 뒤로/앞으로 · 닫기는 같은 길. neighbor 의 우체통 패널은 기록 한 칸(/neighbor/banner).
 
 import { mountAbout } from './about.js';
-import { mountNeighbor } from './neighbor.js';
 import { mountContent } from '../content/viewer.js';
 import { fetchPost } from '../content/data.js';
 import { getClient, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
 import { pathOf, parsePath, withKeep } from './routes.js';
 import { mountArchive } from '../archive/index.js';
+import { mountNeighbor } from '../neighbor/index.js';
 
 const NS = 'http://www.w3.org/2000/svg';
+const SCREENS = ['archive', 'neighbor']; // 창 대신 흰 화면으로 여는 방
 const LIKE_KEY = 'hsh:liked';
 
 /** 뾰족한 별(가시 points 개) — 가시 길이를 조금씩 달리해 손으로 오린 느낌 */
@@ -221,31 +222,6 @@ function noticeMarkup() {
   return { tabs, secs };
 }
 
-// ---------- 내 배너(neighbor 의 '배너교환은 여기에서') ----------
-
-const BANNER = {
-  site: 'https://xn--9g3b29an0p.me', // 바이브.me — 한글 주소를 못 받는 곳도 있어서 퓨니코드로
-  siteLabel: 'xn--9g3b29an0p.me',
-  image: 'https://iokdgqzfprtggsnrusez.supabase.co/storage/v1/object/public/user-banners/cfe0dc66-7fa2-450e-8817-44073a4a5aab/banner', // 3000×600
-};
-
-/** 클립보드에 — 안 되는 브라우저(오래된 iOS · http)는 숨긴 textarea 로 */
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return;
-  } catch { /* 아래로 */ }
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.setAttribute('readonly', '');
-  ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
-  document.body.append(ta);
-  ta.select();
-  ta.setSelectionRange(0, text.length);
-  try { document.execCommand('copy'); } catch { /* 복사 못 해도 조용히 */ }
-  ta.remove();
-}
-
 const readLikes = () => {
   try { return JSON.parse(localStorage.getItem(LIKE_KEY)) || {}; } catch { return {}; }
 };
@@ -290,21 +266,7 @@ function build() {
             <p class="hsh-win__empty"></p>
             <div class="hsh-win__note hsh-note" hidden></div>
             <div class="hsh-ve" hidden></div>
-            <div class="hsh-nb" hidden></div>
             <div class="hsh-ct-box" hidden></div>
-            <div class="hsh-banner" hidden>
-              <img class="hsh-banner__img" src="${BANNER.image}" alt="hongjiwon.love 배너" width="3000" height="600" loading="lazy" decoding="async">
-              <dl class="hsh-banner__rows">
-                <div class="hsh-banner__row">
-                  <dt>url</dt>
-                  <dd><span class="hsh-banner__val">${BANNER.siteLabel}</span><button class="hsh-banner__copy" type="button" data-copy="${BANNER.site}">복사</button></dd>
-                </div>
-                <div class="hsh-banner__row">
-                  <dt>image</dt>
-                  <dd><span class="hsh-banner__val">${BANNER.image}</span><button class="hsh-banner__copy" type="button" data-copy="${BANNER.image}">복사</button></dd>
-                </div>
-              </dl>
-            </div>
           </div>
           <div class="hsh-win__rail" aria-hidden="true" hidden><span class="hsh-win__knob"></span></div>
         </div>
@@ -327,15 +289,13 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const win = build();
   host.append(win);
   const archive = mountArchive(host, { reduced, cover: trigger });
+  const neighbor = mountNeighbor(host, { reduced, cover: trigger });
   const frame = win.querySelector('.hsh-win__frame');
   const title = win.querySelector('.hsh-win__title');
   const url = win.querySelector('.hsh-win__url');
   const like = win.querySelector('.hsh-win__like');
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
-  const banner = win.querySelector('.hsh-banner');
-  const nbBox = win.querySelector('.hsh-nb');
-  const neighbor = mountNeighbor(nbBox, () => syncRail());
   const veBox = win.querySelector('.hsh-ve');
   const about = mountAbout(veBox, () => syncRail());
   const ctBox = win.querySelector('.hsh-ct-box');
@@ -366,30 +326,12 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   let scroller = inner;
   const rail = win.querySelector('.hsh-win__rail');
   const knob = win.querySelector('.hsh-win__knob');
-  let pill = win.querySelector('.hsh-win__pill');
+  const pill = win.querySelector('.hsh-win__pill');
   let current = null;
   let back = null; // 닫으면 포커스를 돌려줄 버튼
   let closing = null;
 
-  const setPill = (room, name) => {
-    // neighbor 는 누를 수 있는 칩, 나머지는 방 이름표
-    const next = document.createElement(room === 'entry' ? 'button' : 'span');
-    next.className = 'hsh-win__pill';
-    if (room === 'entry') {
-      next.type = 'button';
-      next.classList.add('is-link');
-      next.textContent = '배너교환은 여기에서 <';
-      next.addEventListener('click', () => {
-        if (steps[at]?.page === 'banner') return;
-        showBanner();
-        step({ detail: steps[at].detail, page: 'banner' });
-      });
-    } else {
-      next.textContent = name;
-    }
-    pill.replaceWith(next);
-    pill = next;
-  };
+  const setPill = (name) => { pill.textContent = name; };
 
   const show = (label, text) => {
     title.textContent = label;
@@ -398,10 +340,6 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     // 공지면 탭 + 내용(ABOUT 부터), 아니면 '곧 채워질' 안내
     const isNotice = label === 'notice';
     note.hidden = noteTabs.hidden = !isNotice;
-    // neighbor 면 친구 배너 모음(neighbor.js)
-    const isNeighbor = label === 'neighbor';
-    nbBox.hidden = !isNeighbor;
-    if (isNeighbor) neighbor.show();
     // about __VE 면 Vibe · Echo 카드(about.js)
     const isAbout = label === 'about __VE';
     veBox.hidden = !isAbout;
@@ -410,8 +348,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     const isContent = Boolean(win.dataset.category);
     ctBox.hidden = !isContent;
     scroller = isContent ? winBody : inner;
-    empty.hidden = isNotice || isNeighbor || isAbout || isContent;
-    banner.hidden = true;
+    empty.hidden = isNotice || isAbout || isContent;
     if (isNotice) pickTab(0);
     else scroller.scrollTop = 0;
     syncRail();
@@ -456,33 +393,15 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     knob.addEventListener('lostpointercapture', () => knob.removeEventListener('pointermove', move), { once: true });
   });
 
-  // 배너 정보 — 배너 그림 + 사이트 주소 · 배너 이미지 주소(각각 복사 버튼)
-  const showBanner = () => {
-    show('my banner', '');
-    empty.hidden = true;
-    banner.hidden = false;
-    syncRail();
-    win.dispatchEvent(new CustomEvent('hsh:banner', { bubbles: true }));
-  };
-  banner.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-copy]');
-    if (!btn) return;
-    await copyText(btn.dataset.copy);
-    btn.textContent = '복사됨 ♡';
-    btn.classList.add('is-done');
-    clearTimeout(btn.timer);
-    btn.timer = setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('is-done'); }, 1400);
-  });
-
   const paintLike = () => {
     const on = Boolean(current && readLikes()[current]);
     like.setAttribute('aria-pressed', String(on));
   };
 
   // ---------- 뒤로 · 앞으로 — 브라우저 기록과 같이 간다 ----------
-  //   방을 열거나 창 안에서 다른 쪽(my banner)으로 가면 기록을 한 칸 쌓는다.
+  //   방을 열거나 창 안에서 다른 쪽(글 · neighbor 우체통 패널)으로 가면 기록을 한 칸 쌓는다.
   //   < > · 휴대폰 뒤로 가기 · 브라우저 버튼이 모두 같은 기록을 오간다. 처음 칸에서 뒤로 가면 창이 닫힌다.
-  let steps = []; // 이번 창에서 거친 화면 [{ detail, page: 'room' | 'banner' }]
+  let steps = []; // 이번 창에서 거친 화면 [{ detail, page: 'room' | 'banner' | 'content' }]
   let at = -1; // 지금 steps 의 몇 번째(-1 = 창 닫힘)
   const navBack = win.querySelector('[data-nav="back"]');
   const navFwd = win.querySelector('[data-nav="forward"]');
@@ -508,9 +427,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   };
 
   const showStep = (view) => {
-    if (win.hidden || win.classList.contains('is-closing')) openWindow(view.detail, back);
+    if (win.hidden || win.classList.contains('is-closing') || SCREENS.includes(view.detail.label)) openWindow(view.detail, back, view.page);
     else show(view.detail.label, '곧 채워질 방이에요.');
-    if (view.page === 'banner') showBanner();
     if (view.page === 'content') {
       scroller.scrollTop = 0;
       const shown = view;
@@ -558,7 +476,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     if (unwinding) { queued = [detail, from, first]; return; }
     steps = [];
     at = -1;
-    openWindow(detail, from);
+    openWindow(detail, from, first?.page);
     if (detail.category) {
       const state = first?.state || content.initial(detail);
       step({ detail, page: 'content', state });
@@ -566,7 +484,6 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
       return;
     }
     step({ detail, page: first?.page || 'room' });
-    if (first?.page === 'banner') showBanner();
   };
 
   // ×  · 덮개 · Esc — 쌓아 둔 기록을 한꺼번에 되돌리고 닫는다
@@ -581,10 +498,22 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     closeWindow();
   };
 
-  const openWindow = ({ room, label, name, bg, fg, category, auto }, from) => {
+  // neighbor 안에서 우체통 패널을 열고 닫을 때 — 열면 기록 한 칸(/neighbor/banner), 닫으면 되돌린다
+  const neighborPage = (page) => {
+    const now = steps[at];
+    if (!now || now.page === page) return;
+    // 우체통으로 연 칸은 바로 앞이 집 화면이라고 적어 둔다(새로고침 뒤 앞 칸을 몰라도 되돌릴 수 있게)
+    if (page === 'banner') { step({ detail: now.detail, page, fromRoom: true }); return; }
+    if (now.fromRoom) { history.back(); return; }
+    // 주소로 바로 들어온 패널 — 기록을 늘리지 않고 이 칸을 /neighbor 로
+    steps[at] = { detail: now.detail, page: 'room' };
+    history.replaceState({ hshWin: at, view: steps[at] }, '', urlOf(steps[at]));
+  };
+
+  const openWindow = ({ room, label, name, bg, fg, category, auto }, from, page = 'room') => {
     clearTimeout(closing);
-    // archive — 창 대신 열쇠꾸러미. ← home · Esc 는 × 와 같이 기록을 되돌리며 홈으로
-    if (label === 'archive') {
+    // archive · neighbor — 창 대신 흰 화면. ← home · Esc 는 × 와 같이 기록을 되돌리며 홈으로
+    if (SCREENS.includes(label)) {
       if (!win.hidden) {
         content.close();
         win.hidden = true;
@@ -592,10 +521,17 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
       }
       back = null;
       current = room;
-      archive.show({ from, home: close });
+      if (label === 'archive') {
+        neighbor.hide({ instant: true });
+        archive.show({ from, home: close });
+      } else {
+        archive.hide({ instant: true });
+        neighbor.show({ from, home: close, page, onPage: neighborPage });
+      }
       return;
     }
     archive.hide({ instant: true });
+    neighbor.hide({ instant: true });
     const already = win.classList.contains('is-open'); // 주소로 연 글 창이 이제 카테고리를 알게 됐다 — 스티커 · 등장은 그대로
     back = from ?? null;
     current = category ? `${room}:${category}` : room; // 하트는 버튼마다
@@ -608,7 +544,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.');
     if (!already) scatter(frame);
-    setPill(room, PILLS[label] ?? name);
+    setPill(PILLS[label] ?? name);
     thumb.style.backgroundImage = label === 'notice' ? `url("${NOTICE_THUMB}")` : '';
     paintLike();
     if (already) return;
@@ -621,6 +557,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
 
   const closeWindow = () => {
     archive.hide();
+    neighbor.hide();
     if (win.hidden || win.classList.contains('is-closing')) return;
     content.close();
     win.classList.remove('is-open');
