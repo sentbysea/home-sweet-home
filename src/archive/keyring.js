@@ -40,13 +40,13 @@ const BOIL_MS = 190;
 const BOIL_FRAMES = 3;
 
 // 사이트 오브젝트 → 열쇠 + 키링
-//   keySize    열쇠 크기(1 = 보통) — twitter 열쇠는 눈에 띄게 작다(새 키링은 그대로)
+//   keySize    열쇠 크기(1 = 보통) — twitter · luvlog 열쇠는 조금 작다(키링은 그대로)
 //   charmFront 고르면 키링이 열쇠 옆이 아니라 열쇠 앞(화면 쪽)으로 나온다
 //   charmFlip  키링을 열쇠 반대쪽에(맨 앞 home sweet home 이름표에 가리지 않게)
 const OBJECTS = {
-  bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky', keySize: 0.68, charmFlip: true },
+  bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky', keySize: 0.84, charmFlip: true },
   diary: { key: 'roundKey', tone: 'butter', charm: 'diary', charmTone: 'lilac', charmFront: true },
-  heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'lilac', keySize: 0.84 }, // tistory(1) 와 twitter(0.68) 사이
+  heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'lilac', keySize: 0.84 }, // twitter 와 같은 크기
   house: { key: 'houseKey', tone: 'silver' },
 };
 const HOUSE_LOOKS = [['silver', '#cfe0fb', '#f6c6d6'], ['butter', '#dfd2f6', '#cfe0fb'], ['silver', '#fbefae', '#dfd2f6']];
