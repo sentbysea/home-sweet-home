@@ -118,9 +118,12 @@ function edgePoint(t) {
   return [100, 50];
 }
 
-function scatter(frame) {
+const STICKERS = [2, 4]; // 둘레 스티커 개수 기본(주인이 방마다 바꿀 수 있다 — 0 ~ STICKER_MAX)
+const STICKER_MAX = 8;
+
+function scatter(frame, [lo, hi] = STICKERS) {
   frame.querySelectorAll('.hsh-win__deco').forEach((n) => n.remove());
-  const n = 2 + Math.floor(Math.random() * 3); // 2 ~ 4
+  const n = lo + Math.floor(Math.random() * (hi - lo + 1)); // lo ~ hi
   const start = Math.random();
   const big = Math.floor(Math.random() * n); // 하나는 크게
   for (let i = 0; i < n; i++) {
@@ -265,6 +268,8 @@ function build() {
           </div>
           <label class="hsh-win__ed-field"><span>제목</span><input name="head-title" maxlength="40" autocomplete="off"></label>
           <label class="hsh-win__ed-field"><span>검정 알약</span><input name="head-pill" maxlength="60" autocomplete="off"></label>
+          <div class="hsh-win__ed-field"><span id="hsh-win-ed-st">주변 스티커 개수 <em>0 ~ ${STICKER_MAX} · 열 때마다 그 사이에서</em></span>
+            <span class="hsh-win__ed-range" role="group" aria-labelledby="hsh-win-ed-st"><input name="st-min" type="number" min="0" max="${STICKER_MAX}" inputmode="numeric" aria-label="최소"> ~ <input name="st-max" type="number" min="0" max="${STICKER_MAX}" inputmode="numeric" aria-label="최대"></span></div>
           <label class="hsh-win__ed-check"><input name="headless" type="checkbox"> 상단 바 숨기기 <em>사진 · 제목 · 검정 알약</em></label>
           <p class="hsh-win__ed-msg" role="status" aria-live="polite"></p>
           <div class="hsh-win__ed-act">
@@ -369,6 +374,12 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const headOf = (l) => (win.dataset.category ? {} : heads[l] || {});
   const baseThumb = (l) => (l === 'notice' ? NOTICE_THUMB : '');
   const titleFor = (l) => (pairNow ? 'pair' : headOf(l).title || l);
+  // 둘레 스티커 개수 [최소, 최대] — 고친 값이 이상하면 기본
+  const stickersOf = (l) => {
+    const r = headOf(l).stickers;
+    const ok = Array.isArray(r) && r.length === 2 && r.every((n) => Number.isInteger(n) && n >= 0 && n <= STICKER_MAX) && r[0] <= r[1];
+    return ok ? r : STICKERS;
+  };
 
   const paintHead = () => {
     const h = headOf(headLabel);
@@ -384,7 +395,12 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     paintHead();
     syncRail();
   };
-  fetchRoomHeads().then((h) => { heads = h; repaintHead(); });
+  fetchRoomHeads().then((h) => {
+    heads = h;
+    repaintHead();
+    // 창을 먼저 열었는데 이 방 스티커 개수를 고쳐 두었으면 — 그 개수로 다시 붙인다
+    if (!win.hidden && !win.dataset.category && heads[headLabel]?.stickers) scatter(frame, stickersOf(headLabel));
+  });
 
   // 로그인돼 있으면 조용히 주인인지 본다(처음 창을 열 때 한 번) — 주인에게만 edit
   const checkOwner = async () => {
@@ -398,7 +414,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     paintHead();
   };
 
-  // 고치기 창 — 사진(고르기 · 지우기) · 제목 · 검정 알약 · 머리 숨기기. 비운 칸은 기본값으로
+  // 고치기 창 — 사진(고르기 · 지우기) · 제목 · 검정 알약 · 둘레 스티커 개수(n ~ n) · 머리 숨기기. 비운 칸은 기본값으로
   let pendingFile = null;
   let clearPhoto = false;
   let previewUrl = '';
@@ -417,17 +433,25 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     field('head-pill').value = h.pill || '';
     field('head-pill').placeholder = basePill;
     field('headless').checked = Boolean(h.hidden);
+    const [lo, hi] = h.stickers ? stickersOf(headLabel) : ['', ''];
+    field('st-min').value = lo;
+    field('st-max').value = hi;
+    field('st-min').placeholder = STICKERS[0];
+    field('st-max').placeholder = STICKERS[1];
     field('photo').value = '';
     pendingFile = null;
     clearPhoto = false;
     paintEdThumb();
     edSay('');
     editor.hidden = false;
+    win.classList.add('is-editing');
     field('head-title').focus({ preventScroll: true });
   };
   const closeEditor = () => {
     if (editor.hidden) return;
     editor.hidden = true;
+    win.classList.remove('is-editing');
+    syncRail();
     pendingFile = null;
     paintEdThumb();
   };
@@ -446,6 +470,19 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     if (act === 'cancel') { closeEditor(); editBtn.focus({ preventScroll: true }); }
     if (act === 'clear') { pendingFile = null; clearPhoto = true; field('photo').value = ''; paintEdThumb(); }
   });
+  // 스티커 개수 칸 — 둘 다 비면 기본(null), 하나만 적으면 딱 그 개수, 0 ~ STICKER_MAX 로 맞추고 작은 쪽이 최소
+  const readStickers = () => {
+    const num = (name) => {
+      const t = field(name).value.trim();
+      return t === '' || !Number.isFinite(Number(t)) ? null : Math.max(0, Math.min(STICKER_MAX, Math.round(Number(t))));
+    };
+    const a = num('st-min');
+    const b = num('st-max');
+    if (a === null && b === null) return null;
+    const lo = a ?? b;
+    const hi = b ?? a;
+    return [Math.min(lo, hi), Math.max(lo, hi)];
+  };
   editor.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!owner || saving) return;
@@ -461,7 +498,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
         uploaded = await uploadRoomPhoto(owner.id, pendingFile);
         ({ url: image, path: imagePath } = uploaded);
       }
-      const next = { title: field('head-title').value.trim(), pill: field('head-pill').value.trim(), image, imagePath, hidden: field('headless').checked };
+      const next = { title: field('head-title').value.trim(), pill: field('head-pill').value.trim(), image, imagePath, hidden: field('headless').checked, stickers: readStickers() };
       for (const k of Object.keys(next)) if (!next[k]) delete next[k];
       const all = { ...heads };
       if (Object.keys(next).length) all[label] = next;
@@ -471,6 +508,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
       if (prev.imagePath && prev.imagePath !== imagePath) removeRoomPhoto(prev.imagePath);
       closeEditor();
       repaintHead();
+      scatter(frame, stickersOf(label)); // 바꾼 개수를 바로 보이게
       editBtn.focus({ preventScroll: true });
     } catch {
       if (uploaded) removeRoomPhoto(uploaded.path);
@@ -699,7 +737,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.style.setProperty('--hsh-win-tint', bg);
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.', page);
-    if (!already) scatter(frame);
+    if (!already) scatter(frame, stickersOf(label));
     basePill = PILLS[label] ?? name;
     paintHead();
     paintLike();

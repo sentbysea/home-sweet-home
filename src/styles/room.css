@@ -243,15 +243,14 @@
 .hsh-win__edit:hover { color: var(--hsh-win-text); }
 .hsh-win__edit:focus-visible { outline: 1.5px solid var(--hsh-win-line); outline-offset: 1px; }
 
-/* 고치기 창 — 창 몸통을 덮는 흰 종이 */
+/* 고치기 창 — 여는 동안은 창 몸통에 이것만(창 높이가 고치기 칸에 맞는다) */
+.hsh-win.is-editing .hsh-win__body > :not(.hsh-win__editor, .hsh-win__edit) { display: none; }
 .hsh-win__editor {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
   display: grid;
   align-content: start;
   gap: 12px;
-  padding: 34px 22px 20px;
+  min-height: 0;
+  padding: 14px 4px 0;
   overflow-y: auto;
   background: var(--hsh-win-paper);
   font-family: var(--hsh-win-font);
@@ -299,6 +298,10 @@
   color: var(--hsh-win-text);
 }
 .hsh-win__ed-field input::placeholder { color: #a9adb0; }
+.hsh-win__ed-field > span em { font-style: normal; font-size: 11.5px; color: #a3a7aa; }
+/* 스티커 개수 — 작은 숫자 칸 두 개 사이에 ~ */
+.hsh-win__ed-range { display: flex; align-items: center; gap: 8px; color: var(--hsh-win-note); }
+.hsh-win__ed-field .hsh-win__ed-range input { width: 64px; text-align: center; }
 .hsh-win__ed-field input:focus { outline: 1.5px solid var(--hsh-win-ink); outline-offset: 0; }
 
 .hsh-win__ed-check { display: flex; align-items: center; gap: 7px; cursor: pointer; }

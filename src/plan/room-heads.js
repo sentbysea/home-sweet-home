@@ -1,6 +1,6 @@
 // 방 창 머리(사진 · 제목 · 검정 알약) — 주인이 창 오른쪽 위 edit 로 고친다(room-window.js).
 //   저장 자리: hongjiwon.love 와 같은 site_settings 표의 한 칸(vibe_room_heads) — 값은 JSON 글자
-//     { [방 label]: { title, pill, image, imagePath, hidden } }. 누구나 읽고 주인만 쓴다. 비운 칸은 코드의 기본값.
+//     { [방 label]: { title, pill, image, imagePath, hidden, stickers: [최소, 최대] } }. 누구나 읽고 주인만 쓴다. 비운 칸은 코드의 기본값.
 //   사진: user-banners/{주인}/vibe-rooms/{uuid} — 고를 때마다 새 경로(주소가 바뀌어 캐시에 예전 사진이 남지 않는다),
 //     저장이 끝난 뒤에 밀려난 예전 사진을 지운다. 정사각형으로 가운데를 잘라 600px 까지 줄인다(움직이는 GIF 는 그대로).
 
