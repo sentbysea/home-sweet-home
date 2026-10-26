@@ -72,9 +72,10 @@ ready.resolve();
 | 주소 | 화면 |
 | --- | --- |
 | `/` | 홈(창 없음) |
-| `/about` `/teatime` `/notice` `/neighbor` | 방 버튼 창(about __VE · teatime? · notice · neighbor) |
+| `/about` `/teatime` `/notice` | 방 버튼 창(about __VE · teatime? · notice) |
+| `/neighbor` | 이웃 간판 집(창 대신 아이보리 화면 — 아래 "neighbor") |
 | `/archive` | 열쇠꾸러미(창 대신 아이보리 화면 — 아래 "archive") |
-| `/neighbor/banner` | neighbor 의 '배너교환은 여기에서'(내 배너) |
+| `/neighbor/banner` | neighbor 우체통의 배너 교환 패널(내 배너 · 교환 신청) |
 | `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
 | `/category/:id/read` · `/category/:id/folder/:fid/read` | 이어서 읽기 — 그 칸의 글을 목록 순서대로 한 화면에 |
 | `/post/:id` · `/post/:id/quote` | 글 · Quote(주인) — hongjiwon.love 와 같은 글 주소 모양 |
@@ -114,6 +115,44 @@ src/styles/archive.css
   색은 툰 3단 그늘뿐 — 금속 반짝임 없음. 라벨 글씨는 로딩 화면 글꼴(Nanum Gothic Coding).
 - three.js(`three@0.169.0`)는 jsDelivr 에서 archive 를 열 때만 받는다 — 홈 첫 화면 무게는 그대로. WebGL 이 없거나 못 받으면 같은 데이터로 목록.
 - 모션 줄이기: 저절로 흔들림 · 위글 · 관성 없이(손으로 돌리기 · 고르기는 그대로). archive 를 벗어나면 그리기를 멈추고 WebGL 자원 · 캔버스를 정리한다.
+
+## neighbor (이웃 간판 집)
+
+홈의 neighbor 버튼 · `/neighbor` — 아이보리 화면 가운데 벽이 뚫린 작고 부드러운 손그림 입체 집. 이웃 배너가 집 안에 한 줄로 둥실둥실 떠 있고,
+맨 아래 바닥 오른쪽 바깥에 작은 우체통(배너 교환)이 있다. 배너가 적으면 집 · 우체통이 한 화면에, 많아지면 몸통만 길어지고 페이지가 세로로 스크롤된다.
+
+```
+src/neighbor/data.js    배너 목록(banners · 배너 카테고리 4) · 내 배너(MY_BANNER) · 신청 RPC · 주인 추가 · 삭제
+src/neighbor/house.js   CSS 3D 장면 — 집 선(앞 · 뒤 · 옆 · 용마루 · 원통 굴뚝 평면) · 위글 · 배너(종이 · 두께 · 둥실) · 우체통 · 돌리기 · 원근
+src/neighbor/panel.js   배너 교환 패널 — 내 배너(복사) · 교환 신청 · 받은 신청(주인 승인 · 거절) · 간판 걸기(주인)
+src/neighbor/index.js   화면 — ← home · 데이터 · 주인 edit(Google 로그인) · 처음 안내 · 닫으면 정리
+src/styles/neighbor.css
+```
+
+- 크기: PC 집 바깥 폭 약 420px · 배너 폭 약 245px(5:1), 배너 사이 빈 간격 30px(휴대폰은 늘 보이는 이름까지 34px). 첫 배너는 지붕 안쪽부터.
+  휴대폰은 좌우 20px 여백을 두고 집 폭에 맞춰 배너를 줄인다.
+- 배너: 원본 이미지(5:1 칸, `object-fit: contain` — 자르거나 늘이지 않고 필터 · 테두리 없음) 뒤에 아주 얇은 흰 종이. 선반 · 지지선 없이 집 안 가운데에 떠 있다.
+  줄마다 아주 작은 좌우 어긋남(±4px) · 기울기(±0.7°), 앞뒤 자리만 조금 달라 돌릴 때 거리감이 난다. 순서는 `sort_order`, 이름이 비어 있으면 주소.
+- 둥실둥실: 집 전체는 6.2초 주기로 4px, 배너는 각자 4.2~6.8초 · 시작이 다르게 2~4px · ±1° 안팎. 올리거나 누르거나 키보드로 고르는 동안,
+  주인이 고치는 동안은 멈춘다.
+- 손그림 선: 조금 휘고 굵기가 고르지 않은 선, 둥근 끝 · 살짝 둥근 모서리, 원통 굴뚝. 선 변형 4장을 190ms 마다 돌린다(로딩 · 평면도 위글과 같은 박자,
+  꼭짓점은 그대로라 선이 벌어지지 않는다). 배너 이미지 · 글자는 흔들지 않는다. 뒤쪽 선은 아주 조금 옅게.
+  이미지를 못 불러오면 판 크기 그대로 사이트 이름(누르면 그 사이트). PC 는 올리거나 Tab 포커스하면 그 간판만 조금 앞으로 + '이름 ↗', 휴대폰은 이름이 늘 보인다.
+- 3D: three.js 없이 CSS `preserve-3d` — 선은 제자리 평면(SVG)에 세워 브라우저가 앞뒤를 가린다(뒤쪽 선은 간판 뒤로).
+  `perspective-origin` 을 화면 가운데에 맞춰 따라가 긴 집의 지붕 · 바닥이 찌그러지지 않고, 맨 아래에서는 바닥면이 보인다.
+  높이 900px 덩어리로 나눠 화면에서 먼 덩어리는 그리지 않는다(간판이 많아도 가볍게).
+- 돌리기: 좌우로 끌면 세로축으로 ±12°, 놓으면 관성 없이 멈춘다(저절로 돌지 않음). 휴대폰은 세로 스크롤이 먼저(`touch-action: pan-y`),
+  가로로 분명히 끌 때만 돌고, 끈 뒤에는 손을 뗀 자리의 간판이 열리지 않는다. 처음 한 번(탭마다) '끌어서 돌려 보기' 손그림 화살표.
+- 우체통: 누르면 편지가 살짝 올라온 뒤 패널(`/neighbor/banner`). 패널을 닫으면 `/neighbor`.
+  - 내 배너 — `data.js` 의 `MY_BANNER`(바이브.me · 퓨니코드 주소 · admin MY BANNER 와 같은 고정 이미지 주소)와 그 값으로 만든 삽입 코드(200×40). 항목마다 복사.
+  - 교환 신청 — 사이트 이름 · 주소 · 배너 이미지 주소 · 메시지(선택). 칸마다 검사, 이미지가 실제로 열리는지 확인, 보내는 동안 다시 못 누름,
+    실패하면 적은 내용 그대로 두고 다시 시도 안내. 신청은 대기 목록(`banner_requests`)에만 — **공개 목록에는 주인이 승인해야 걸린다.**
+    같은 사이트(대소문자 · www · 끝 / 무시)가 대기 중이거나 이미 걸려 있으면 안내만. 한 시간에 30건이 넘으면 잠시 멈춤.
+- 주인: 아래 `edit` → Google 로그인(돌아오면 보던 주소) → 간판마다 ×(내리기) · `+ add banner`(주소 또는 파일) · `받은 신청 N`(미리보기 · 메시지 · 승인 · 거절).
+  승인하면 배너 카테고리 맨 뒤에 붙는다(hongjiwon.love 배너 칸에도 같이 보인다).
+- 신청 표 · RPC 는 web 저장소 `supabase/migrations/20261026100000_banner_requests.sql` — **운영 DB 에 적용해야 신청이 저장된다**
+  (그 전에는 신청을 누르면 '보내지 못했어요' 안내). 표는 아무에게도 직접 열지 않고 RPC 셋(신청 · 목록 · 승인/거절)으로만.
+- 모션 줄이기: 둥실거림 · 위글 · 편지 · 화살표 흔들림 · 간판 전환 없이(앞으로 나오기는 그대로), 패널은 바로.
 
 ## 글 · 갤러리 · 메모 (hongjiwon.love 연동)
 
@@ -170,7 +209,7 @@ tag('living', 'pic', '사진', 582, 726, '#fbefae', '#e8893a', -2, { category: 2
 
 ```sh
 npm run e2e                     # node tests/e2e.mjs — 이웃 web 저장소(WEB_DIR, 기본 ../web)가 있어야 한다
-npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile · layout · archive (--browser=webkit)
+npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile · layout · archive · neighbor (--browser=webkit)
 ```
 
 web 저장소의 `tests/lib/harness.mjs`(Playwright · 정적 서버)와 `mock-supabase.mjs`(RLS 흉내 메모리 DB)를 쓴다 —
