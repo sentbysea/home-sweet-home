@@ -34,6 +34,7 @@ const TONES = {
   sky: { face: '#cfe0fb', side: '#8fb0de' },
   lilac: { face: '#dfd2f6', side: '#a690d6' },
   cloth: { face: '#fffaf0', side: '#d9cfbb' },
+  pink: { face: '#f9cadb', side: '#de95b0' },
 };
 const PEN = 0.02; // 기본 펜 굵기(열쇠 길이 2.1 기준) — 화면에서 2~3px
 const BOIL_MS = 190;
@@ -46,7 +47,7 @@ const BOIL_FRAMES = 3;
 const OBJECTS = {
   bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky', keySize: 0.84, charmFlip: true },
   diary: { key: 'roundKey', tone: 'butter', charm: 'diary', charmTone: 'lilac', charmFront: true },
-  heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'lilac', keySize: 0.84 }, // twitter 와 같은 크기
+  heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'pink', keySize: 0.84 }, // twitter 와 같은 크기
   house: { key: 'houseKey', tone: 'silver' },
 };
 const HOUSE_LOOKS = [['silver', '#cfe0fb', '#f6c6d6'], ['butter', '#dfd2f6', '#cfe0fb'], ['silver', '#fbefae', '#dfd2f6']];
@@ -297,7 +298,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     x.strokeRect(22, 22, c.width - 44, c.height - 44);
     x.setLineDash([]);
     x.save();
-    x.translate(c.width / 2, c.height / 2 - 24);
+    x.translate(c.width / 2, c.height / 2 - 52);
     x.rotate(Math.PI / 2);
     x.fillStyle = '#4f5357';
     x.font = '76px "Nanum Gothic Coding", ui-monospace, monospace';
@@ -305,11 +306,29 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     x.textBaseline = 'middle';
     x.fillText('home sweet home', 0, 4);
     x.restore();
-    x.fillStyle = '#f4a6c9';
-    x.font = '44px sans-serif';
-    x.textAlign = 'center';
-    x.textBaseline = 'middle';
-    x.fillText('♥', c.width / 2, c.height - 66);
+    // 글씨 끝에 빨간 집 하나(지붕 · 몸통 · 작은 문)
+    const hx = c.width / 2;
+    const hy = c.height - 118;
+    const u = 1.9; // 집 크기
+    x.lineJoin = 'round';
+    x.lineWidth = 6;
+    x.strokeStyle = INK;
+    x.fillStyle = '#e8574d';
+    x.beginPath();
+    x.moveTo(hx, hy - 30 * u);
+    x.lineTo(hx + 28 * u, hy - 6 * u);
+    x.lineTo(hx + 19 * u, hy - 6 * u);
+    x.lineTo(hx + 19 * u, hy + 24 * u);
+    x.lineTo(hx - 19 * u, hy + 24 * u);
+    x.lineTo(hx - 19 * u, hy - 6 * u);
+    x.lineTo(hx - 28 * u, hy - 6 * u);
+    x.closePath();
+    x.fill();
+    x.stroke();
+    x.fillStyle = TONES.cloth.face;
+    x.lineWidth = 5;
+    x.fillRect(hx - 6 * u, hy + 6 * u, 12 * u, 18 * u);
+    x.strokeRect(hx - 6 * u, hy + 6 * u, 12 * u, 18 * u);
     const t = keep(new T.CanvasTexture(c));
     t.colorSpace = T.SRGBColorSpace;
     t.anisotropy = 4;
@@ -407,9 +426,11 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     camera.aspect = w / h;
     // 꾸러미 높이 약 4.2 · 폭 약 3.3 이 다 들어가게 — 휴대폰(세로)에서는 폭 기준으로 크게
     const halfH = 2.2;
-    const halfW = camera.aspect < 0.8 ? 1.42 : 1.6;
+    const phone = w < 560;
+    const halfW = phone ? 1.42 : 1.6;
     const t = Math.tan((camera.fov * Math.PI) / 360);
-    const d = Math.max(halfH / t, halfW / (t * camera.aspect));
+    // 휴대폰은 꾸러미를 85% 쯤으로 — 아래 버튼 줄 · 링크와 답답하게 붙지 않게
+    const d = Math.max(halfH / t, halfW / (t * camera.aspect)) / (phone ? 0.85 : 1);
     camera.position.set(0, CENTER_Y + 0.35, d);
     camera.lookAt(0, CENTER_Y, 0);
     camera.updateProjectionMatrix();
