@@ -136,7 +136,7 @@ tag('living', 'pic', '사진', 582, 726, '#fbefae', '#e8893a', -2, { category: 2
 
 ```sh
 npm run e2e                     # node tests/e2e.mjs — 이웃 web 저장소(WEB_DIR, 기본 ../web)가 있어야 한다
-npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile (--browser=webkit)
+npm run e2e -- --only=owner     # visitor · owner · admin · routing · mobile · layout (--browser=webkit)
 ```
 
 web 저장소의 `tests/lib/harness.mjs`(Playwright · 정적 서버)와 `mock-supabase.mjs`(RLS 흉내 메모리 DB)를 쓴다 —

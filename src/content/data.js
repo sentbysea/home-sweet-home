@@ -4,7 +4,7 @@
 //   공개 범위는 DB 가 정한다 — 비공개 글 · 나만 보기 폴더는 방문자에게 행이 오지 않고,
 //   비밀글 본문은 비밀번호 RPC 로만, 비밀번호 폴더 안은 열람 표가 있어야 온다(RLS).
 
-import { getClient } from './supabase.js';
+import { getClient, ownerSession } from './supabase.js';
 
 const SITE_OWNER_ID = 'cfe0dc66-7fa2-450e-8817-44073a4a5aab'; // 그쪽 core/site-config.js · DB site_owner_id() 와 같은 값(비밀 아님)
 const GALLERY_PAGE_SIZES = [6, 12, 18, 24]; // posts-view-gallery.js
@@ -30,12 +30,25 @@ export async function fetchCategory(ref) {
   return data;
 }
 
-/** 이 카테고리를 주인이 보고 있나(빈 폴더 · 잠금 표시가 달라진다) */
+let ownerCheck = null; // { token, verdict } — 세션(토큰)이 바뀔 때만 다시 묻는다
+
+/**
+ * 이 카테고리를 주인이 보고 있나(quote · 고치기 링크 · 빈 폴더 · 잠금 표시가 달라진다).
+ * 주인은 브라우저에 남은 세션만으로 정하지 않는다 — 서버가 토큰을 확인한 계정(getUser)이
+ * DB 의 site_owner_id() 와 같을 때만. 확인이 끝나기 전 · 실패하면 주인이 아니다.
+ * (실제 고치기 · 지우기는 hongjiwon.love 에서 RLS · 주인 전용 RPC 가 따로 막는다 — 이 판정은 화면용)
+ */
 export async function viewerOf(category) {
   const client = await getClient();
   const { data } = await client.auth.getSession();
-  const user = data?.session?.user ?? null;
-  return { user, owner: Boolean(user && category && user.id === category.user_id) };
+  const session = data?.session ?? null;
+  if (!session) return { user: null, owner: false };
+  if (ownerCheck?.token !== session.access_token) {
+    ownerCheck = { token: session.access_token, verdict: ownerSession(client).catch(() => ({ user: null, owner: false })) };
+  }
+  const verified = await ownerCheck.verdict;
+  const owner = Boolean(verified.owner && category && verified.user?.id === category.user_id);
+  return { user: session.user, owner };
 }
 
 /** 일반 카테고리 — 글 전부 + 폴더 전부(posts-view-list.js selectCategoryPosts · selectCategoryFolders) */

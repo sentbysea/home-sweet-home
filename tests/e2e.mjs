@@ -715,12 +715,107 @@ async function mobile() {
   await context.close();
 }
 
+// ---------- 창 모양(글 · 발췌 · 폴더) · 주인 링크 ----------
+
+/** 창 몸통 안에서 스스로 스크롤하는 칸(몸통 자신 빼고) */
+const innerScrollers = (page) => page.evaluate(() => {
+  const body = document.querySelector('.hsh-win__body');
+  return [...body.querySelectorAll('*')].filter((el) => {
+    const o = getComputedStyle(el).overflowY;
+    return (o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight + 1;
+  }).map((el) => el.className || el.tagName);
+});
+
+async function layout() {
+  for (const [name, device] of [['desktop', null], ['phone', playwright.devices['iPhone 13']]]) {
+    console.log(`\n[layout — ${name}]`);
+    const { page, errors, context } = device ? await open(USERS.owner, undefined, device) : await open(USERS.owner);
+    await home(page);
+    await openRoom(page, '1');
+    await page.waitForSelector('.hsh-ct__folders', { timeout: 20000 });
+    const folder = page.locator('.hsh-ct__folder', { hasText: 'open' });
+    await folder.hover();
+    await page.waitForTimeout(300);
+    const tile = await folder.evaluate((b) => {
+      const cs = getComputedStyle(b);
+      const iconEl = b.querySelector('.hsh-ct__icon');
+      const icon = iconEl.getBoundingClientRect();
+      const label = b.querySelector('.hsh-ct__folder-name');
+      const box = b.getBoundingClientRect();
+      return {
+        border: cs.borderTopWidth === '0px' || cs.borderTopColor === 'rgba(0, 0, 0, 0)' || cs.borderTopStyle === 'none',
+        outline: cs.outlineStyle === 'none' || cs.outlineWidth === '0px',
+        iconW: iconEl.offsetWidth, nameSize: getComputedStyle(label).fontSize,
+        inside: icon.top >= box.top && label.getBoundingClientRect().bottom <= box.bottom + 0.5,
+        clipped: label.scrollWidth > label.clientWidth + 1,
+      };
+    });
+    check(`${name} — 폴더: 마우스 올려도 테두리 없음`, tile.border && tile.outline, JSON.stringify(tile));
+    check(`${name} — 폴더 아이콘 65px · 이름 13px`, Math.round(tile.iconW) === 65 && tile.nameSize === '13px', JSON.stringify(tile));
+    check(`${name} — 누르는 칸이 아이콘 · 이름을 감싼다`, tile.inside && !tile.clipped, JSON.stringify(tile));
+    await page.screenshot({ path: path.join(OUT, `layout-${name}-folders.png`) });
+    await page.keyboard.press('Tab');
+
+    await folder.click();
+    await clickRow(page, '사진 글');
+    await bodyReady(page);
+    await page.waitForTimeout(500);
+    const post = await page.evaluate(() => {
+      const pg = getComputedStyle(document.querySelector('.hsh-win__page'));
+      const body = document.querySelector('.hsh-win__body');
+      const c = document.querySelector('.hsh-ct__sheet').getBoundingClientRect();
+      return { pageBorder: pg.borderTopWidth, body: body.getBoundingClientRect().width, sheet: c.width, right: c.right, vw: innerWidth };
+    });
+    check(`${name} — 글 창: 안쪽 둥근 상자 없음`, post.pageBorder === '0px', JSON.stringify(post));
+    check(`${name} — 글 창: 본문 칸이 몸통의 88% 이상`, post.sheet / post.body >= 0.88 && post.right <= post.vw, JSON.stringify(post));
+    check(`${name} — 글 창: 안쪽 스크롤 칸 없음`, (await innerScrollers(page)).length === 0, (await innerScrollers(page)).join(' | '));
+    await page.screenshot({ path: path.join(OUT, `layout-${name}-post.png`) });
+    check(`${name} — 주인에게 'hongjiwon.love 에서 고치기'`, Boolean(await page.$('.hsh-ct__owner')));
+
+    await page.click('.hsh-ct__tool');
+    await page.waitForSelector('.hsh-ct__pick');
+    await page.screenshot({ path: path.join(OUT, `layout-${name}-pick.png`) });
+    await page.click('.hsh-ct__pick .hsh-ct__btn');
+    const frame = await quoteFrame(page);
+    await page.waitForTimeout(800);
+    const q = await page.evaluate(() => {
+      const f = document.querySelector('.hsh-ct__quote-frame');
+      const cs = getComputedStyle(f);
+      const doc = f.contentDocument.documentElement;
+      return { border: cs.borderTopWidth, right: f.getBoundingClientRect().right, vw: innerWidth, inner: doc.scrollHeight > doc.clientHeight + 1, innerX: doc.scrollWidth > doc.clientWidth + 1 };
+    });
+    check(`${name} — 발췌 창: 둥근 테두리 없음`, q.border === '0px', JSON.stringify(q));
+    check(`${name} — 발췌 창: 가로로 잘리지 않음`, q.right <= q.vw && !q.innerX, JSON.stringify(q));
+    check(`${name} — 발췌 창: 중첩 스크롤 없음`, !q.inner && (await innerScrollers(page)).length === 0, JSON.stringify(q) + (await innerScrollers(page)).join(' | '));
+    await page.screenshot({ path: path.join(OUT, `layout-${name}-quote.png`), fullPage: false });
+    const label = (await frame.textContent('#postEditorPreviewExportSize')).trim();
+    const out = await exportFirst(page, frame, `layout-${name}`);
+    check(`${name} — export 크기 = 프리셋 출력 크기`, label.startsWith(`${out.size.w}`) && label.includes(`${out.size.h}`), `${label} / ${JSON.stringify(out.size)}`);
+    check(`콘솔 오류 없음(layout ${name})`, errors.length === 0, errors.join(' | '));
+    await context.close();
+  }
+
+  console.log('\n[주인 링크 — 방문자 · 다른 계정]');
+  for (const [name, user] of [['로그아웃', null], ['다른 Google 계정', USERS.other]]) {
+    const { page, context } = await open(user);
+    await home(page);
+    await openRoom(page, '1');
+    await clickRow(page, '프리셋 지정 글');
+    await bodyReady(page);
+    await page.waitForTimeout(400);
+    check(`${name} — 고치기 링크 없음`, !(await page.$('.hsh-ct__owner')));
+    check(`${name} — quote 버튼 없음`, !(await page.$('.hsh-ct__tool')));
+    await context.close();
+  }
+}
+
 try {
   if (!ONLY || ONLY === 'visitor') await visitor();
   if (!ONLY || ONLY === 'owner') await owner();
   if (!ONLY || ONLY === 'admin') { await admin(); await activeSwitch(); }
   if (!ONLY || ONLY === 'routing') await routing();
   if (!ONLY || ONLY === 'mobile') await mobile();
+  if (!ONLY || ONLY === 'layout') await layout();
 } catch (e) {
   console.error(e);
   check('예외 없이 끝남', false, e.message);
