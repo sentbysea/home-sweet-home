@@ -506,12 +506,12 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     closeWindow();
   };
 
-  // neighbor 안에서 우체통 패널을 열고 닫을 때 — 열면 기록 한 칸(/neighbor/banner), 닫으면 되돌린다
+  // neighbor 안에서 패널(우체통 /neighbor/banner · 홍차네 집 /neighbor/mine)을 열고 닫을 때 — 열면 기록 한 칸, 닫으면 되돌린다
   const neighborPage = (page) => {
     const now = steps[at];
     if (!now || now.page === page) return;
     // 우체통으로 연 칸은 바로 앞이 집 화면이라고 적어 둔다(새로고침 뒤 앞 칸을 몰라도 되돌릴 수 있게)
-    if (page === 'banner') { step({ detail: now.detail, page, fromRoom: true }); return; }
+    if (page === 'banner' || page === 'mine') { step({ detail: now.detail, page, fromRoom: true }); return; }
     if (now.fromRoom) { history.back(); return; }
     // 주소로 바로 들어온 패널 — 기록을 늘리지 않고 이 칸을 /neighbor 로
     steps[at] = { detail: now.detail, page: 'room' };

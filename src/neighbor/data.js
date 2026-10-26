@@ -153,6 +153,28 @@ export async function removeImage(userId, path) {
   await client.storage.from(BUCKET).remove([storagePath(userId, path)]);
 }
 
+/**
+ * 홍차네 집 모양(neighbor_home 한 줄 · web 저장소 20261029100000_neighbor_home.sql) — 누구나 읽는다.
+ * 표가 아직 없거나 비었으면 null(화면이 기본 모양 HOME_HOUSE)
+ */
+export async function fetchHome() {
+  try {
+    const res = await rest('neighbor_home?select=house&limit=1');
+    if (!res.ok) return null;
+    return (await res.json())?.[0]?.house ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** 주인 — 홍차네 집 모양 고치기(null 이면 기본 모양) */
+export async function setHomeHouse(house) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('set_home_house', { p_house: house });
+  if (error) throw error;
+  if (data !== 'ok') throw new Error(`set_home_house ${data}`);
+}
+
 /** 주인 — 이웃집 모양 고치기(null 이면 기본 모양) */
 export async function setHouse(id, house) {
   const client = await getClient();

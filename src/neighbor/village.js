@@ -11,11 +11,11 @@
 //   · 집마다 바로 아래 이름표(사이트 이름) — 홈 라벨 같은 색종이. 종이 색은 그 집에 쓴 색 중 하나(진하면 밝혀서, house-art.js tagTone),
 //     배너 링크를 올렸을 때 밑줄도 같은 색. 긴 이름은 줄을 바꾸고, 화면 밖으로 나가지 않게 폭을 정한다.
 //   · 우체통 위에 통통 튀는 화살표 · 바람에 떠는 빨간 세모 깃발로 누르기를 이끈다.
+//   · 홍차네 집 — 주인이 고친 모양(neighbor_home, 없으면 HOME_HOUSE). 누르면 내 배너(onHouse), 주인 고치기 중이면 홍차네 집 고치기.
 //   · 주인 고치기 중에는 집을 누르면 그 집 고치기(onEdit).
 
-import { houseSvg, houseKey, normalizeHouse, defaultHouse, tagTone, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
+import { houseSvg, houseKey, normalizeHouse, defaultHouse, tagTone, HOME_HOUSE, rng, sketch, sketchEllipse, BOIL } from './house-art.js';
 
-const HOME_HOUSE = { v: 2, body: 'cozy', roof: 'tri', roofPattern: 'solid', door: 'arch', window: 'cross', deco: ['chimney'], wall: '#fffaf0', roofColor: '#e88a8a', doorColor: '#c9a27e' };
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const f = (n) => Math.round(n * 10) / 10;
@@ -70,9 +70,9 @@ function grid(width) {
 
 /**
  * @param {HTMLElement} stage  마을을 그릴 칸
- * @param {{ reduced?: boolean, onMail?: () => void, onEdit?: (item: any) => void }} opts
+ * @param {{ reduced?: boolean, onMail?: () => void, onEdit?: (item: any, from: Element) => void, onHouse?: (from: Element) => void }} opts  onHouse — 홍차네 집을 눌렀을 때
  */
-export function createVillage(stage, { reduced = false, onMail = () => {}, onEdit = () => {} } = {}) {
+export function createVillage(stage, { reduced = false, onMail = () => {}, onEdit = () => {}, onHouse = () => {} } = {}) {
   const town = document.createElement('div');
   town.className = 'nbh-town';
   const pop = document.createElement('div');
@@ -88,6 +88,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     </a>`;
   stage.append(town, pop);
   let items = [];
+  let homeHouse = null; // 홍차네 집 — 주인이 고친 모양(없으면 HOME_HOUSE)
   let state = 'loading';
   let editing = false;
   let open = -1; // 지금 배너를 보이는 집
@@ -127,22 +128,28 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
 
     // 홍차네 집 + 이름표 + 우체통
     const center = { r: 1, c: g.mid };
-    const hs = houseSvg(HOME_HOUSE, { scale: g.scale * 1.35, seed: 3 });
-    const home = document.createElement('div');
+    const homeSpec = normalizeHouse(homeHouse) || HOME_HOUSE;
+    let hs = houseSvg(homeSpec, { scale: g.scale * 1.35, seed: 3 });
+    // 장식을 많이 단 넓은 모양이면 옆 칸을 넘지 않게 조금 줄인다(홍차네 집만)
+    if (hs.w > g.cw * 1.2) hs = houseSvg(homeSpec, { scale: g.scale * 1.35 * (g.cw * 1.2) / hs.w, seed: 3 });
+    const home = document.createElement('button');
+    home.type = 'button';
     home.className = 'nbh-center';
-    home.innerHTML = `<div class="nbh-home__art">${hs.svg}</div><span class="nbh-center__tag nbh-label">홍차네 집</span>`;
+    home.dataset.house = houseKey(homeSpec);
+    home.setAttribute('aria-label', `홍차네 집 — ${editing ? '집 고치기' : '내 배너'}`);
+    home.innerHTML = `<span class="nbh-home__art">${hs.svg}</span><span class="nbh-center__tag nbh-label" aria-hidden="true">홍차네 집</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
+    home.addEventListener('click', () => onHouse(home));
     const cbase = (center.r + 0.82) * g.rowH;
     const cx = g.left + (center.c + 0.5) * g.cw - g.cw * (g.cols === 3 ? 0.12 : 0.08);
     // 이름표 폭 — 이름 길이만큼, 단 화면(동네) 밖으로 나가지 않게
     const tagMax = (x) => `${f(Math.max(60, Math.min(170, 2 * Math.min(x - 4, g.W - x - 4))))}px`;
-    home.style.setProperty('--tag-bg', tagTone(HOME_HOUSE));
+    home.style.setProperty('--tag-bg', tagTone(homeSpec));
     home.style.setProperty('--tag-max', tagMax(cx));
     home.style.setProperty('--tilt', '-2deg');
     home.style.left = `${f(cx - hs.w / 2)}px`;
     home.style.top = `${f(cbase - hs.h)}px`;
     home.style.setProperty('--dur', '5.6s');
     home.style.setProperty('--delay', '-1.2s');
-    town.append(home);
     layout.push({ kind: 'center', x: cx, base: cbase, w: hs.w, h: hs.h });
 
     // 이웃집
@@ -179,7 +186,9 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       layout.push({ kind: 'home', i, x, base, w: art.w, h: art.h, slot: `${slot.r}:${slot.c}` });
     });
 
-    // 우체통 — 이웃집 다음(Tab 은 이웃집부터)
+    // 홍차네 집 · 우체통 — 이웃집 다음(Tab 은 이웃집부터)
+    town.append(home);
+
     mailBtn = document.createElement('button');
     mailBtn.type = 'button';
     mailBtn.className = 'nbh-mailbox';
@@ -418,8 +427,9 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   window.addEventListener('resize', onResize);
 
   return {
-    /** @param {{ items?: Array<{ id?: any, href: string, image: string, label: string, house?: object | null }>, state?: string, editing?: boolean }} next */
+    /** @param {{ items?: Array<{ id?: any, href: string, image: string, label: string, house?: object | null }>, home?: object | null, state?: string, editing?: boolean }} next */
     render(next = {}) {
+      if (next.home !== undefined) homeHouse = next.home;
       if (next.items) items = next.items;
       if (next.state) state = next.state;
       if (next.editing != null) editing = next.editing;

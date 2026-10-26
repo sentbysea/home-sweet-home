@@ -1,5 +1,5 @@
-// 배너 교환 패널 — 우체통을 누르면(주소 /neighbor/banner) 열린다.
-//   ① 내 배너: 바이브.me 배너 미리보기 · 이름 · 주소 · 이미지 주소 · 삽입 코드(각각 복사)
+// neighbor 패널 — 우체통(주소 /neighbor/banner)은 배너 교환, 홍차네 집(/neighbor/mine)은 내 배너.
+//   ① 내 배너(mode 'mine'): 바이브.me 배너 미리보기 · 이름 · 주소 · 이미지 주소 · 삽입 코드(각각 복사)
 //   ② 교환 신청: 사이트 이름 · 주소 · 배너 이미지 주소 · 메시지(선택) → submit_banner_request.
 //      신청은 대기 목록으로만 — 공개 이웃 목록에는 주인이 승인해야 걸린다.
 //      입력 검사(칸마다 안내) · 이미지가 실제로 열리는지 · 보내는 동안 다시 못 누름 · 실패하면 그대로 두고 다시 시도 안내.
@@ -7,10 +7,11 @@
 //   ④ 우리 집 꾸미기(customizer.js) — 신청에 집 모양을 같이 보낸다. 승인하면 그 모습으로 마을에.
 //   주인의 '+ add banner'(직접 걸기 · mode 'add')와 이웃집 고치기(mode 'house')도 같은 패널.
 //     이웃집 고치기는 탭 둘: 집 고치기(모양 · 색 · 기본 모양으로 · 내리기) · 내용 고치기(이름 · 주소 · 배너 이미지).
+//     홍차네 집 고치기(item.home)는 모양만 — 내용 탭 · 내리기 없이, 저장은 set_home_house.
 
-import { MY_BANNER, bannerCode, httpUrl, siteLabel, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
+import { MY_BANNER, bannerCode, httpUrl, siteLabel, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, setHomeHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
 import { mountCustomizer } from './customizer.js';
-import { houseSvg, normalizeHouse, defaultHouse, randomHouse } from './house-art.js';
+import { houseSvg, normalizeHouse, defaultHouse, randomHouse, HOME_HOUSE } from './house-art.js';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const SENT_KEY = 'hsh:nbh-sent';
@@ -71,7 +72,6 @@ function markup() {
       <div class="nbh-panel__body">
         <div class="nbh-tabs" data-mode="exchange" role="tablist" aria-label="배너 교환">
           <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-apply" aria-controls="nbh-ex-apply" aria-selected="true" data-ex-tab="apply" style="--c:var(--hsh-pink)">교환 신청</button>
-          <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-mine" aria-controls="nbh-ex-mine" aria-selected="false" tabindex="-1" data-ex-tab="mine" style="--c:var(--hsh-sky)">내 배너</button>
           <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-review" aria-controls="nbh-ex-review" aria-selected="false" tabindex="-1" data-ex-tab="review" data-owner hidden style="--c:var(--hsh-butter)">받은 신청 <span class="nbh-review__n"></span></button>
         </div>
         <section class="nbh-sec" data-mode="exchange" data-ex="apply" id="nbh-ex-apply" role="tabpanel" aria-labelledby="nbh-extab-apply">
@@ -94,7 +94,7 @@ function markup() {
             </div>
           </form>
         </section>
-        <section class="nbh-sec" data-mode="exchange" data-ex="mine" id="nbh-ex-mine" role="tabpanel" aria-labelledby="nbh-extab-mine" hidden>
+        <section class="nbh-sec" data-mode="mine" aria-label="내 배너" hidden>
           <div class="nbh-mine__preview"><img src="${esc(MY_BANNER.image)}" alt="${esc(MY_BANNER.name)} 배너" width="3000" height="600" decoding="async"></div>
           <dl class="nbh-mine__rows">${rows}
             <div class="nbh-mine__row is-code">
@@ -219,7 +219,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   const diyAdd = mountCustomizer(root.querySelector('[data-diy="add"]'), { imageUrl: () => httpUrl(withScheme(add.image.value)) || uploaded?.url || '', nameOf: nameOf(add) });
   const houseBox = root.querySelector('[data-mode="house"]');
   const houseMsg = houseBox.querySelector('.nbh-house__msg');
-  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => httpUrl(withScheme(info.image.value)) || infoUploaded?.url || editing?.image || '', nameOf: () => (editing ? nameOf(root.querySelector('[data-form="info"]'))() || editing.label : '') });
+  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => (editing?.home ? MY_BANNER.image : httpUrl(withScheme(info.image.value)) || infoUploaded?.url || editing?.image || ''), nameOf: () => (editing ? (editing.home ? editing.label : nameOf(root.querySelector('[data-form="info"]'))() || editing.label) : '') });
   const info = root.querySelector('[data-form="info"]');
   const infoMsg = info.querySelector('.nbh-form__msg');
   const infoPreview = previewer(info.querySelector('.nbh-form__preview'));
@@ -496,14 +496,17 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   houseBox.addEventListener('click', async (e) => {
     const act = e.target.closest('button[data-house]')?.dataset.house;
     if (!act || !editing) return;
-    if (act === 'reset') { diyHouse.set(defaultHouse(editing.id)); say(houseMsg, '기본 모양으로 바꿨어요. 저장을 눌러야 마을에 반영돼요.'); return; }
+    const base = editing.home ? HOME_HOUSE : defaultHouse(editing.id); // 기본 모양
+    if (act === 'reset') { diyHouse.set(base); say(houseMsg, '기본 모양으로 바꿨어요. 저장을 눌러야 마을에 반영돼요.'); return; }
     if (act === 'delete' && !confirm(`'${editing.label}' 이웃집을 내릴까요?`)) return;
     houseBusy(true);
     say(houseMsg, act === 'save' ? '저장하는 중…' : '내리는 중…');
     try {
       if (act === 'save') {
-        const same = JSON.stringify(diyHouse.value) === JSON.stringify(defaultHouse(editing.id));
-        await setHouse(editing.id, same ? null : diyHouse.value); // 기본 모양 그대로면 비워 둔다(id 로 늘 같은 모양)
+        const same = JSON.stringify(diyHouse.value) === JSON.stringify(normalizeHouse(base));
+        // 기본 모양 그대로면 비워 둔다(id 로 · 홍차네 집은 HOME_HOUSE 로 늘 같은 모양)
+        if (editing.home) await setHomeHouse(same ? null : diyHouse.value);
+        else await setHouse(editing.id, same ? null : diyHouse.value);
       } else {
         await deleteBanner(session().user.id, editing.banner);
       }
@@ -688,26 +691,29 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   return {
     get mode() { return mode; },
     /**
-     * @param {'exchange' | 'add' | 'house'} next  @param {Element | null} from 닫으면 포커스를 돌려줄 곳
-     * @param {{ item?: { id: any, label: string, image: string, house?: object | null, banner: object } }} extra  house — 고칠 이웃집
+     * @param {'exchange' | 'mine' | 'add' | 'house'} next  @param {Element | null} from 닫으면 포커스를 돌려줄 곳
+     * @param {{ item?: { id: any, label: string, image: string, house?: object | null, banner?: object, home?: boolean } }} extra  house — 고칠 집(home — 홍차네 집)
      */
     open(next, from = null, extra = {}) {
       if (next === 'house') {
         if (mode === 'house') discardInfoUpload();
         editing = extra.item;
         houseTab(extra.tab || 'shape');
-        fillInfo();
-        diyHouse.set(normalizeHouse(editing.house) || defaultHouse(editing.id));
+        if (!editing.home) fillInfo();
+        // 홍차네 집은 모양만 — 내용 탭 · 내리기 없음
+        houseBox.querySelector('[role="tablist"]').hidden = Boolean(editing.home);
+        houseBox.querySelector('[data-house="delete"]').hidden = Boolean(editing.home);
+        diyHouse.set(normalizeHouse(editing.house) || (editing.home ? HOME_HOUSE : defaultHouse(editing.id)));
         diyHouse.bannerChanged();
         houseBox.querySelector('.nbh-house__who').textContent = editing.label;
         say(houseMsg, '');
         houseBusy(false);
       }
-      if (mode === next && !root.hidden) return;
+      if (mode === next && !root.hidden && next !== 'house') return;
       if (mode === 'add' && next !== 'add') discardUpload();
       mode = next;
       back = from;
-      title.textContent = next === 'add' ? '이웃집 짓기' : next === 'house' ? '이웃집 고치기' : '배너 교환';
+      title.textContent = next === 'add' ? '이웃집 짓기' : next === 'house' ? (editing.home ? '홍차네 집 고치기' : '이웃집 고치기') : next === 'mine' ? '내 배너' : '배너 교환';
       root.querySelectorAll('[data-mode]').forEach((s) => { s.hidden = s.dataset.mode !== next || (s.hasAttribute('data-owner') && !session().owner); });
       say(addMsg, '');
       root.hidden = false;

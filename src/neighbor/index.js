@@ -2,13 +2,14 @@
 // 여닫기 · 기록은 room-window.js 가 맡는다(archive 와 같은 길).
 //   · 가운데 홍차네 집, 둘레에 배너를 교환한 이웃집(banners · 배너 카테고리, 정렬 순서대로). 집을 고르면 그 배너.
 //   · 홍차네 집 옆 우체통 → 배너 교환 패널(panel.js) — 주소 /neighbor/banner.
+//   · 홍차네 집 → 내 배너(복사) — 주소 /neighbor/mine. 주인 고치기 중이면 홍차네 집 고치기(모양 · 색, neighbor_home 에 저장).
 //   · 주인: 아래 'edit' → Google 로그인(돌아오면 보던 주소로) → 집을 누르면 그 집 고치기, '+ add banner', 받은 신청.
 //   · 손그림 위글: 선 변형 4장을 190ms 마다(로딩 · 평면도와 같은 박자) — 이 화면의 모든 집(패널 미리보기까지)이 같이. 모션 줄이기면 멈춘다.
 //   · 바탕은 홈과 같은 아이보리, 여백에 홈 · archive 와 같은 작은 별(shared/star.js)을 성글게 — 자리는 고정 비율이라
 //     창 크기가 바뀌어도 그대로, 마을 뒤에 깔려 집 · 이름표를 가리거나 누르기를 막지 않는다.
 //   · 닫으면 마을을 치운다.
 
-import { fetchBanners, siteLabel, httpUrl } from './data.js';
+import { fetchBanners, fetchHome, siteLabel, httpUrl, MY_BANNER } from './data.js';
 import { createVillage } from './village.js';
 import { mountPanel } from './panel.js';
 import { BOIL } from './house-art.js';
@@ -60,6 +61,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   let village = null;
   let panel = null;
   let banners = [];
+  let homeHouse = null; // 홍차네 집 — 주인이 고친 모양(없으면 기본)
   let state = 'loading';
   let loaded = false;
   let editing = false;
@@ -89,7 +91,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   }));
 
   const paint = () => {
-    village?.render({ items: items(), state, editing });
+    village?.render({ items: items(), home: homeHouse, state, editing });
     $('.nbh__village').setAttribute('aria-busy', String(state === 'loading'));
   };
 
@@ -97,7 +99,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   const load = async ({ quiet = false } = {}) => {
     if (!quiet || state !== 'ready') { state = 'loading'; paint(); }
     try {
-      banners = await fetchBanners();
+      [banners, homeHouse] = await Promise.all([fetchBanners(), fetchHome()]);
       state = 'ready';
     } catch (e) {
       console.error(e);
@@ -163,6 +165,18 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     onPage('banner');
   };
 
+  // 홍차네 집 — 내 배너, 주인 고치기 중이면 홍차네 집 고치기
+  const openHouse = (from) => {
+    village?.close();
+    if (editing) {
+      panel.open('house', from, { item: { id: 'home', home: true, label: '홍차네 집', image: MY_BANNER.image, house: homeHouse } });
+      return;
+    }
+    if (panel.mode === 'mine') return;
+    panel.open('mine', from);
+    onPage('mine');
+  };
+
   const ensure = () => {
     if (root) return;
     root = build();
@@ -172,7 +186,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       reduced,
       session: () => session,
       banners: () => banners,
-      onClose: (mode) => { if (mode === 'exchange') onPage('room'); },
+      onClose: (mode) => { if (mode === 'exchange' || mode === 'mine') onPage('room'); },
       onChanged: () => load(),
       onCount: (n) => { $('.nbh__count').textContent = String(n); },
     });
@@ -196,7 +210,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   return {
     get open() { return Boolean(root && !root.hidden && !root.classList.contains('is-closing')); },
     /**
-     * @param {{ from?: Element | null, home: () => void, page?: 'room' | 'banner', onPage: (page: 'room' | 'banner') => void }} o
+     * @param {{ from?: Element | null, home: () => void, page?: 'room' | 'banner' | 'mine', onPage: (page: 'room' | 'banner' | 'mine') => void }} o
      */
     show({ from = null, home, page = 'room', onPage: pageCb }) {
       ensure();
@@ -213,6 +227,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
         reduced,
         onMail: () => openExchange(),
         onEdit: (item, from) => panel.open('house', from, { item }),
+        onHouse: (from) => openHouse(from),
       });
       $('.nbh__village').hshVillage = village; // 시험이 배치를 읽는다
       if (!reduced) {
@@ -243,6 +258,9 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       if (page === 'banner') {
         if (panel.mode === 'exchange') return;
         panel.open('exchange', village?.mail || null);
+      } else if (page === 'mine') {
+        if (panel.mode === 'mine') return;
+        panel.open('mine', root.querySelector('.nbh-center'));
       } else if (panel.mode) {
         panel.close({ silent: true });
       }
