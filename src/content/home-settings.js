@@ -13,7 +13,7 @@ export const VIBE_HOME_KEYS = {
   faviconUrl: 'vibe_site_favicon_url',
   cursor: 'vibe_site_cursor',
 };
-const SITE_OWNER_ID = 'cfe0dc66-7fa2-450e-8817-44073a4a5aab'; // 사이트 주인(그쪽 core/site-config.js · DB site_owner_id() 와 같다)
+export const SITE_OWNER_ID = 'cfe0dc66-7fa2-450e-8817-44073a4a5aab'; // 사이트 주인(그쪽 core/site-config.js · DB site_owner_id() 와 같다)
 const DEFAULT_TITLE = 'home sweet home';
 
 async function fetchHomeSettings() {

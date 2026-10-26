@@ -139,11 +139,16 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     home.innerHTML = `<span class="nbh-home__art">${hs.svg}</span><span class="nbh-center__tag nbh-label" aria-hidden="true">${HOME_NAME}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
     home.addEventListener('click', () => onHouse(home));
     const cbase = (center.r + 0.82) * g.rowH;
-    const cx = g.left + (center.c + 0.5) * g.cw - g.cw * (g.cols === 3 ? 0.12 : 0.08);
+    // 집 + 우체통을 한 덩어리로 — 우체통은 집 오른쪽 벽에 바짝(두 그림의 빈 여백만큼 겹쳐), 덩어리 가운데가 칸 가운데
+    const ms = 34 * g.scale;
+    const mailOff = ms - 10 * g.scale; // 집 오른쪽 끝에서 우체통 오른쪽 끝까지(처마 밑으로 살짝 들어간다)
+    const cx = g.left + (center.c + 0.5) * g.cw - mailOff / 2;
+    const gx = cx + mailOff / 2; // 덩어리 가운데 — 이름표는 여기에
     // 이름표 폭 — 이름 길이만큼, 단 화면(동네) 밖으로 나가지 않게
     const tagMax = (x) => `${f(Math.max(60, Math.min(170, 2 * Math.min(x - 4, g.W - x - 4))))}px`;
     home.style.setProperty('--tag-bg', tagTone(homeSpec));
-    home.style.setProperty('--tag-max', tagMax(cx));
+    home.style.setProperty('--tag-max', tagMax(gx));
+    home.style.setProperty('--tag-dx', `${f(gx - cx)}px`);
     home.style.setProperty('--tilt', '-2deg');
     home.style.left = `${f(cx - hs.w / 2)}px`;
     home.style.top = `${f(cbase - hs.h)}px`;
@@ -193,8 +198,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     mailBtn.className = 'nbh-mailbox';
     mailBtn.setAttribute('aria-label', '배너교환은 여기에서 — 입주 신청');
     mailBtn.innerHTML = `<span class="nbh-mailbox__arrow" aria-hidden="true">${arrow(g.scale)}</span>${mailbox(g.scale)}`;
-    const ms = 34 * g.scale;
-    const mx = cx + hs.w / 2 + 4;
+    const mx = cx + hs.w / 2 + mailOff - ms;
     mailBtn.style.left = `${f(mx)}px`;
     mailBtn.style.top = `${f(cbase - 46 * g.scale)}px`;
     mailBtn.addEventListener('click', () => onMail());
@@ -290,7 +294,10 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     const pw = pop.offsetWidth;
     const ph = pop.offsetHeight;
     const vw = document.documentElement.clientWidth;
-    let left = hr.left + hr.width / 2 - pw / 2;
+    // 말풍선은 화면 가운데 — 꼬리만 집 쪽으로. 집이 가장자리라 꼬리가 닿지 않으면 그만큼만 옮긴다
+    const hx = hr.left + hr.width / 2;
+    let left = vw / 2 - pw / 2;
+    left = Math.max(hx - pw + 22, Math.min(hx - 22, left));
     left = Math.max(8, Math.min(vw - pw - 8, left));
     let top = hr.top - ph - 10;
     let below = false;
@@ -298,7 +305,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     pop.classList.toggle('is-below', below);
     pop.style.left = `${f(left - sr.left)}px`;
     pop.style.top = `${f(top - sr.top)}px`;
-    drawFrame(pw, ph, Math.max(16, Math.min(pw - 16, hr.left + hr.width / 2 - left)), below);
+    drawFrame(pw, ph, Math.max(16, Math.min(pw - 16, hx - left)), below);
   };
 
   // 손그림 말풍선 — 집 쪽으로 작은 꼬리. 선 변형 4장(.nbh 의 data-boil)

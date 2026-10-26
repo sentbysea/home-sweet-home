@@ -1,7 +1,7 @@
 /* =========================================================
    home sweet home — archive 열쇠꾸러미(src/archive/)
    평면도 속 열쇠꾸러미를 가까이 꺼내 본 화면. 바탕 · 선 · 파스텔 · 글꼴 · 별은 로딩 · 홈과 같은 공통 값(base.css).
-   위에 ← home(회색 글자) · 연보라 색종이 제목, 아래에 사이트 종이 라벨 줄과 '사이트 이름 ↗'.
+   위에 ← home(회색 글자) · 노란 밑줄 제목, 아래에 사이트 흰 알약 줄과 '사이트 이름 ↗'.
    ========================================================= */
 
 .hsh-arc {
@@ -71,17 +71,17 @@
 .hsh-arc__link:focus-visible,
 .hsh-arc__row:focus-visible { outline: 1.5px solid var(--hsh-line); outline-offset: 2px; }
 
-/* 제목 — 홈 Archive 라벨과 같은 계열의 연보라 색종이(테두리 없는 단색 네모, 살짝 기울여 붙임) */
+/* 제목 — 영단어(첫 글자 대문자) + 노란 밑줄(neighbor 와 같다) */
 .hsh-arc__title {
   margin: 0;
-  padding: 5px 14px 6px;
-  background: var(--hsh-lilac);
   font-family: var(--hsh-arc-mono);
-  font-size: 19px;
+  font-size: 26px;
   font-weight: 400;
-  letter-spacing: 0.06em;
-  color: var(--hsh-lilac-ink);
-  rotate: -2deg;
+  letter-spacing: 0.02em;
+  color: var(--hsh-text);
+  text-decoration: underline 5px var(--hsh-butter);
+  text-underline-offset: 6px;
+  text-decoration-skip-ink: none;
 }
 
 /* ---------- 가운데 — 꾸러미 ---------- */
@@ -122,7 +122,7 @@
 }
 .hsh-arc__tag[hidden] { display: none; }
 
-/* ---------- 아래 — 사이트 종이 라벨 줄 · 이동 링크 ---------- */
+/* ---------- 아래 — 사이트 알약 줄 · 이동 링크 ---------- */
 
 .hsh-arc__foot {
   position: relative;
@@ -137,60 +137,60 @@
 }
 .hsh-arc__foot[hidden] { display: none; }
 
-/* 라벨 줄 — 좁으면 자연스럽게 다음 줄로(잘리지 않게) */
+/* 사이트 줄 — 한 줄에(몇 개든 다음 줄로 내려가지 않게) */
 .hsh-arc__chips {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 4px 10px;
-  max-width: 480px;
+  gap: 10px;
+  max-width: 100%;
 }
 
-/* 종이 라벨 — 테두리 · 둥근 캡슐 없이 단색 네모 + 작은 그림 + 이름. 라벨마다 조금씩 기울여 붙임.
-   누르는 자리는 44px(보이는 종이는 그 안에 조금 작게 — ::before) */
+/* 흰 알약 — 꾸러미 · 집과 같은 부드러운 회색 선, 왼쪽에 사이트 색 동그라미 + 그림, 오른쪽에 이름 */
 .hsh-arc__chip {
-  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
   min-height: 44px;
-  padding: 0 12px;
-  border: 0;
-  background: none;
+  padding: 4px 16px 4px 5px;
+  border: 1.3px solid var(--hsh-line);
+  border-radius: 999px;
+  background: #fff;
   font-family: var(--hsh-arc-mono);
   font-size: 14px;
   color: var(--hsh-text);
   cursor: pointer;
-  rotate: var(--tilt, 0deg);
-  transition: rotate 200ms ease-out, translate 200ms ease-out;
+  transition: translate 180ms ease-out, background-color 180ms ease-out, border-color 180ms ease-out;
 }
-.hsh-arc__chip::before {
-  content: "";
-  position: absolute;
-  inset: 6px 0;
-  z-index: -1;
+
+.hsh-arc__dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   background: var(--c);
-  transition: background-color 200ms ease-out;
 }
-.hsh-arc__chips { isolation: isolate; } /* 라벨 종이(::before)가 줄 뒤로 빠지지 않게 */
 
-.hsh-arc__name { white-space: nowrap; }
+.hsh-arc__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* 고름 — 살짝 더 기울고 들리며 색이 조금 짙어진다(열쇠를 눌러 골라도 같이) */
+/* 고름 — 살짝 들리고 선이 짙어지며 바탕에 사이트 색이 옅게(열쇠를 눌러 골라도 같이) */
 .hsh-arc__chip[aria-pressed="true"] {
-  rotate: calc(var(--tilt, 0deg) * 2.2);
   translate: 0 -2px;
+  border-color: var(--hsh-text);
+  background: color-mix(in srgb, var(--c) 30%, #fff);
 }
-.hsh-arc__chip[aria-pressed="true"]::before { background: color-mix(in srgb, var(--c) 82%, var(--hsh-line)); }
 
 @media (hover: hover) {
-  .hsh-arc__chip:hover { rotate: calc(var(--tilt, 0deg) * 1.8); }
+  .hsh-arc__chip:hover { translate: 0 -1px; }
+  .hsh-arc__chip[aria-pressed="true"]:hover { translate: 0 -2px; }
 }
 
 .hsh-arc__icon {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: var(--hsh-text);
   stroke-width: 1.3;
@@ -281,6 +281,24 @@
 
 @media (max-width: 560px) {
   .hsh-arc__tag { font-size: 16px; }
+
+  /* 사이트 줄 — 열쇠 꼬리표처럼 세로로 선 알약을 한 줄에 칸을 똑같이 나눠서(동그라미 위 · 이름 아래) */
+  .hsh-arc__chips {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+    gap: 8px;
+    width: min(420px, 100%);
+  }
+  .hsh-arc__chip {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 4px 7px;
+    font-size: 12px;
+  }
+  .hsh-arc__dot { width: 28px; height: 28px; }
+  .hsh-arc__icon { width: 18px; height: 18px; }
+  .hsh-arc__name { max-width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -289,7 +307,6 @@
   .hsh-arc__home,
   .hsh-arc__home > span,
   .hsh-arc__chip,
-  .hsh-arc__chip::before,
   .hsh-arc__link,
   .hsh-star { transition: none; }
 }

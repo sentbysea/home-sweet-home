@@ -76,9 +76,8 @@ function markup() {
           <button class="nbh-tag nbh-tabs__tab" type="button" role="tab" id="nbh-extab-review" aria-controls="nbh-ex-review" aria-selected="false" tabindex="-1" data-ex-tab="review" data-owner hidden style="--c:var(--hsh-butter)">받은 신청 <span class="nbh-review__n"></span></button>
         </div>
         <section class="nbh-sec" data-mode="exchange" data-ex="apply" id="nbh-ex-apply" role="tabpanel" aria-labelledby="nbh-extab-apply">
-          <p class="nbh-sec__note">신청하면 주인이 확인한 뒤 마을에 이웃집으로 지어져요.</p>
           <form class="nbh-form" data-form="apply" novalidate>
-            <label class="nbh-field"><span class="nbh-field__k">사이트 이름 <em>선택 · 마을에서 집 아래 이름표 · 비우면 사이트 제목으로</em></span>
+            <label class="nbh-field"><span class="nbh-field__k">사이트 이름 <em>선택 · 집 아래 이름표 · 비우면 사이트 제목으로</em></span>
               <input name="name" maxlength="40" autocomplete="off" aria-describedby="nbh-e-name"><small class="nbh-field__err" id="nbh-e-name"></small></label>
             <label class="nbh-field"><span class="nbh-field__k">사이트 주소</span>
               <input name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://" required aria-describedby="nbh-e-url"><small class="nbh-field__err" id="nbh-e-url"></small></label>

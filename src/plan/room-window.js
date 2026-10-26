@@ -11,12 +11,14 @@
 //   화면마다 주소가 있다(routes.js) — 직접 들어오거나 새로고침해도 그 창이 열리고, 닫으면(×) 홈(/)으로 돌아간다.
 //   archive · neighbor 버튼은 브라우저 창 대신 흰 화면 — 열쇠꾸러미(archive/index.js) · 이웃 간판 집(neighbor/index.js).
 //   주소 · 뒤로/앞으로 · 닫기는 같은 길. neighbor 의 우체통 패널은 기록 한 칸(/neighbor/banner).
+//   창 머리(사진 · 제목 · 검정 알약)는 주인만 보이는 오른쪽 위 edit 로 방마다 고친다 — 머리를 아예 숨길 수도(room-heads.js).
 
 import { mountAbout } from './about.js';
-import { aboutNoteMarkup } from './about-note.js';
+import { aboutNoteMarkup, loadAboutFont } from './about-note.js';
 import { mountContent } from '../content/viewer.js';
 import { fetchPost } from '../content/data.js';
-import { getClient, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
+import { getClient, ownerSession, hasSavedLogin, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
+import { fetchRoomHeads, saveRoomHeads, uploadRoomPhoto, removeRoomPhoto } from './room-heads.js';
 import { pathOf, parsePath, withKeep } from './routes.js';
 import { mountArchive } from '../archive/index.js';
 import { mountNeighbor } from '../neighbor/index.js';
@@ -181,14 +183,14 @@ function punyDecode(input) {
 // ---------- 공지(notice 버튼) ----------
 
 const NOTICE_TAG = '@3tatichearts · 수아'; // 공지 창의 검정 이름표
-// 방 버튼(data-label)마다 검정 이름표 글자 — 없으면 버튼 이름(aria-label)
+// 방 버튼(data-label)마다 검정 이름표 글자 — 없으면 버튼 이름(aria-label). 주인이 edit 로 고친 값이 있으면 그것(room-heads.js)
 const PILLS = {
   'about __VE': 'Vibe X Echo',
   'teatime?': '홍차라도 한 잔?',
   notice: NOTICE_TAG,
   archive: '홍차아카이브',
 };
-const NOTICE_THUMB = 'src/images/notice-thumb.jpg'; // 공지 창 썸네일 사진
+const NOTICE_THUMB = 'src/images/notice-thumb.jpg'; // 공지 창 썸네일 사진(주인이 고른 사진이 없을 때)
 // 칸마다 [제목, [[본문, 화살표 줄], …] 또는 한 줄] — **…** 는 강조
 const NOTICE = [
   ['ABOUT', [
@@ -254,6 +256,22 @@ function build() {
         </button>
       </div>
       <div class="hsh-win__body">
+        <button class="hsh-win__edit" type="button" hidden>edit</button>
+        <form class="hsh-win__editor" aria-label="창 머리 고치기" novalidate hidden>
+          <div class="hsh-win__ed-photo">
+            <span class="hsh-win__ed-thumb" aria-hidden="true"></span>
+            <label class="hsh-win__ed-btn">사진 고르기<input name="photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
+            <button class="hsh-win__ed-btn" type="button" data-ed="clear">사진 지우기</button>
+          </div>
+          <label class="hsh-win__ed-field"><span>제목</span><input name="head-title" maxlength="40" autocomplete="off"></label>
+          <label class="hsh-win__ed-field"><span>검정 알약</span><input name="head-pill" maxlength="60" autocomplete="off"></label>
+          <label class="hsh-win__ed-check"><input name="headless" type="checkbox"> 상단 바 숨기기 <em>사진 · 제목 · 검정 알약</em></label>
+          <p class="hsh-win__ed-msg" role="status" aria-live="polite"></p>
+          <div class="hsh-win__ed-act">
+            <button class="hsh-win__ed-btn" type="button" data-ed="cancel">취소</button>
+            <button class="hsh-win__ed-save" type="submit">저장</button>
+          </div>
+        </form>
         <header class="hsh-win__head">
           <span class="hsh-win__thumb" aria-hidden="true"></span>
           <div class="hsh-win__titles">
@@ -335,13 +353,140 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   let back = null; // 닫으면 포커스를 돌려줄 버튼
   let closing = null;
 
-  const setPill = (name) => { pill.textContent = name; };
+  // ---------- 창 머리(사진 · 제목 · 검정 알약) — 주인이 고친 값(room-heads.js), 없으면 코드 기본값 ----------
+
+  const editBtn = win.querySelector('.hsh-win__edit');
+  const editor = win.querySelector('.hsh-win__editor');
+  const field = (name) => editor.elements.namedItem(name);
+  const edThumb = editor.querySelector('.hsh-win__ed-thumb');
+  const edMsg = editor.querySelector('.hsh-win__ed-msg');
+  let heads = {};
+  let headLabel = ''; // 지금 방(data-label)
+  let basePill = ''; // 그 방의 기본 검정 알약
+  let pairNow = false; // about 의 /pair — 제목은 늘 pair
+  let owner = null; // 주인이면 그 사람(edit 가 보인다)
+  let ownerChecked = false;
+  const headOf = (l) => (win.dataset.category ? {} : heads[l] || {});
+  const baseThumb = (l) => (l === 'notice' ? NOTICE_THUMB : '');
+  const titleFor = (l) => (pairNow ? 'pair' : headOf(l).title || l);
+
+  const paintHead = () => {
+    const h = headOf(headLabel);
+    pill.textContent = h.pill || basePill;
+    const img = h.image || baseThumb(headLabel);
+    thumb.style.backgroundImage = img ? `url("${img}")` : '';
+    win.classList.toggle('is-headless', Boolean(h.hidden));
+    editBtn.hidden = !owner || Boolean(win.dataset.category);
+  };
+  const repaintHead = () => {
+    if (win.hidden || win.dataset.category) return;
+    title.textContent = titleFor(headLabel);
+    paintHead();
+    syncRail();
+  };
+  fetchRoomHeads().then((h) => { heads = h; repaintHead(); });
+
+  // 로그인돼 있으면 조용히 주인인지 본다(처음 창을 열 때 한 번) — 주인에게만 edit
+  const checkOwner = async () => {
+    if (ownerChecked) return;
+    ownerChecked = true;
+    if (!hasSavedLogin() && !AUTH_RETURN) return;
+    try {
+      const s = await ownerSession(await getClient());
+      owner = s.owner ? s.user : null;
+    } catch { return; }
+    paintHead();
+  };
+
+  // 고치기 창 — 사진(고르기 · 지우기) · 제목 · 검정 알약 · 머리 숨기기. 비운 칸은 기본값으로
+  let pendingFile = null;
+  let clearPhoto = false;
+  let previewUrl = '';
+  let saving = false;
+  const edSay = (text, tone = '') => { edMsg.textContent = text; edMsg.dataset.tone = tone; };
+  const paintEdThumb = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = pendingFile ? URL.createObjectURL(pendingFile) : '';
+    const img = previewUrl || (clearPhoto ? baseThumb(headLabel) : headOf(headLabel).image || baseThumb(headLabel));
+    edThumb.style.backgroundImage = img ? `url("${img}")` : '';
+  };
+  const openEditor = () => {
+    const h = headOf(headLabel);
+    field('head-title').value = h.title || '';
+    field('head-title').placeholder = headLabel;
+    field('head-pill').value = h.pill || '';
+    field('head-pill').placeholder = basePill;
+    field('headless').checked = Boolean(h.hidden);
+    field('photo').value = '';
+    pendingFile = null;
+    clearPhoto = false;
+    paintEdThumb();
+    edSay('');
+    editor.hidden = false;
+    field('head-title').focus({ preventScroll: true });
+  };
+  const closeEditor = () => {
+    if (editor.hidden) return;
+    editor.hidden = true;
+    pendingFile = null;
+    paintEdThumb();
+  };
+  editBtn.addEventListener('click', () => (editor.hidden ? openEditor() : closeEditor()));
+  field('photo').addEventListener('change', () => {
+    const file = field('photo').files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { edSay('사진 파일만 올릴 수 있어요.', 'error'); return; }
+    pendingFile = file;
+    clearPhoto = false;
+    paintEdThumb();
+    edSay('');
+  });
+  editor.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-ed]')?.dataset.ed;
+    if (act === 'cancel') { closeEditor(); editBtn.focus({ preventScroll: true }); }
+    if (act === 'clear') { pendingFile = null; clearPhoto = true; field('photo').value = ''; paintEdThumb(); }
+  });
+  editor.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!owner || saving) return;
+    saving = true;
+    edSay('저장 중…');
+    const label = headLabel;
+    const prev = heads[label] || {};
+    let uploaded = null;
+    try {
+      let image = clearPhoto ? '' : prev.image || '';
+      let imagePath = clearPhoto ? '' : prev.imagePath || '';
+      if (pendingFile) {
+        uploaded = await uploadRoomPhoto(owner.id, pendingFile);
+        ({ url: image, path: imagePath } = uploaded);
+      }
+      const next = { title: field('head-title').value.trim(), pill: field('head-pill').value.trim(), image, imagePath, hidden: field('headless').checked };
+      for (const k of Object.keys(next)) if (!next[k]) delete next[k];
+      const all = { ...heads };
+      if (Object.keys(next).length) all[label] = next;
+      else delete all[label];
+      await saveRoomHeads(owner.id, all);
+      heads = all;
+      if (prev.imagePath && prev.imagePath !== imagePath) removeRoomPhoto(prev.imagePath);
+      closeEditor();
+      repaintHead();
+      editBtn.focus({ preventScroll: true });
+    } catch {
+      if (uploaded) removeRoomPhoto(uploaded.path);
+      edSay('저장하지 못했어요. 잠시 뒤 다시 해 주세요.', 'error');
+    } finally {
+      saving = false;
+    }
+  });
 
   const show = (label, text, page = 'room') => {
     // about __VE 의 /pair — 같은 방 창에 Vibe · Echo 카드, 제목 · 주소창은 pair
     const isAbout = label === 'about __VE';
     const isPair = isAbout && page === 'pair';
-    title.textContent = isPair ? 'pair' : label;
+    pairNow = isPair;
+    headLabel = label;
+    title.textContent = titleFor(label);
     url.textContent = `${siteHost()} / ${isPair ? 'pair' : label}`;
     empty.textContent = text;
     // 공지면 탭 + 내용(ABOUT 부터), 아니면 '곧 채워질' 안내
@@ -349,6 +494,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     note.hidden = noteTabs.hidden = !isNotice;
     // about __VE 면 아스키 집 · 글(about-note.js), /pair 면 Vibe · Echo 카드(about.js)
     abBox.hidden = !isAbout || isPair;
+    if (!abBox.hidden) loadAboutFont();
     win.classList.toggle('is-about', isAbout && !isPair); // about 글은 둥근 상자 없이 창에 바로
     veBox.hidden = !isPair;
     if (isPair) about.reset();
@@ -540,6 +686,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     }
     archive.hide({ instant: true });
     neighbor.hide({ instant: true });
+    closeEditor();
+    checkOwner();
     const already = win.classList.contains('is-open'); // 주소로 연 글 창이 이제 카테고리를 알게 됐다 — 스티커 · 등장은 그대로
     back = from ?? null;
     current = category ? `${room}:${category}` : room; // 하트는 버튼마다
@@ -552,8 +700,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.', page);
     if (!already) scatter(frame);
-    setPill(PILLS[label] ?? name);
-    thumb.style.backgroundImage = label === 'notice' ? `url("${NOTICE_THUMB}")` : '';
+    basePill = PILLS[label] ?? name;
+    paintHead();
     paintLike();
     if (already) return;
     win.hidden = false;
@@ -567,6 +715,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     archive.hide();
     neighbor.hide();
     if (win.hidden || win.classList.contains('is-closing')) return;
+    closeEditor();
     content.close();
     win.classList.remove('is-open');
     win.classList.add('is-closing');
@@ -656,6 +805,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   win.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });
   document.addEventListener('keydown', (e) => {
     if (win.hidden) return;
+    // 고치기 창이 열려 있으면 Esc 는 그것만 닫는다
+    if (e.key === 'Escape' && !editor.hidden) { closeEditor(); editBtn.focus({ preventScroll: true }); return; }
     if (e.key === 'Escape') close();
     // 창 안에서만 Tab 이 돌게
     if (e.key === 'Tab') {

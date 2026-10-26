@@ -12,10 +12,10 @@ import { starSvg } from '../shared/star.js';
 
 // 라벨 줄 작은 그림 · 종이 색 — 홈 라벨 파스텔(base.css). 새 · 일기장 · 하트는 꾸러미 키링과 같은 색
 const ICONS = {
-  bird: { color: 'var(--hsh-sky)', tilt: -2.2, svg: '<path d="M5 13c0-3.6 2.6-6 6-6 3 0 5 2 5.4 4.4L20 9l-1.4 4.6c-.8 2.6-3.4 4.4-7 4.4C7.6 18 5 16 5 13z"/><path d="M5.2 11.6L2.6 12.4l2.6 1"/><circle cx="8.4" cy="11.4" r=".6" class="dot"/>' },
-  diary: { color: 'var(--hsh-lilac)', tilt: 1.6, svg: '<rect x="5.5" y="4" width="13" height="16" rx="1.6"/><path d="M8.5 4v16"/><path d="M13.6 10.2c-.6-1-2.2-.8-2.2.5 0 1 1.4 1.9 2.2 2.6.8-.7 2.2-1.6 2.2-2.6 0-1.3-1.6-1.5-2.2-.5z" class="fill"/>' },
-  heart: { color: 'var(--hsh-pink)', tilt: -1.2, svg: '<path d="M9 9V7a3 3 0 0 1 6 0v2"/><path d="M12 20c-4-2.8-6.6-5-6.6-7.6 0-2 1.5-3.4 3.3-3.4 1.4 0 2.6.8 3.3 2 .7-1.2 1.9-2 3.3-2 1.8 0 3.3 1.4 3.3 3.4 0 2.6-2.6 4.8-6.6 7.6z"/>' },
-  house: { color: 'var(--hsh-mint)', tilt: 2, svg: '<path d="M4 11.5L12 4l8 7.5"/><path d="M6.5 9.6V20h11V9.6"/><path d="M10.4 20v-4.6h3.2V20"/>' },
+  bird: { color: 'var(--hsh-sky)', svg: '<path d="M5 13c0-3.6 2.6-6 6-6 3 0 5 2 5.4 4.4L20 9l-1.4 4.6c-.8 2.6-3.4 4.4-7 4.4C7.6 18 5 16 5 13z"/><path d="M5.2 11.6L2.6 12.4l2.6 1"/><circle cx="8.4" cy="11.4" r=".6" class="dot"/>' },
+  diary: { color: 'var(--hsh-lilac)', svg: '<rect x="5.5" y="4" width="13" height="16" rx="1.6"/><path d="M8.5 4v16"/><path d="M13.6 10.2c-.6-1-2.2-.8-2.2.5 0 1 1.4 1.9 2.2 2.6.8-.7 2.2-1.6 2.2-2.6 0-1.3-1.6-1.5-2.2-.5z" class="fill"/>' },
+  heart: { color: 'var(--hsh-pink)', svg: '<path d="M9 9V7a3 3 0 0 1 6 0v2"/><path d="M12 20c-4-2.8-6.6-5-6.6-7.6 0-2 1.5-3.4 3.3-3.4 1.4 0 2.6.8 3.3 2 .7-1.2 1.9-2 3.3-2 1.8 0 3.3 1.4 3.3 3.4 0 2.6-2.6 4.8-6.6 7.6z"/>' },
+  house: { color: 'var(--hsh-mint)', svg: '<path d="M4 11.5L12 4l8 7.5"/><path d="M6.5 9.6V20h11V9.6"/><path d="M10.4 20v-4.6h3.2V20"/>' },
 };
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -38,8 +38,8 @@ function build(links) {
   const stars = STARS.map(([x, y, rot, size]) => starSvg(x, y, rot, size)).join('');
   const chips = links.map((l, i) => {
     const icon = ICONS[l.object] || ICONS.house;
-    return `<button class="hsh-arc__chip" type="button" data-i="${i}" aria-pressed="false" style="--c:${icon.color};--tilt:${icon.tilt}deg">` +
-      `<svg class="hsh-arc__icon" viewBox="0 0 24 24" aria-hidden="true">${icon.svg}</svg>` +
+    return `<button class="hsh-arc__chip" type="button" data-i="${i}" aria-pressed="false" style="--c:${icon.color}">` +
+      `<span class="hsh-arc__dot" aria-hidden="true"><svg class="hsh-arc__icon" viewBox="0 0 24 24">${icon.svg}</svg></span>` +
       `<span class="hsh-arc__name">${esc(l.name)}</span></button>`;
   }).join('');
   const list = links.map((l) => {

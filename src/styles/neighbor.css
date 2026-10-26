@@ -69,18 +69,17 @@
 .nbh-copy:focus-visible,
 .nbh-panel__x:focus-visible { outline: 1.5px solid var(--nbh-ink); outline-offset: 2px; }
 
-/* 제목 — 홈 Neighbor 라벨 그대로: 연두 색종이(--hsh-mint) + 분홍 둥근 이탤릭(홈 .hsh-tag__text 와 같은 글꼴 · 굵기 · 기울기 · 자간) */
+/* 제목 — 영단어(첫 글자 대문자) + 노란 밑줄(archive 와 같다) */
 .nbh__title {
   margin: 44px 0 6px;
-  padding: 4px 18px 6px;
-  background: var(--hsh-mint);
-  font-family: var(--hsh-tag-font);
-  font-size: 23px;
+  font-family: var(--hsh-mono);
+  font-size: 26px;
   font-weight: 400;
-  font-style: italic;
-  letter-spacing: 1.5px;
-  color: #e65d98; /* 홈 Neighbor 라벨 글씨(tools/floorplan.mjs) */
-  rotate: -3deg;
+  letter-spacing: 0.02em;
+  color: var(--hsh-text);
+  text-decoration: underline 5px var(--hsh-butter);
+  text-underline-offset: 6px;
+  text-decoration-skip-ink: none;
 }
 
 /* 여백 별 — 홈 · archive 와 같은 .hsh-star(base.css). 마을 뒤에 깔고 누르기 · 끌기는 지나간다 */
@@ -207,7 +206,7 @@
   translate: -50% 0;
   rotate: var(--tilt, -1.5deg);
 }
-.nbh-center__tag { font-size: 12.5px; }
+.nbh-center__tag { left: calc(50% + var(--tag-dx, 0px)); font-size: 12.5px; } /* 집 + 우체통 덩어리 가운데(village.js) */
 
 
 .nbh-deco-wrap { position: absolute; pointer-events: none; }
@@ -284,8 +283,8 @@
   left: 0;
   top: 0;
   z-index: 4;
-  width: min(400px, calc(100vw - 24px)); /* 배너만 가로로 길게 */
-  padding: 9px 10px;
+  width: min(280px, calc((100vw - 24px) * 0.7)); /* 배너만 가로로 길게 — 화면 폭의 70% 까지 */
+  padding: 6px 7px;
   opacity: 0;
   translate: 0 8px;
   transition: opacity 240ms ease-out, translate 240ms ease-out;
