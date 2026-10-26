@@ -402,7 +402,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   });
   // 가죽 이름표 — 작은 고리로 큰 고리에 걸려 열쇠들 옆에 아래로 늘어진 home sweet home
   const LABEL_DEPTH = 0.045;
-  const LABEL_SIZE = 0.8; // 이름표 크기(1 = 처음 크기) — 걸린 구멍을 축으로 줄인다
+  const LABEL_SIZE = 0.75; // 이름표 크기(1 = 처음 크기) — 걸린 구멍을 축으로 줄인다
   const labelDef = SHAPES.label();
   const labelPiece = buildPiece(labelDef, 'cloth', LABEL_DEPTH, 909, PEN / LABEL_SIZE); // 줄여도 선 굵기는 같게
   labelPiece.group.add(jumpRing());
