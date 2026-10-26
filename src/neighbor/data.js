@@ -6,6 +6,8 @@
 //   신청은 banner_requests 표 — 표는 직접 열지 않고 RPC 로만
 //     (web 저장소 supabase/migrations/20261026100000_banner_requests.sql · 20261027100000_neighbor_houses.sql).
 //   집 모양은 banners.house · banner_requests.house(jsonb). house 열이 아직 없는 DB 면 열 없이 다시 읽는다(모두 기본 모양).
+//   홈페이지 없는 이웃(집 + 이름표만)은 banners 가 아니라 neighbor_residents(20261030100000_neighbor_residents.sql) —
+//   hongjiwon.love 배너 화면에 빈 배너가 생기지 않게.
 
 import { SUPABASE_URL, SUPABASE_KEY, getClient } from '../content/supabase.js';
 
@@ -83,7 +85,20 @@ export async function fetchBanners() {
 }
 
 /**
- * 배너 교환 신청 — 누구나.
+ * 홈페이지 없는 이웃(neighbor_residents · web 저장소 20261030100000_neighbor_residents.sql) — 집 + 이름표만.
+ * 누구나 읽는다. 표가 아직 없거나 못 읽으면 [](마을은 배너 이웃만)
+ */
+export async function fetchResidents() {
+  try {
+    const res = await rest('neighbor_residents?select=id,name,house,sort_order&order=sort_order.asc');
+    return res.ok ? await res.json() : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 배너 교환 신청 — 누구나. 홈페이지가 없으면 url · image 를 비워 보낸다(이름 · 집만).
  * @returns {Promise<'ok' | 'pending' | 'listed' | 'busy' | 'unavailable' | 'invalid:site_name' | 'invalid:site_url' | 'invalid:image_url' | 'invalid:message'>}
  *   네트워크 · 서버 오류는 throw(다시 시도 안내)
  */
@@ -188,6 +203,22 @@ export async function setHomeHouse(house) {
   const { data, error } = await client.rpc('set_home_house', { p_house: house });
   if (error) throw error;
   if (data !== 'ok') throw new Error(`set_home_house ${data}`);
+}
+
+/** 주인 — 홈페이지 없는 이웃 이름 · 집 고치기(집 null 이면 기본 모양) */
+export async function updateResident(id, { name, house }) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('update_resident', { p_id: id, p_name: name, p_house: house });
+  if (error) throw error;
+  if (data !== 'ok') throw new Error(`update_resident ${data}`);
+}
+
+/** 주인 — 홈페이지 없는 이웃 내리기 */
+export async function deleteResident(id) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('delete_resident', { p_id: id });
+  if (error) throw error;
+  if (data !== 'ok') throw new Error(`delete_resident ${data}`);
 }
 
 /** 주인 — 이웃집 모양 고치기(null 이면 기본 모양) */
