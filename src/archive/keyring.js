@@ -395,14 +395,16 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
         a0: (-FAN * 0.6 * (phi + off)) / KEY_L, c0: FACE_C + (rand() - 0.5) * 0.2,
         b0: spec.charmFlip ? -0.38 : -0.16, layer: spec.charmFlip ? 0.06 : 0.045, front: spec.charmFlip ? 0.35 : 0.05,
         // 고르면 — 열쇠 앞(제 열쇠 머리 위 · 화면 쪽) 또는 열쇠 옆으로 비켜
-        ...(spec.charmFront ? { phiSel: 0.04, aSel: 0, bSel: -0.62, layerSel: 0.12 } : { phiSel: off * 1.25, aSel: a0 * 1.2, bSel: -0.5, layerSel: 0.1 }),
+        //   charmFront(일기장)는 열쇠 머리 위에 얹되 파랑새처럼 살짝 비스듬히(왼쪽으로 조금 비켜 · 약 17° 기울여)
+        ...(spec.charmFront ? { phiSel: 0.12, aSel: -0.3, bSel: -0.62, layerSel: 0.12 } : { phiSel: off * 1.25, aSel: a0 * 1.2, bSel: -0.5, layerSel: 0.1 }),
       });
     }
   });
   // 가죽 이름표 — 작은 고리로 큰 고리에 걸려 열쇠들 옆에 아래로 늘어진 home sweet home
   const LABEL_DEPTH = 0.045;
+  const LABEL_SIZE = 0.8; // 이름표 크기(1 = 처음 크기) — 걸린 구멍을 축으로 줄인다
   const labelDef = SHAPES.label();
-  const labelPiece = buildPiece(labelDef, 'cloth', LABEL_DEPTH, 909);
+  const labelPiece = buildPiece(labelDef, 'cloth', LABEL_DEPTH, 909, PEN / LABEL_SIZE); // 줄여도 선 굵기는 같게
   labelPiece.group.add(jumpRing());
   const { x0, y0, x1, y1 } = labelDef.face;
   const fw = x1 - x0 - 0.03;
@@ -417,7 +419,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     labelPiece.group.add(m);
   }
   // 맨 오른쪽 · 맨 앞 줄 — 다른 것에 가리지 않고 아래로 곧게 늘어진다
-  addPendulum(labelPiece, { kind: 'label', phi: -1.62, a0: 0.3, b0: -0.3, c0: FACE_C + 0.05, layer: 0.07, front: 0.45, seed: 999, mass: 0.55 });
+  addPendulum(labelPiece, { kind: 'label', phi: -1.62, a0: 0.3, b0: -0.3, c0: FACE_C + 0.05, layer: 0.07, front: 0.45, seed: 999, mass: 0.55, size: LABEL_SIZE });
 
   // ---------- 화면 맞추기 ----------
   const fit = () => {
