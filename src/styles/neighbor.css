@@ -1,16 +1,12 @@
 /* =========================================================
    home sweet home — neighbor(src/neighbor/)
-   흰 화면 위에 서 있는 길쭉한 손그림 집, 그 안에 한 줄로 이어지는 이웃 간판, 끝에서 만나는 작은 우체통.
+   흰 화면 가운데 홍차네 집, 둘레에 배너를 교환한 이웃집들이 모인 손그림 마을. 집을 고르면 그 배너.
    바탕 · 글자 · 파스텔 · 글꼴은 로딩 · 홈 · archive 와 같은 공통 값(base.css). 선만 한 단 짙은 회색.
    ========================================================= */
 
 .nbh {
   --nbh-ink: #54585c; /* 집 선 — 평면도 선(--hsh-line)보다 또렷하게 */
-  --nbh-ink-back: #73787c; /* 뒤쪽 선 — 명암 차이는 약하게 */
   --nbh-ink-soft: #8f9497;
-  --nbh-edge: #dfe1e3; /* 배너 종이 옆면 두께 */
-  --nbh-pad: 52px; /* 장면 위 여백(굴뚝 · 원근 · 둥실거림) */
-  --nbh-pad-b: 78px; /* 장면 아래 여백(우체통 안내 · 바닥 원근) */
   --nbh-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
 
   position: fixed;
@@ -86,208 +82,141 @@
   rotate: -2deg;
 }
 
-/* ---------- 장면 ---------- */
 
-.nbh__scene {
+/* ---------- 마을(village.js) ---------- */
+
+.nbh__village {
   position: relative;
   flex: none;
   width: 100%;
-  height: calc(var(--nbh-pad) + var(--nbh-h, 600px) + var(--nbh-pad-b));
-  touch-action: pan-y; /* 세로 스크롤이 먼저 — 가로로 끌 때만 돌린다 */
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  cursor: grab;
-}
-.nbh__scene.is-turning { cursor: grabbing; }
-
-.nbh-house {
-  position: absolute;
-  animation: nbh-house-bob 6.2s ease-in-out infinite; /* 집 전체가 천천히 둥실 */
-  left: 50%;
-  top: var(--nbh-pad);
-  margin-left: calc(var(--nbh-w, 400px) / -2);
-  transform-style: preserve-3d;
-  pointer-events: none; /* 집 상자(z=0)가 뒤쪽 간판 앞에서 누름을 가로채지 않게 — 누르는 것만 받는다 */
-}
-.nbh-sign,
-.nbh-mail,
-.nbh-del,
-.nbh-note__retry { pointer-events: auto; }
-
-.nbh-chunk,
-.nbh-row,
-.nbh-float,
-.nbh-sign,
-.nbh-mail,
-.nbh-box {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-  transform-style: preserve-3d;
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
 }
 
-.nbh-plane,
-.nbh-box__face,
-.nbh-letter,
-.nbh-sign__back,
-.nbh-sign__edge,
-.nbh-sign__face {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: block;
-}
-.nbh-plane { overflow: hidden; pointer-events: none; }
-.nbh-box__face > svg,
-.nbh-letter > svg { display: block; overflow: visible; }
+.nbh-town { position: relative; flex: none; }
 
-.nbh-ink path,
-.nbh-ink {
-  fill: none;
+/* 손그림 위글 — 선 변형 4장 중 지금 것만(index.js 가 190ms 마다 .nbh 의 data-boil 을 바꾼다) */
+.nbh .nbh-v { display: none; }
+.nbh[data-boil="0"] .nbh-v0,
+.nbh[data-boil="1"] .nbh-v1,
+.nbh[data-boil="2"] .nbh-v2,
+.nbh[data-boil="3"] .nbh-v3 { display: inline; }
+
+.nbh-ink path {
   stroke: var(--nbh-ink);
+  stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke; /* 집 크기와 상관없이 같은 굵기 */
 }
-.nbh-ink.is-back path { stroke: var(--nbh-ink-back); }
+.nbh-art,
+.nbh-deco,
+.nbh-mailbox__art { display: block; overflow: visible; }
 
-/* 손그림 위글 — 선 변형 4장 중 지금 것만(house.js 가 190ms 마다 data-boil 을 바꾼다) */
-.nbh-v { display: none; }
-.nbh-house[data-boil="0"] .nbh-v0,
-.nbh-house[data-boil="1"] .nbh-v1,
-.nbh-house[data-boil="2"] .nbh-v2,
-.nbh-house[data-boil="3"] .nbh-v3 { display: inline; }
-
-/* 둥실둥실 — 배너마다 주기 · 시작 · 기울기가 다르다(house.js 가 변수로) */
-.nbh-float {
-  rotate: var(--tilt, 0deg);
-  animation: nbh-float 5s ease-in-out infinite;
-}
-/* 올리거나 · 누르거나 · 키보드로 고르는 동안은 멈춰서 누르기 쉽게 */
-.nbh-row:hover .nbh-float,
-.nbh-row:focus-within .nbh-float,
-.nbh-float:active,
-.nbh.is-editing .nbh-house,
-.nbh.is-editing .nbh-float { animation-play-state: paused; } /* 주인이 고치는 동안도(× 를 누르기 쉽게) */
-
-@keyframes nbh-float {
-  0%, 100% { translate: 0 0; rotate: var(--tilt, 0deg); }
-  50% { translate: 0 calc(var(--bob, 3px) * -1); rotate: calc(var(--tilt, 0deg) + var(--rock, 0.5deg)); }
-}
-@keyframes nbh-house-bob {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -4px; }
-}
-
-/* ---------- 간판 ---------- */
-
-.nbh-sign {
-  display: block;
-  color: var(--hsh-text);
-  text-decoration: none;
-  outline: none;
-  transition: transform 220ms cubic-bezier(.2, .7, .3, 1);
+/* 이웃집 — 카드 · 테두리 없이 집 그림 그대로가 누르는 자리 */
+.nbh-home {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
-/* 얇은 종이 조각 — 테두리 · 카드 없이 이미지 그대로(뒤에 흰 종이 · 옆에서 보이는 두께만) */
-.nbh-sign__face {
+.nbh-home__art,
+.nbh-center .nbh-home__art {
+  display: block;
+  animation: nbh-bob var(--dur, 5s) ease-in-out var(--delay, 0s) infinite;
+}
+.nbh-home:hover .nbh-home__art,
+.nbh-home:focus-visible .nbh-home__art,
+.nbh-home.is-open .nbh-home__art { animation-play-state: paused; }
+.nbh-home:focus-visible .nbh-art { filter: drop-shadow(0 0 0 transparent); }
+.nbh-home:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 1.5px dashed var(--nbh-ink-soft);
+  border-radius: 10px;
+}
+@keyframes nbh-bob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 calc(var(--bob, 3px) * -1); }
+}
+.nbh-home__edit {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  width: 22px;
+  height: 22px;
   display: grid;
   place-items: center;
-  overflow: hidden;
-  background: #fff;
-}
-.nbh-sign__face img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* 원본 그대로 — 자르거나 늘이지 않는다 */
-  -webkit-user-drag: none;
-}
-.nbh-sign__back { background: #fff; }
-.nbh-sign__edge { background: var(--nbh-edge); }
-
-/* 이미지를 못 불러오면 — 판 크기는 그대로, 사이트 이름으로 */
-.nbh-sign__alt {
-  display: none;
-  padding: 0 10px;
-  font-family: var(--nbh-font);
-  font-size: 13px;
-  color: var(--hsh-link);
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-.nbh-sign__face.is-broken img { display: none; }
-.nbh-sign__face.is-broken .nbh-sign__alt { display: block; }
-.nbh-sign__face.is-broken + .nbh-sign__cap { visibility: hidden; } /* 이름은 판 안에 이미 있다 */
-
-/* 사이트 이름 ↗ — PC 는 올리거나 포커스할 때, 휴대폰은 늘 */
-.nbh-sign__cap {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  max-width: 260px;
-  font-family: var(--nbh-font);
-  font-size: 12px;
-  letter-spacing: 0.01em;
-  line-height: 18px;
-  color: var(--hsh-text);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 180ms ease-out;
-  pointer-events: none;
-}
-.nbh-sign__arrow { font-size: 11px; color: var(--hsh-link); }
-
-/* 올리거나 포커스하면 그 간판만 조금 앞으로 */
-.nbh-sign:focus-visible { transform: translateZ(12px); }
-.nbh-sign:focus-visible .nbh-sign__face { outline: 2px solid var(--nbh-ink); outline-offset: 3px; }
-.nbh-sign:focus-visible .nbh-sign__cap { opacity: 1; }
-@media (hover: hover) {
-  .nbh-sign:hover { transform: translateZ(12px); }
-  .nbh-sign:hover .nbh-sign__cap { opacity: 1; }
-  .nbh__scene.is-turning .nbh-sign:hover { transform: none; }
-}
-@media (hover: none) {
-  .nbh-sign__cap { opacity: 1; }
-}
-
-/* 주인 — 내리기 */
-.nbh-del {
-  position: absolute;
-  left: -13px;
-  top: -13px;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--nbh-ink);
+  border: 1px solid var(--nbh-ink-soft);
   border-radius: 50%;
   background: var(--hsh-paper);
-  font-size: 16px;
-  line-height: 1;
+  font-size: 12px;
   color: var(--hsh-text);
-  cursor: pointer;
 }
 
-/* 빈 집 · 불러오는 중 · 오류 */
+/* 홍차네 집 · 이름표 */
+.nbh-center { position: absolute; pointer-events: none; }
+.nbh-center__tag {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  padding: 2px 9px 3px;
+  background: var(--hsh-butter);
+  font-family: var(--hsh-mono);
+  font-size: 12.5px;
+  color: var(--hsh-text);
+  white-space: nowrap;
+  translate: -50% 0;
+  rotate: -2deg;
+}
+
+.nbh-deco-wrap { position: absolute; pointer-events: none; }
+
+/* 우체통 — 홍차네 집 옆. 누르면 깃발이 서고 편지가 살짝 */
+.nbh-mailbox {
+  position: absolute;
+  display: grid;
+  justify-items: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nbh-mailbox__flag { transform-box: fill-box; transform-origin: 0 100%; transition: rotate 260ms ease-out; }
+.nbh-mailbox__letter { opacity: 0; transition: opacity 200ms ease-out, translate 260ms ease-out; }
+.nbh-mailbox:hover .nbh-mailbox__flag,
+.nbh-mailbox.is-sending .nbh-mailbox__flag { rotate: -20deg; }
+.nbh-mailbox.is-sending .nbh-mailbox__letter { opacity: 1; translate: 0 -4px; }
+.nbh-mailbox__tip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  padding: 0 3px;
+  font-family: var(--nbh-font);
+  font-size: 11.5px;
+  color: var(--hsh-link);
+  white-space: nowrap;
+  background: linear-gradient(var(--hsh-pink), var(--hsh-pink)) 0 calc(100% - 1px) / 100% 5px no-repeat;
+}
+.nbh-mailbox:focus-visible { outline: 1.5px dashed var(--nbh-ink-soft); outline-offset: 4px; border-radius: 6px; }
+
+/* 빈 동네 · 불러오는 중 · 오류 */
 .nbh-note {
   position: absolute;
   left: 0;
-  top: 0;
+  right: 0;
   display: grid;
   justify-items: center;
   gap: 8px;
   font-family: var(--nbh-font);
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--hsh-note);
-  white-space: nowrap;
 }
 .nbh-note__retry {
   min-height: 36px;
@@ -301,78 +230,135 @@
   cursor: pointer;
 }
 
-/* ---------- 우체통 ---------- */
+/* ---------- 집 위 배너(하나만) ---------- */
 
-.nbh-mail { cursor: pointer; outline: none; }
-.nbh-letter { translate: 0 0; transition: translate 200ms ease-out; }
-@media (hover: hover) {
-  .nbh-mail:hover .nbh-letter { translate: 0 -5px; } /* 살짝 엿보이는 편지 */
-}
-.nbh-mail:focus-visible .nbh-letter { translate: 0 -5px; }
-
-.nbh-mail__tip {
+.nbh-pop {
   position: absolute;
   left: 0;
   top: 0;
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
+  z-index: 4;
+  width: min(272px, calc(100vw - 24px));
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 10px 10px 8px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(84, 88, 92, 0.18), 0 6px 18px rgba(84, 88, 92, 0.12);
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 240ms ease-out, translate 240ms ease-out;
+}
+.nbh-pop.is-below { translate: 0 -8px; }
+.nbh-pop[hidden] { display: none; }
+.nbh-pop.is-open { opacity: 1; translate: 0 0; }
+/* 집 쪽 꼬리 */
+.nbh-pop::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--tail, 50%) - 6px);
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  rotate: 45deg;
+  box-shadow: 1px 1px 0 rgba(84, 88, 92, 0.12);
+}
+.nbh-pop.is-below::after { bottom: auto; top: -6px; box-shadow: -1px -1px 0 rgba(84, 88, 92, 0.12); }
+
+.nbh-pop__banner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 5 / 1; /* 원본 5:1 — 이미지 전체를 보인다 */
+  background: #fff;
+}
+.nbh-pop__banner img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.nbh-pop__alt { display: none; font-family: var(--nbh-font); font-size: 13px; color: var(--hsh-link); }
+.nbh-pop.is-broken .nbh-pop__banner img { display: none; }
+.nbh-pop.is-broken .nbh-pop__alt { display: block; }
+.nbh-pop__name {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: 100%;
   font-family: var(--nbh-font);
-  font-size: 12px;
-  line-height: 17px;
+  font-size: 13.5px;
   color: var(--hsh-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.nbh-mail__tip span { padding: 0 3px; background: linear-gradient(var(--hsh-pink), var(--hsh-pink)) 0 calc(100% - 1px) / 100% 6px no-repeat; }
-.nbh-mail:focus-visible .nbh-mail__tip span { outline: 1.5px solid var(--nbh-ink); outline-offset: 2px; }
-.nbh-mail__arrow {
-  order: 2;
-  width: 16px;
-  height: 22px;
-  margin-bottom: 8px;
-  fill: none;
-  stroke: var(--nbh-ink);
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.nbh-pop__go {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--hsh-sky);
+  font-family: var(--nbh-font);
+  font-size: 13px;
+  color: var(--hsh-text);
+  text-decoration: none;
 }
+.nbh-pop__go:focus-visible,
+.nbh-pop__banner:focus-visible { outline: 1.5px solid var(--nbh-ink); outline-offset: 2px; }
+/* PC(올리기)에서는 이름 아래 방문하기가 없어도 집을 누르면 간다 — 그래도 보여 둔다(키보드) */
 
-/* ---------- 처음 한 번 — 끌어서 돌려 보기 ---------- */
+/* ---------- 우리 집 꾸미기(customizer.js) ---------- */
 
-.nbh__hint {
-  position: absolute;
-  left: 50%;
-  top: calc(var(--nbh-pad) + var(--nbh-w, 400px) * 0.45 * 0.36); /* 지붕 안 빈 자리 */
-  z-index: 2;
-  margin: 0;
+.nbh-diy { display: grid; gap: 10px; }
+.nbh-diy__preview {
   display: grid;
-  justify-items: center;
-  gap: 2px;
-  translate: -50% 0;
-  font-family: var(--hsh-mono);
-  font-size: 12.5px;
-  color: var(--hsh-link);
-  pointer-events: none;
-  transition: opacity 400ms ease-out;
+  place-items: end center;
+  min-height: 150px;
+  padding: 10px 0 6px;
+  border-radius: 8px;
+  background: var(--hsh-paper);
 }
-.nbh__hint[hidden] { display: none; }
-.nbh__hint.is-gone { opacity: 0; }
-.nbh__hint svg {
-  width: 96px;
-  height: 18px;
-  fill: none;
-  stroke: var(--nbh-ink);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  animation: nbh-sway 1.4s ease-in-out 2;
+.nbh-diy__rows { display: grid; gap: 6px; }
+.nbh-diy__row { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 8px; }
+.nbh-diy__k { font-size: 12px; color: var(--hsh-note); }
+.nbh-diy__opts { display: flex; flex-wrap: wrap; gap: 4px; }
+.nbh-diy__opts > button {
+  min-width: 40px;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
 }
-.nbh__hint span { padding: 1px 6px; background: color-mix(in srgb, var(--hsh-paper) 85%, transparent); }
-@keyframes nbh-sway {
-  0%, 100% { translate: 0 0; }
-  25% { translate: -6px 0; }
-  75% { translate: 6px 0; }
+.nbh-diy__opts > button[aria-checked="true"] { border-color: var(--nbh-ink); background: var(--hsh-paper); }
+.nbh-diy__opts > button:focus-visible { outline: 1.5px solid var(--nbh-ink); outline-offset: 1px; }
+.nbh-diy__icon { display: block; max-height: 34px; width: auto; }
+.nbh-diy__icon .nbh-ink path { stroke-width: 1.1; }
+.nbh-diy__none { font-size: 11.5px; color: var(--hsh-note); }
+.nbh-diy__opts.is-colors > button { min-width: 30px; min-height: 30px; padding: 0; border-radius: 50%; }
+.nbh-diy__opts.is-colors > button::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(84, 88, 92, 0.35);
+  border-radius: 50%;
+  background: var(--chip);
 }
+.nbh-diy__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.nbh-diy__msg { margin: 0; font-size: 12.5px; color: var(--hsh-note); }
+.nbh-diy__msg:empty { display: none; }
+.nbh-form.is-sent .nbh-diy { pointer-events: none; opacity: 0.6; }
+.nbh-btn.is-small { min-height: 34px; padding: 0 12px; font-size: 13px; }
+
+/* 받은 신청 — 신청한 집 */
+.nbh-req__house { display: grid; place-items: end center; min-height: 86px; border-radius: 8px; background: var(--hsh-paper); }
+.nbh-req__art { display: block; overflow: visible; }
 
 /* ---------- 아래 — 주인 ---------- */
 
@@ -587,38 +573,32 @@
 .nbh-review__msg:empty { display: none; }
 .nbh-review__msg[data-tone="error"] { color: #b3364f; }
 
+
 /* ---------- 휴대폰 ---------- */
 
 @media (max-width: 560px) {
-  .nbh { --nbh-pad: 46px; --nbh-pad-b: 74px; }
   .nbh__title { margin-top: 50px; }
-  .nbh-sign__cap { font-size: 12px; }
   .nbh-mine__row { grid-template-columns: 64px minmax(0, 1fr); }
 }
 
-/* ---------- 동작 줄이기 ---------- */
+/* ---------- 동작 줄이기 — 둥실거림 · 위글 · 나타남 없이 ---------- */
 
-.nbh.is-reduced .nbh-sign,
-.nbh.is-reduced .nbh-sign__cap,
-.nbh.is-reduced .nbh-letter,
+.nbh.is-reduced .nbh-home__art,
+.nbh.is-reduced .nbh-center .nbh-home__art { animation: none; }
+.nbh.is-reduced .nbh-pop,
+.nbh.is-reduced .nbh-mailbox__flag,
+.nbh.is-reduced .nbh-mailbox__letter,
 .nbh.is-reduced .nbh-panel,
-.nbh.is-reduced .nbh-panel__sheet,
-.nbh.is-reduced .nbh__hint { transition: none; }
-.nbh.is-reduced .nbh__hint svg,
-.nbh.is-reduced .nbh-house,
-.nbh.is-reduced .nbh-float { animation: none; }
+.nbh.is-reduced .nbh-panel__sheet { transition: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .nbh,
   .nbh__home,
   .nbh__home > span,
-  .nbh-sign,
-  .nbh-sign__cap,
-  .nbh-letter,
+  .nbh-pop,
+  .nbh-mailbox__flag,
+  .nbh-mailbox__letter,
   .nbh-panel,
-  .nbh-panel__sheet,
-  .nbh__hint { transition: none; }
-  .nbh__hint svg,
-  .nbh-house,
-  .nbh-float { animation: none; }
+  .nbh-panel__sheet { transition: none; }
+  .nbh-home__art { animation: none; }
 }

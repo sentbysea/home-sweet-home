@@ -1,22 +1,24 @@
-// neighbor — 브라우저 창 대신 흰 화면 가운데 길쭉한 손그림 집(house.js). 주소 /neighbor · /neighbor/banner(routes.js),
+// neighbor — 브라우저 창 대신 흰 화면의 손그림 마을(village.js). 주소 /neighbor · /neighbor/banner(routes.js),
 // 여닫기 · 기록은 room-window.js 가 맡는다(archive 와 같은 길).
-//   · 이웃 배너(banners · 배너 카테고리)를 정렬 순서대로 집 안에 한 줄로 건다. 누르면 새 탭.
-//   · 맨 아래 바닥 오른쪽 바깥 우체통 → 편지가 살짝 올라온 뒤 배너 교환 패널(panel.js) — 주소 /neighbor/banner.
-//   · 주인: 아래 'edit' → Google 로그인(돌아오면 보던 주소로) → 간판마다 ×, '+ add banner', 받은 신청.
-//   · 처음 한 번만 '끌어서 돌려 보기' 손그림 화살표.
-//   · 닫으면 그리기 · 스크롤 따라가기를 멈추고 장면을 치운다.
+//   · 가운데 홍차네 집, 둘레에 배너를 교환한 이웃집(banners · 배너 카테고리, 정렬 순서대로). 집을 고르면 그 배너.
+//   · 홍차네 집 옆 우체통 → 배너 교환 패널(panel.js) — 주소 /neighbor/banner.
+//   · 주인: 아래 'edit' → Google 로그인(돌아오면 보던 주소로) → 집을 누르면 그 집 고치기, '+ add banner', 받은 신청.
+//   · 손그림 위글: 선 변형 4장을 190ms 마다(로딩 · 평면도와 같은 박자) — 이 화면의 모든 집(패널 미리보기까지)이 같이. 모션 줄이기면 멈춘다.
+//   · 닫으면 마을을 치운다.
 
-import { fetchBanners, siteLabel, httpUrl, deleteBanner } from './data.js';
-import { createHouse } from './house.js';
+import { fetchBanners, siteLabel, httpUrl } from './data.js';
+import { createVillage } from './village.js';
 import { mountPanel } from './panel.js';
+import { BOIL } from './house-art.js';
 import { getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError, rememberReturnPath } from '../content/supabase.js';
 
-const HINT_KEY = 'hsh:nbh-hint';
+const BOIL_MS = 190;
 
 function build() {
   const root = document.createElement('section');
   root.className = 'nbh';
   root.hidden = true;
+  root.dataset.boil = '0';
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-labelledby', 'nbh-title');
@@ -25,12 +27,7 @@ function build() {
     <div class="nbh__scroll">
       <button class="nbh__home" type="button"><span aria-hidden="true">←</span> home</button>
       <h2 class="nbh__title" id="nbh-title">neighbor</h2>
-      <div class="nbh__scene" role="group" aria-label="이웃 간판 — 좌우로 끌면 집이 살짝 돌아가요">
-        <p class="nbh__hint" aria-hidden="true" hidden>
-          <svg viewBox="0 0 120 22"><path d="M8 13C30 7 88 7 112 13"/><path d="M15 6.5L7.5 13.2L15.5 18.4"/><path d="M105 6.8L112.6 13.3L104.6 18.6"/></svg>
-          <span>끌어서 돌려 보기</span>
-        </p>
-      </div>
+      <div class="nbh__village" role="group" aria-label="이웃 마을 — 집을 고르면 그 집의 배너가 보여요"></div>
       <footer class="nbh__foot">
         <p class="nbh__msg" role="status" aria-live="polite" hidden></p>
         <div class="nbh__owner">
@@ -50,7 +47,7 @@ function build() {
  */
 export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   let root = null;
-  let house = null;
+  let village = null;
   let panel = null;
   let banners = [];
   let state = 'loading';
@@ -61,7 +58,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   let onPage = () => {};
   let hiding = 0;
   let back = null;
-  let hintTimer = 0;
+  let boilTimer = 0;
   const authError = consumeAuthError();
 
   const $ = (q) => root.querySelector(q);
@@ -77,11 +74,13 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     href: httpUrl(b.url) || '',
     image: httpUrl(b.image_url) || '',
     label: siteLabel(b),
+    house: b.house ?? null,
+    banner: b,
   }));
 
   const paint = () => {
-    house?.render({ items: items(), state, editing });
-    $('.nbh__scene').setAttribute('aria-busy', String(state === 'loading'));
+    village?.render({ items: items(), state, editing });
+    $('.nbh__village').setAttribute('aria-busy', String(state === 'loading'));
   };
 
   // quiet — 다시 열 때는 지난 목록을 그대로 두고 뒤에서 새로 받는다
@@ -105,24 +104,6 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     $('[data-act="requests"]').hidden = !session.owner;
   };
 
-  // ---------- 안내 — 처음 한 번만, 몇 초 뒤 또는 처음 돌리면 사라진다 ----------
-
-  const hideHint = () => {
-    clearTimeout(hintTimer);
-    const hint = $('.nbh__hint');
-    if (hint.hidden) return;
-    hint.classList.add('is-gone');
-    setTimeout(() => { hint.hidden = true; hint.classList.remove('is-gone'); }, reduced ? 0 : 400);
-  };
-  const showHint = () => {
-    let seen = false;
-    try { seen = sessionStorage.getItem(HINT_KEY) === '1'; sessionStorage.setItem(HINT_KEY, '1'); } catch { /* 이번 한 번 */ }
-    if (seen) return;
-    const hint = $('.nbh__hint');
-    hint.hidden = false;
-    hintTimer = setTimeout(hideHint, 4200);
-  };
-
   // ---------- 주인 ----------
 
   // edit — 로그인 안 했으면 Google 로, 주인이면 고치기 모드
@@ -141,25 +122,11 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       return;
     }
     if (!session.owner) { say('사이트 주인만 고칠 수 있어요.'); return; }
-    say('');
+    say('집을 누르면 그 집을 고칠 수 있어요.');
     editing = true;
     paintOwner();
     paint();
     panel.refreshCount();
-  };
-
-  const remove = async (id) => {
-    const b = banners.find((x) => String(x.id) === String(id));
-    if (!b || !confirm(`'${siteLabel(b)}' 배너를 내릴까요?`)) return;
-    try {
-      await deleteBanner(session.user.id, b);
-    } catch (e) {
-      console.error(e);
-      say('삭제하지 못했어요.');
-      return;
-    }
-    say('');
-    await load();
   };
 
   // 로그인돼 있으면 조용히 주인인지 본다(받은 신청 수)
@@ -175,16 +142,14 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   // ---------- 배너 교환 ----------
 
   let mailing = false;
-  const openExchange = async ({ animate = true } = {}) => {
+  const openExchange = async () => {
     if (panel.mode === 'exchange' || mailing) return;
-    hideHint();
-    if (animate) {
-      mailing = true;
-      await house.mailOut();
-      mailing = false;
-      if (!root || root.hidden) return;
-    }
-    panel.open('exchange', house.mail);
+    village?.close();
+    mailing = true;
+    await village.mailOut();
+    mailing = false;
+    if (!root || root.hidden) return;
+    panel.open('exchange', village.mail);
     onPage('banner');
   };
 
@@ -208,10 +173,8 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       if (act === 'add') panel.open('add', e.target.closest('button'));
       if (act === 'retry') load();
       if (act === 'requests') { panel.open('exchange', e.target.closest('button')); onPage('banner'); setTimeout(() => panel.showRequests(), 60); }
-      const del = e.target.closest('[data-del]');
-      if (del) remove(del.dataset.del);
     });
-    // 캔버스 대신 DOM 이지만 포커스가 화면 밖으로 갈 수 있어 문서에서 받는다
+    // 포커스가 화면 밖으로 갈 수 있어 문서에서 받는다(배너 미리보기 Esc 는 village.js 가 먼저)
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !root || root.hidden || root.classList.contains('is-closing')) return;
       e.preventDefault();
@@ -236,14 +199,21 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       root.hidden = false;
       if (cover) cover.inert = true;
       document.documentElement.classList.add('hsh-nbh-on');
-      const scroller = $('.nbh__scroll');
-      house = createHouse($('.nbh__scene'), scroller, {
+      village = createVillage($('.nbh__village'), {
         reduced,
         onMail: () => openExchange(),
-        onTurn: () => hideHint(),
+        onEdit: (item, from) => panel.open('house', from, { item }),
       });
-      $('.nbh__scene').hshHouse = house; // 시험이 각도를 읽고 돌린다
-      scroller.scrollTop = 0;
+      $('.nbh__village').hshVillage = village; // 시험이 배치를 읽는다
+      if (!reduced) {
+        let k = 0;
+        boilTimer = setInterval(() => {
+          if (document.hidden) return;
+          k = (k + 1) % BOIL;
+          root.dataset.boil = String(k);
+        }, BOIL_MS);
+      }
+      $('.nbh__scroll').scrollTop = 0;
       paint();
       void root.offsetWidth;
       root.classList.add('is-open');
@@ -255,7 +225,6 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       } else {
         load({ quiet: true });
       }
-      showHint();
       this.page(page);
     },
     /** 주소가 바뀌었을 때(뒤로 · 앞으로 · 새로고침) — 패널만 여닫는다 */
@@ -263,10 +232,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       if (!root || root.hidden) return;
       if (page === 'banner') {
         if (panel.mode === 'exchange') return;
-        // 주소로 바로 왔으면 우체통이 보이는 맨 아래로
-        const scroller = $('.nbh__scroll');
-        requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
-        panel.open('exchange', house?.mail || null);
+        panel.open('exchange', village?.mail || null);
       } else if (panel.mode) {
         panel.close({ silent: true });
       }
@@ -274,11 +240,11 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     hide({ instant = false } = {}) {
       if (!root || root.hidden) return;
       panel.close({ silent: true });
-      clearTimeout(hintTimer);
-      $('.nbh__hint').hidden = true;
-      house?.dispose();
-      house = null;
-      delete $('.nbh__scene').hshHouse;
+      clearInterval(boilTimer);
+      root.dataset.boil = '0';
+      village?.dispose();
+      village = null;
+      delete $('.nbh__village').hshVillage;
       editing = false;
       paintOwner();
       if (cover) cover.inert = false;

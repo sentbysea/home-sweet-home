@@ -4,9 +4,12 @@
 //      신청은 대기 목록으로만 — 공개 이웃 목록에는 주인이 승인해야 걸린다.
 //      입력 검사(칸마다 안내) · 이미지가 실제로 열리는지 · 보내는 동안 다시 못 누름 · 실패하면 그대로 두고 다시 시도 안내.
 //   ③ 받은 신청(주인만): 미리보기 · 메시지 · 승인 / 거절.
-//   주인의 '+ add banner'(직접 걸기)도 같은 패널을 쓴다(mode 'add').
+//   ④ 우리 집 꾸미기(customizer.js) — 신청에 집 모양을 같이 보낸다. 승인하면 그 모습으로 마을에.
+//   주인의 '+ add banner'(직접 걸기 · mode 'add')와 이웃집 고치기(mode 'house' — 모양 · 색 · 기본 모양으로 · 내리기)도 같은 패널.
 
-import { MY_BANNER, bannerCode, httpUrl, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner } from './data.js';
+import { MY_BANNER, bannerCode, httpUrl, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, deleteBanner } from './data.js';
+import { mountCustomizer } from './customizer.js';
+import { houseSvg, normalizeHouse, defaultHouse, randomHouse } from './house-art.js';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const SENT_KEY = 'hsh:nbh-sent';
@@ -77,7 +80,7 @@ function markup() {
         </section>
         <section class="nbh-sec" data-mode="exchange" aria-labelledby="nbh-apply-h">
           <h4 class="nbh-tag" id="nbh-apply-h" style="--c:var(--hsh-pink)">교환 신청</h4>
-          <p class="nbh-sec__note">신청하면 주인이 확인한 뒤 이웃 간판으로 걸려요.</p>
+          <p class="nbh-sec__note">신청하면 주인이 확인한 뒤 마을에 이웃집으로 지어져요.</p>
           <form class="nbh-form" data-form="apply" novalidate>
             <label class="nbh-field"><span class="nbh-field__k">사이트 이름</span>
               <input name="name" maxlength="40" autocomplete="off" required aria-describedby="nbh-e-name"><small class="nbh-field__err" id="nbh-e-name"></small></label>
@@ -86,6 +89,7 @@ function markup() {
             <label class="nbh-field"><span class="nbh-field__k">배너 이미지 주소</span>
               <input name="image" type="url" inputmode="url" autocomplete="off" placeholder="https://" required aria-describedby="nbh-e-image"><small class="nbh-field__err" id="nbh-e-image"></small></label>
             <div class="nbh-form__preview" hidden><img alt="신청할 배너 미리보기"></div>
+            <div class="nbh-field"><span class="nbh-field__k">우리 집 꾸미기 <em>승인되면 마을에 이 모습으로 지어져요</em></span><div data-diy="apply"></div></div>
             <label class="nbh-field"><span class="nbh-field__k">메시지 <em>선택</em></span>
               <textarea name="message" maxlength="300" rows="2" aria-describedby="nbh-e-message"></textarea><small class="nbh-field__err" id="nbh-e-message"></small></label>
             <p class="nbh-form__msg" role="status" aria-live="polite"></p>
@@ -101,19 +105,31 @@ function markup() {
           <p class="nbh-review__msg" role="status" aria-live="polite"></p>
         </section>
         <section class="nbh-sec" data-mode="add" hidden aria-labelledby="nbh-add-h">
-          <h4 class="nbh-tag" id="nbh-add-h" style="--c:var(--hsh-mint)">간판 걸기</h4>
+          <h4 class="nbh-tag" id="nbh-add-h" style="--c:var(--hsh-mint)">이웃집 짓기</h4>
           <form class="nbh-form" data-form="add" novalidate>
             <label class="nbh-field"><span class="nbh-field__k">사이트 이름 <em>선택</em></span><input name="name" maxlength="40" autocomplete="off"></label>
             <label class="nbh-field"><span class="nbh-field__k">사이트 주소</span><input name="url" type="url" inputmode="url" placeholder="https://" required></label>
             <label class="nbh-field"><span class="nbh-field__k">배너 이미지 주소</span><input name="image" type="url" inputmode="url" placeholder="이미지 주소 또는 아래 파일"></label>
             <label class="nbh-file"><input name="file" type="file" accept="image/*"><span>파일 올리기</span></label>
             <div class="nbh-form__preview" hidden><img alt="걸 배너 미리보기"></div>
+            <div class="nbh-field"><span class="nbh-field__k">집 모양</span><div data-diy="add"></div></div>
             <p class="nbh-form__msg" role="status" aria-live="polite"></p>
             <div class="nbh-form__actions">
               <button class="nbh-btn is-ghost" type="button" data-panel-close>취소</button>
               <button class="nbh-btn" type="submit">저장</button>
             </div>
           </form>
+        </section>
+        <section class="nbh-sec" data-mode="house" hidden aria-labelledby="nbh-house-h">
+          <h4 class="nbh-tag" id="nbh-house-h" style="--c:var(--hsh-lilac)">집 고치기</h4>
+          <p class="nbh-sec__note nbh-house__who"></p>
+          <div data-diy="house"></div>
+          <p class="nbh-form__msg nbh-house__msg" role="status" aria-live="polite"></p>
+          <div class="nbh-form__actions">
+            <button class="nbh-btn is-ghost" type="button" data-house="delete">내리기</button>
+            <button class="nbh-btn is-ghost" type="button" data-house="reset">기본 모양으로</button>
+            <button class="nbh-btn" type="button" data-house="save">저장</button>
+          </div>
         </section>
       </div>
     </section>`;
@@ -174,6 +190,17 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   let back = null;
   let sending = false;
   let uploaded = null; // { path, url } — 주인 간판 걸기에서 올린 파일
+  let editing = null; // 고치는 이웃집(mode 'house')
+
+  // 우리 집 꾸미기 — 신청 · 간판 걸기 · 집 고치기
+  const imageOf = (form) => () => httpUrl(withScheme(form.image.value)) || '';
+  const diyApply = mountCustomizer(root.querySelector('[data-diy="apply"]'), { imageUrl: imageOf(apply) });
+  const diyAdd = mountCustomizer(root.querySelector('[data-diy="add"]'), { imageUrl: () => httpUrl(withScheme(add.image.value)) || uploaded?.url || '' });
+  const houseBox = root.querySelector('[data-mode="house"]');
+  const houseMsg = houseBox.querySelector('.nbh-house__msg');
+  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => editing?.image || '' });
+  apply.image.addEventListener('input', () => diyApply.bannerChanged());
+  add.image.addEventListener('input', () => diyAdd.bannerChanged());
 
   // ---------- 복사 ----------
 
@@ -239,7 +266,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   };
 
   const RESULT = {
-    ok: ['신청했어요 ♡ 주인이 확인하면 이웃 간판으로 걸려요.', 'done'],
+    ok: ['신청했어요 ♡ 주인이 확인하면 마을에 우리 집이 지어져요.', 'done'],
     pending: ['이미 신청된 사이트예요. 주인이 확인할 때까지 기다려 주세요.', 'done'],
     listed: ['이미 이웃 목록에 걸려 있는 사이트예요.', 'done'],
     busy: ['지금은 신청이 많아요. 잠시 뒤 다시 보내 주세요.', 'error'],
@@ -269,7 +296,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     say(applyMsg, '보내는 중…');
     let result;
     try {
-      result = await submitRequest(v);
+      result = await submitRequest({ ...v, house: diyApply.value });
     } catch (err) {
       console.error(err);
       setSending(false);
@@ -307,6 +334,8 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     againBtn.hidden = true;
     say(applyMsg, '');
     applyPreview.set('');
+    diyApply.set(randomHouse());
+    diyApply.bannerChanged();
   };
   againBtn.addEventListener('click', () => { resetApply(); apply.elements.name.focus(); });
 
@@ -326,6 +355,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
       return `
       <li class="nbh-req" data-id="${esc(r.id)}">
         <div class="nbh-req__img"><img src="${esc(httpUrl(r.image_url) || '')}" alt="${esc(r.site_name)} 배너" loading="lazy" decoding="async"></div>
+        <div class="nbh-req__house" title="신청한 집">${houseSvg(normalizeHouse(r.house) || defaultHouse(r.site_url), { scale: 0.9, seed: 5, cls: 'nbh-req__art' }).svg}</div>
         <p class="nbh-req__name">${esc(r.site_name)} <a href="${esc(url || '#')}" target="_blank" rel="noopener noreferrer">${esc(r.site_url)} ↗</a></p>
         ${r.message ? `<p class="nbh-req__msg">${esc(r.message)}</p>` : ''}
         <p class="nbh-req__date">${date(r.created_at)}</p>
@@ -366,7 +396,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
       const r = await reviewRequest(id, ok);
       requests = requests.filter((x) => Number(x.id) !== id);
       paintReview();
-      say(reviewMsg, r === 'approved' ? '간판을 걸었어요.' : r === 'rejected' ? '거절했어요.' : '이미 처리된 신청이에요.', 'done');
+      say(reviewMsg, r === 'approved' ? '마을에 집을 지었어요.' : r === 'rejected' ? '거절했어요.' : '이미 처리된 신청이에요.', 'done');
       if (r === 'approved') await onChanged();
     } catch (err) {
       console.error(err);
@@ -412,7 +442,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     const submit = add.querySelector('[type="submit"]');
     submit.disabled = true;
     try {
-      await addBanner(s.user.id, { name: add.elements.name.value.trim(), url, imageUrl, imagePath: address ? null : uploaded.path }, banners());
+      await addBanner(s.user.id, { name: add.elements.name.value.trim(), url, imageUrl, imagePath: address ? null : uploaded.path, house: diyAdd.value }, banners());
     } catch (err) {
       console.error(err);
       submit.disabled = false;
@@ -426,6 +456,35 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     add.reset();
     addPreview.set('');
     say(addMsg, '');
+    close();
+    await onChanged();
+  });
+
+  // ---------- 이웃집 고치기(주인) ----------
+
+  const houseBusy = (on) => houseBox.querySelectorAll('[data-house]').forEach((b) => { b.disabled = on; });
+  houseBox.addEventListener('click', async (e) => {
+    const act = e.target.closest('[data-house]')?.dataset.house;
+    if (!act || !editing) return;
+    if (act === 'reset') { diyHouse.set(defaultHouse(editing.id)); say(houseMsg, '기본 모양으로 바꿨어요. 저장을 눌러야 마을에 반영돼요.'); return; }
+    if (act === 'delete' && !confirm(`'${editing.label}' 이웃집을 내릴까요?`)) return;
+    houseBusy(true);
+    say(houseMsg, act === 'save' ? '저장하는 중…' : '내리는 중…');
+    try {
+      if (act === 'save') {
+        const same = JSON.stringify(diyHouse.value) === JSON.stringify(defaultHouse(editing.id));
+        await setHouse(editing.id, same ? null : diyHouse.value); // 기본 모양 그대로면 비워 둔다(id 로 늘 같은 모양)
+      } else {
+        await deleteBanner(session().user.id, editing.banner);
+      }
+    } catch (err) {
+      console.error(err);
+      houseBusy(false);
+      say(houseMsg, act === 'save' ? '저장하지 못했어요. 다시 눌러 주세요.' : '내리지 못했어요. 다시 눌러 주세요.', 'error');
+      return;
+    }
+    houseBusy(false);
+    say(houseMsg, '');
     close();
     await onChanged();
   });
@@ -468,13 +527,24 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
 
   return {
     get mode() { return mode; },
-    /** @param {'exchange' | 'add'} next  @param {Element | null} from 닫으면 포커스를 돌려줄 곳 */
-    open(next, from = null) {
+    /**
+     * @param {'exchange' | 'add' | 'house'} next  @param {Element | null} from 닫으면 포커스를 돌려줄 곳
+     * @param {{ item?: { id: any, label: string, image: string, house?: object | null, banner: object } }} extra  house — 고칠 이웃집
+     */
+    open(next, from = null, extra = {}) {
+      if (next === 'house') {
+        editing = extra.item;
+        diyHouse.set(normalizeHouse(editing.house) || defaultHouse(editing.id));
+        diyHouse.bannerChanged();
+        houseBox.querySelector('.nbh-house__who').textContent = editing.label;
+        say(houseMsg, '');
+        houseBusy(false);
+      }
       if (mode === next && !root.hidden) return;
       if (mode === 'add' && next !== 'add') discardUpload();
       mode = next;
       back = from;
-      title.textContent = next === 'add' ? '간판 걸기' : '배너 교환';
+      title.textContent = next === 'add' ? '이웃집 짓기' : next === 'house' ? '이웃집 고치기' : '배너 교환';
       root.querySelectorAll('[data-mode]').forEach((s) => { s.hidden = s.dataset.mode !== next || (s.hasAttribute('data-owner') && !session().owner); });
       say(addMsg, '');
       root.hidden = false;

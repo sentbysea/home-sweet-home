@@ -3,8 +3,9 @@
 //   고치기 · 신청 확인: 사이트 주인만 — supabase-js 클라이언트(content/supabase.js)로.
 //     배너 추가 · 삭제는 hongjiwon.love 의 posts-view-banner-form.js 와 같다
 //     (이미지 파일은 user-banners 버킷 {user_id}/category-banners/{uuid}/image).
-//   신청은 banner_requests 표 — 표는 직접 열지 않고 RPC 셋으로만
-//     (web 저장소 supabase/migrations/20261026100000_banner_requests.sql).
+//   신청은 banner_requests 표 — 표는 직접 열지 않고 RPC 로만
+//     (web 저장소 supabase/migrations/20261026100000_banner_requests.sql · 20261027100000_neighbor_houses.sql).
+//   집 모양은 banners.house · banner_requests.house(jsonb). house 열이 아직 없는 DB 면 열 없이 다시 읽는다(모두 기본 모양).
 
 import { SUPABASE_URL, SUPABASE_KEY, getClient } from '../content/supabase.js';
 
@@ -53,8 +54,10 @@ const rest = (path, init = {}) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
 });
 
 export async function fetchBanners() {
-  const q = `select=id,name,url,image_url,image_path,sort_order&category_id=eq.${CATEGORY_ID}&order=sort_order.asc`;
-  const res = await rest(`banners?${q}`);
+  const q = (cols) => `select=${cols}&category_id=eq.${CATEGORY_ID}&order=sort_order.asc`;
+  const cols = 'id,name,url,image_url,image_path,sort_order';
+  let res = await rest(`banners?${q(`${cols},house`)}`);
+  if (res.status === 400) res = await rest(`banners?${q(cols)}`); // house 열 적용 전
   if (!res.ok) throw new Error(`banners ${res.status}`);
   return res.json();
 }
@@ -64,10 +67,10 @@ export async function fetchBanners() {
  * @returns {Promise<'ok' | 'pending' | 'listed' | 'busy' | 'unavailable' | 'invalid:site_name' | 'invalid:site_url' | 'invalid:image_url' | 'invalid:message'>}
  *   네트워크 · 서버 오류는 throw(다시 시도 안내)
  */
-export async function submitRequest({ name, url, image, message }) {
+export async function submitRequest({ name, url, image, message, house = null }) {
   const res = await rest('rpc/submit_banner_request', {
     method: 'POST',
-    body: JSON.stringify({ p_site_name: name, p_site_url: url, p_image_url: image, p_message: message || null }),
+    body: JSON.stringify({ p_site_name: name, p_site_url: url, p_image_url: image, p_message: message || null, p_house: house }),
   });
   const body = await res.json().catch(() => null);
   if (res.ok) return body;
@@ -110,7 +113,15 @@ export async function removeImage(userId, path) {
   await client.storage.from(BUCKET).remove([storagePath(userId, path)]);
 }
 
-export async function addBanner(userId, { name, url, imageUrl, imagePath }, banners) {
+/** 주인 — 이웃집 모양 고치기(null 이면 기본 모양) */
+export async function setHouse(id, house) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('set_banner_house', { p_id: id, p_house: house });
+  if (error) throw error;
+  if (data !== 'ok') throw new Error(`set_banner_house ${data}`);
+}
+
+export async function addBanner(userId, { name, url, imageUrl, imagePath, house = null }, banners) {
   const client = await getClient();
   const { error } = await client.from('banners').insert({
     category_id: CATEGORY_ID,
@@ -120,6 +131,7 @@ export async function addBanner(userId, { name, url, imageUrl, imagePath }, bann
     image_url: imageUrl,
     image_path: imagePath || null,
     sort_order: banners.length ? Math.max(...banners.map((b) => b.sort_order ?? 0)) + 1 : 0,
+    ...(house ? { house } : {}),
   });
   if (error) throw error;
 }

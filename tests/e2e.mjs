@@ -62,6 +62,19 @@ const IMG = {
 };
 const imgTag = (id) => `<img src="/api/post-cover?image=${id}" alt="" data-imory-image="${id}">`;
 
+// 저장된 집 모양(banners.house) — 마을에 그대로 나와야 한다
+const SAVED_HOUSE = { v: 1, body: 'wide', roof: 'round', door: 'side', window: 'two', deco: 'pot', wall: '#cfe0fb', roofColor: '#7fa7d9', doorColor: '#e2b36b' };
+/** web supabase/migrations/20261027100000_neighbor_houses.sql 의 banner_house_ok 와 같은 꼴 */
+function houseOk(h) {
+  if (h == null) return true;
+  if (typeof h !== 'object' || Array.isArray(h) || JSON.stringify(h).length > 400) return false;
+  const keys = ['v', 'body', 'roof', 'door', 'window', 'deco', 'wall', 'roofColor', 'doorColor'];
+  const hex = (c) => /^#[0-9a-f]{6}$/i.test(c || '');
+  return Object.keys(h).every((k) => keys.includes(k)) && ['cozy', 'tall', 'wide', 'two'].includes(h.body) && ['tri', 'round', 'trap'].includes(h.roof)
+    && ['arch', 'square', 'side'].includes(h.door) && ['one', 'two', 'round', 'cross'].includes(h.window) && ['chimney', 'dormer', 'pot', 'none'].includes(h.deco)
+    && hex(h.wall) && hex(h.roofColor) && hex(h.doorColor);
+}
+
 function seed() {
   const db = mock.createMockDb();
   const t = (d) => `2026-10-${String(d).padStart(2, '0')}T03:00:00.000Z`;
@@ -107,10 +120,10 @@ function seed() {
   preset(201, 'Active', true, { bodySize: 15, exportWidth: 1000, ratio: 'auto', bodyFont: 'pretendard', titleEnabled: true });
   preset(202, 'Explicit', false, { bodySize: 19, exportWidth: 1440, ratio: '1:1', bodyColor: '#123456' });
   preset(203, 'Other', false, { bodySize: 13, exportWidth: 800, ratio: 'auto' });
-  // neighbor — 배너 카테고리(4) 이웃 간판. 셋째는 이미지가 없는 주소(못 불러올 때)
+  // neighbor — 배너 카테고리(4) 이웃집. 둘째는 저장된 집 모양, 셋째는 이미지가 없는 주소(못 불러올 때)
   db.banners.push(
     { id: 1, category_id: 4, user_id: OWNER_ID, name: '', url: 'https://hongjiwon.love', image_url: 'https://img.test/love.png', image_path: null, sort_order: 0 },
-    { id: 2, category_id: 4, user_id: OWNER_ID, name: '럭키', url: 'https://luvlog.me/lucky', image_url: 'https://img.test/lucky.png', image_path: null, sort_order: 1 },
+    { id: 2, category_id: 4, user_id: OWNER_ID, name: '럭키', url: 'https://luvlog.me/lucky', image_url: 'https://img.test/lucky.png', image_path: null, sort_order: 1, house: SAVED_HOUSE },
     { id: 3, category_id: 4, user_id: OWNER_ID, name: '', url: 'https://broken.example/home/', image_url: 'https://img.test/missing.png', image_path: null, sort_order: 2 },
     { id: 9, category_id: 9, user_id: OWNER_ID, name: '다른 칸', url: 'https://other.example', image_url: 'https://img.test/love.png', image_path: null, sort_order: 0 },
   );
@@ -134,10 +147,20 @@ function seed() {
       if (nm.length < 1 || nm.length > 40) { await bad('site_name'); return true; }
       if (!/^https?:\/\/[^\s/?#]+\.[^\s/?#]+(\S*)$/i.test(url)) { await bad('site_url'); return true; }
       if (!/^https?:\/\/\S+$/i.test(img)) { await bad('image_url'); return true; }
+      if (!houseOk(args.p_house)) { await bad('house'); return true; }
       if (db.banners.some((b) => b.category_id === 4 && key(b.url) === key(url))) { await reply(route, 200, 'listed'); return true; }
       if (db.banner_requests.some((r) => r.status === 'pending' && key(r.site_url) === key(url))) { await reply(route, 200, 'pending'); return true; }
-      db.banner_requests.push({ id: db.banner_requests.length + 1, site_name: nm, site_url: url, image_url: img, message: String(args.p_message || '').trim() || null, status: 'pending', created_at: new Date().toISOString() });
+      db.banner_requests.push({ id: db.banner_requests.length + 1, site_name: nm, site_url: url, image_url: img, message: String(args.p_message || '').trim() || null, house: args.p_house ?? null, status: 'pending', created_at: new Date().toISOString() });
       await reply(route, 200, 'ok');
+      return true;
+    }
+    if (name === 'set_banner_house') {
+      if (uid !== OWNER_ID) { await reply(route, 403, { code: '42501', message: 'owner only' }); return true; }
+      if (!houseOk(args.p_house)) { await reply(route, 400, { code: '22023', message: 'house' }); return true; }
+      const b = db.banners.find((x) => x.id === Number(args.p_id) && x.category_id === 4);
+      if (b) b.house = args.p_house ?? null;
+      db.houseCalls = (db.houseCalls || 0) + 1;
+      await reply(route, 200, b ? 'ok' : 'missing');
       return true;
     }
     if (name === 'list_banner_requests' || name === 'review_banner_request') {
@@ -151,7 +174,7 @@ function seed() {
       if (r.status !== 'pending') { await reply(route, 200, r.status); return true; }
       if (args.p_approve && !db.banners.some((b) => b.category_id === 4 && key(b.url) === key(r.site_url))) {
         const max = Math.max(-1, ...db.banners.filter((b) => b.category_id === 4).map((b) => b.sort_order));
-        db.banners.push({ id: ++db.seq.banners, category_id: 4, user_id: OWNER_ID, name: r.site_name, url: r.site_url, image_url: r.image_url, image_path: null, sort_order: max + 1 });
+        db.banners.push({ id: ++db.seq.banners, category_id: 4, user_id: OWNER_ID, name: r.site_name, url: r.site_url, image_url: r.image_url, image_path: null, sort_order: max + 1, house: r.house ?? null });
       }
       r.status = args.p_approve ? 'approved' : 'rejected';
       await reply(route, 200, r.status);
@@ -240,6 +263,9 @@ const webServer = await startStaticServer(WEB_PORT, {
   },
 });
 const vibeServer = await startStaticServer(VIBE_PORT, { root: ROOT });
+// 다른 출처 · 읽기 허용 헤더 없는 이미지(배너 색을 못 읽는 경우)
+const PLAIN_ORIGIN = `http://127.0.0.1:${VIBE_PORT + 1}`;
+const plainServer = await startStaticServer(VIBE_PORT + 1, { root: path.join(WEB, 'images') });
 
 const playwright = await loadPlaywright(BROWSER);
 const browser = await playwright[BROWSER].launch();
@@ -254,7 +280,9 @@ async function open(user, viewport = { width: 1280, height: 900 }, extra = {}) {
     const name = new URL(route.request().url()).pathname;
     if (name.includes('missing')) return route.fulfill({ status: 404, body: '' });
     const color = name.includes('lucky') ? [120, 160, 240] : name.includes('new') ? [240, 200, 120] : [250, 210, 225];
-    return route.fulfill({ status: 200, contentType: 'image/png', body: png(200, 40, color) });
+    // nocors — 다른 출처에서 색을 읽지 못하게 막은 이미지(보이기는 한다)
+    const headers = name.includes('nocors') ? {} : { 'access-control-allow-origin': '*' };
+    return route.fulfill({ status: 200, contentType: 'image/png', headers, body: png(200, 40, color) });
   });
   const page = await context.newPage();
   const errors = [];
@@ -633,7 +661,7 @@ async function routing() {
   const nbhOpen = () => page.$eval('.nbh', (n) => !n.hidden && n.classList.contains('is-open')).catch(() => false);
   const panelOpen = () => page.$eval('.nbh-panel', (n) => !n.hidden).catch(() => false);
   await page.locator('.hsh-sticker[data-label="neighbor"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
-  await page.waitForSelector('.nbh.is-open .nbh-sign', { state: 'attached', timeout: 10000 });
+  await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 10000 });
   check('neighbor 버튼 → /neighbor(창 대신 집 화면)', at() === '/neighbor' && !(await winOpen()), at());
   await page.$eval('.nbh__scroll', (s) => { s.scrollTop = s.scrollHeight; });
   await clickMail(page);
@@ -1049,15 +1077,13 @@ async function archive() {
   await nw.context.close();
 }
 
-// ---------- neighbor — 이웃 간판 집 ----------
-//   흰 화면 가운데 손그림 3D 집(CSS 3D) · 한 줄 간판 · 맨 아래 우체통 → 배너 교환 패널(/neighbor/banner).
-//   간판 순서 · 크기 · 둥실거림 · 위글 · 새 탭 · 끌어 돌리기(±12°) · 끈 뒤 링크 막힘 · 휴대폰 세로 스크롤 우선 · 화면 폭 안 · 우체통 자리 ·
-//   복사 · 신청(검사 · 중복 · 다시 시도) · 신청은 공개 목록에 바로 안 걸림 · 주인 확인(승인 · 거절) · 주인 고치기 ·
-//   빈 집 · 하나 · 많을 때(덩어리만 그림) · 모션 줄이기.
+// ---------- neighbor — 손그림 마을 ----------
+//   가운데 홍차네 집 + 이웃집(배너 카테고리, 정렬 순서) · 집 모양(저장된 것 / id 로 정한 기본) · 겹치지 않는 배치 · 새로고침해도 같은 배치 ·
+//   둥실거림 · 위글 · 집을 고르면 배너 하나(PC 올리기 · 포커스 · 누르면 새 탭 / 휴대폰 한 번 누르면 배너 · 방문하기) · 잘리지 않는 자리 ·
+//   우체통 → 배너 교환(내 배너 복사 · 신청 + 우리 집 꾸미기 · 배너 색 · 다시 시도) · 주인(승인하면 그 모양 · 집 고치기 · 내리기 · 걸기) ·
+//   3 · 12 · 30 집 · 모션 줄이기. 모두 흉내 DB — 운영에 쓰지 않는다.
 
 const MY_IMAGE = `https://iokdgqzfprtggsnrusez.supabase.co/storage/v1/object/public/user-banners/${OWNER_ID}/banner`;
-const nbhAngle = (page) => page.$eval('.nbh__scene', (s) => s.hshHouse?.angle ?? null);
-const signLabels = (page) => page.$$eval('.nbh-sign', (a) => a.map((x) => x.querySelector('.nbh-sign__cap').textContent.replace('↗', '').trim()));
 const watchLoader = (context) => context.addInitScript(() => {
   window.__loaderSeen = false;
   const look = () => {
@@ -1067,41 +1093,31 @@ const watchLoader = (context) => context.addInitScript(() => {
   };
   requestAnimationFrame(look);
 });
-const toBottom = async (page) => { await page.$eval('.nbh__scroll', (s) => { s.scrollTop = s.scrollHeight; }); await page.waitForTimeout(350); };
-const toTop = async (page) => { await page.$eval('.nbh__scroll', (s) => { s.scrollTop = 0; }); await page.waitForTimeout(350); };
+const toBottom = async (page) => { await page.$eval('.nbh__scroll', (s) => { s.scrollTop = s.scrollHeight; }); await page.waitForTimeout(300); };
 const rects = (page, sel) => page.$$eval(sel, (els) => els.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }).filter((r) => r.w > 0));
-const union = (list) => list.reduce((u, r) => ({ x: Math.min(u.x, r.x), y: Math.min(u.y, r.y), r: Math.max(u.r, r.r), b: Math.max(u.b, r.b) }), { x: Infinity, y: Infinity, r: -Infinity, b: -Infinity });
-/** 지금 그리는 장면 전체(선 · 간판 · 우체통)의 좌우 끝 */
-const sceneSpan = (page) => page.evaluate(() => {
-  let l = Infinity;
-  let r = -Infinity;
-  document.querySelectorAll('.nbh-chunk').forEach((c) => {
-    if (c.style.display === 'none') return;
-    c.querySelectorAll('.nbh-plane, .nbh-sign__face, .nbh-box__face, .nbh-mail__tip').forEach((el) => {
-      const b = el.getBoundingClientRect();
-      if (!b.width) return;
-      l = Math.min(l, b.left);
-      r = Math.max(r, b.right);
-    });
-  });
-  return { l: Math.round(l), r: Math.round(r), vw: innerWidth };
+const center = (r) => ({ x: (r.x + r.r) / 2, y: (r.y + r.b) / 2 });
+const clickMail = async (page) => { const m = (await rects(page, '.nbh-mailbox__art'))[0]; await page.mouse.click(m.x + m.w / 2, m.y + m.h * 0.45); };
+const homeLabels = (page) => page.$$eval('.nbh-home', (b) => b.map((x) => x.getAttribute('aria-label').replace(/ — .*$/, '')));
+const popOpen = (page) => page.$eval('.nbh-pop', (p) => !p.hidden && p.classList.contains('is-open'));
+const villageReady = (page) => page.waitForFunction(() => document.querySelector('.nbh__village')?.getAttribute('aria-busy') === 'false', null, { timeout: 20000 });
+/** 집 · 홍차네 집 · 우체통 · 장식 — 서로 겹치는 짝(그림 상자 기준, 2px 여유) */
+const overlaps = (page) => page.evaluate(() => {
+  const els = [...document.querySelectorAll('.nbh-home .nbh-art, .nbh-center .nbh-art, .nbh-mailbox__art, .nbh-deco')];
+  const rs = els.map((el) => el.getBoundingClientRect());
+  const bad = [];
+  for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+    const a = rs[i];
+    const b = rs[j];
+    if (a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2) bad.push([i, j]);
+  }
+  return bad;
 });
-const clickMail = async (page) => { const m = union(await rects(page, '.nbh-mail .nbh-box__face')); await page.mouse.click((m.x + m.r) / 2, (m.y + m.b) / 2); };
-/** 휴대폰 손가락 밀기(Chromium CDP 터치) */
-const swiper = async (context, page) => {
-  const cdp = await context.newCDPSession(page);
-  return async (x0, y0, x1, y1, steps = 12) => {
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
-    for (let i = 1; i <= steps; i++) {
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + ((x1 - x0) * i) / steps, y: y0 + ((y1 - y0) * i) / steps }] });
-      await page.waitForTimeout(16);
-    }
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  };
-};
-const turn = async (page, deg) => { await page.$eval('.nbh__scene', (s, d) => s.hshHouse.turn(d), deg); await page.waitForTimeout(700); };
+/** 그림 상자들이 화면 폭 안 */
+const inWidth = (page) => page.evaluate(() => [...document.querySelectorAll('.nbh-art, .nbh-mailbox__art, .nbh-deco')]
+  .every((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= document.documentElement.clientWidth; }));
+const layoutOf = (page) => page.$eval('.nbh__village', (v) => v.hshVillage.layout.map((l) => [l.kind, Math.round(l.x), Math.round(l.base)].join(':')).join('|'));
 
-async function neighborCase(device, name) {
+async function neighborVillage(device, name) {
   const d = await open(null, device ? undefined : { width: 1280, height: 860 }, device || {});
   const { page, context } = d;
   await watchLoader(context);
@@ -1109,193 +1125,133 @@ async function neighborCase(device, name) {
   const popups = [];
   context.on('page', (p) => popups.push(p));
   const at = () => new URL(page.url()).pathname;
-  const touch = device && BROWSER === 'chromium';
+  const vw = await page.evaluate(() => innerWidth);
 
   await page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
-  await page.waitForSelector('.nbh.is-open .nbh-sign', { state: 'attached', timeout: 20000 });
-  await page.waitForTimeout(700);
-  check(`${name} — /neighbor 직접 → 로딩 없이 집 화면(브라우저 창 꼴 아님)`, at() === '/neighbor' && !(await page.evaluate(() => window.__loaderSeen)) && (await page.$eval('.hsh-win', (w) => w.hidden)));
-  const labels = await signLabels(page);
-  check(`${name} — 간판은 정렬 순서대로 · 배너 카테고리만(이름 없으면 주소)`, labels.join(' / ') === 'hongjiwon.love / 럭키 / broken.example/home', labels.join(' / '));
-  check(`${name} — 처음에 '끌어서 돌려 보기' 안내`, await page.$eval('.nbh__hint', (h) => !h.hidden && h.textContent.includes('끌어서')));
-  await page.screenshot({ path: path.join(OUT, `neighbor-${name}-top.png`) });
+  await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
+  await villageReady(page);
+  await page.waitForTimeout(500);
+  check(`${name} — /neighbor 직접 → 로딩 없이 마을(브라우저 창 꼴 아님)`, at() === '/neighbor' && !(await page.evaluate(() => window.__loaderSeen)) && (await page.$eval('.hsh-win', (w) => w.hidden)));
+  const labels = await homeLabels(page);
+  check(`${name} — 이웃집은 배너 카테고리만, 정렬 순서대로(이름 없으면 주소)`, labels.join(' / ') === 'hongjiwon.love / 럭키 / broken.example/home', labels.join(' / '));
+  const homeRects = await rects(page, '.nbh-home .nbh-art');
+  const c = (await rects(page, '.nbh-center .nbh-art'))[0];
+  const town = (await rects(page, '.nbh-town'))[0];
+  check(`${name} — 홍차네 집이 가운데 · 조금 더 크다`, Math.abs(center(c).x - center(town).x) < town.w * 0.12 && homeRects.every((h) => c.w > h.w * 0.95 || c.h > h.h), JSON.stringify({ c, town }));
+  check(`${name} — '홍차네 집' 이름표`, (await page.textContent('.nbh-center__tag')).trim() === '홍차네 집');
+  check(`${name} — 집 · 우체통 · 장식이 겹치지 않고 화면 폭 안`, (await overlaps(page)).length === 0 && (await inWidth(page)), JSON.stringify(await overlaps(page)));
+  check(`${name} — 집은 누르기 편한 크기`, homeRects.every((h) => h.w >= 44 && h.h >= 44), homeRects.map((h) => Math.round(h.w)).join(','));
+  check(`${name} — 배너는 평소 숨김 · 카드 테두리 없음`, (await page.$eval('.nbh-pop', (p) => p.hidden)) && (await page.$eval('.nbh-home', (b) => getComputedStyle(b).borderTopWidth === '0px' && getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)')));
+  check(`${name} — 저장된 집 모양 그대로(럭키)`, (await page.$eval('.nbh-home[data-i="1"]', (b) => b.dataset.house)) === 'wide/round/side/two/pot/#cfe0fb/#7fa7d9/#e2b36b');
+  const looks = await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house));
+  const lay = await layoutOf(page);
+  await page.screenshot({ path: path.join(OUT, `neighbor-${name}-village.png`) });
 
-  // 간판 — 5:1 · 같은 크기 · 같은 가운데 · 읽을 수 있는 크기
-  const faces = await rects(page, '.nbh-sign__face');
-  const boxes = await page.$$eval('.nbh-sign__face', (f) => f.map((x) => parseFloat(x.style.width) / parseFloat(x.style.height)));
-  const widths = faces.map((f) => f.w);
-  const centers = faces.map((f) => (f.x + f.r) / 2);
-  const front0 = union(await rects(page, '.nbh-plane.is-front'));
-  check(`${name} — 간판 5:1 유지`, boxes.every((r) => Math.abs(r - 5) < 0.02), boxes.map((r) => r.toFixed(2)).join(','));
-  check(`${name} — 간판 크기 같다(앞뒤 차이만)`, Math.max(...widths) / Math.min(...widths) < 1.06, widths.map(Math.round).join(','));
-  check(`${name} — 간판 집 안 가운데 한 줄(작은 어긋남만)`, Math.max(...centers) - Math.min(...centers) < 20, centers.map(Math.round).join(','));
-  check(`${name} — 아담한 크기(PC 집 380~440 · 배너 230~270, 휴대폰은 집 안에 맞춰)`, device
-    ? Math.min(...widths) >= 160 && front0.x >= 16 && front0.r <= (await page.evaluate(() => innerWidth)) - 16
-    : front0.r - front0.x >= 380 && front0.r - front0.x <= 440 && Math.min(...widths) >= 230 && Math.max(...widths) <= 270,
-    JSON.stringify({ house: Math.round(front0.r - front0.x), banner: widths.map(Math.round) }));
-  const gaps = faces.slice(1).map((f, i) => f.y - faces[i].b);
-  check(`${name} — 배너 사이 빈 간격 약 24~36px(둥실거림 ±4)`, gaps.every((g) => g >= 20 && g <= 42), gaps.map(Math.round).join(','));
-  check(`${name} — 배너끼리 · 집 외곽선과 겹치지 않는다`, gaps.every((g) => g > 0) && faces.every((f) => f.x > front0.x + 8 && f.r < front0.r - 8 && f.b < front0.b - 8));
-  check(`${name} — 배너가 적으면 집 · 우체통이 한 화면에`, front0.y > 0 && front0.b < (await page.evaluate(() => innerHeight)) && union(await rects(page, '.nbh-mail .nbh-box__face')).b < (await page.evaluate(() => innerHeight)), JSON.stringify(front0));
-  check(`${name} — 이미지는 원본(자르지 않음 · 필터 없음)`, await page.$eval('.nbh-sign__face img', (img) => {
-    const s = getComputedStyle(img);
-    return img.naturalWidth === 200 && s.objectFit === 'contain' && s.filter === 'none' && s.mixBlendMode === 'normal' && s.opacity === '1';
-  }));
-  const broken = await page.$eval('.nbh-sign[data-i="2"]', (a) => ({
-    broken: a.querySelector('.nbh-sign__face').classList.contains('is-broken'),
-    alt: a.querySelector('.nbh-sign__alt').textContent,
-    href: a.href,
-    w: a.querySelector('.nbh-sign__face').getBoundingClientRect().width,
-  }));
-  check(`${name} — 이미지 실패 → 판 크기 그대로, 사이트 이름으로 방문`, broken.broken && broken.alt.includes('broken.example/home') && broken.href === 'https://broken.example/home/' && Math.abs(broken.w - widths[0]) / widths[0] < 0.06, JSON.stringify(broken));
-  check(`${name} — 선반 · 지지선 · 두꺼운 테두리 없이 떠 있다`, !(await page.$('.nbh-wire')) && (await page.$eval('.nbh-sign__face', (x) => getComputedStyle(x).borderTopWidth)) === '0px');
-  // 둥실둥실 — 집 하나 · 배너마다 다른 주기와 시작
-  const floats = await page.evaluate(() => ({
-    house: document.querySelector('.nbh-house').getAnimations().map((a) => a.effect.getTiming().duration),
-    signs: [...document.querySelectorAll('.nbh-float')].map((x) => { const a = x.getAnimations()[0]; return a ? [a.effect.getTiming().duration, a.effect.getTiming().delay] : null; }),
-  }));
-  check(`${name} — 집은 5~7초 주기로 · 배너는 각자 다른 주기로 둥실`, floats.house.length === 1 && floats.house[0] >= 5000 && floats.house[0] <= 7000
-    && floats.signs.every(Boolean) && new Set(floats.signs.map((x) => x[0])).size === floats.signs.length && new Set(floats.signs.map((x) => x[1])).size === floats.signs.length, JSON.stringify(floats));
-  // 위글 — 선 변형 4장이 190ms 마다 바뀐다(이미지 · 글자는 그대로)
+  // 둥실 · 위글 — 집마다 다른 주기, 선 변형이 돌고 한 번에 하나만, 배너 · 이름은 위글 없이
+  const bob = await page.$$eval('.nbh-home .nbh-home__art', (a) => a.map((x) => { const an = x.getAnimations()[0]; return an ? an.effect.getTiming().duration : 0; }));
+  check(`${name} — 집마다 다른 주기로 둥실`, bob.every((x) => x > 3000) && new Set(bob).size === bob.length, bob.join(','));
   const boils = new Set();
-  for (let i = 0; i < 8; i++) { boils.add(await page.$eval('.nbh-house', (h) => h.dataset.boil)); await page.waitForTimeout(110); }
-  const shown = await page.$$eval('.nbh-plane.is-front', (p) => p.map((x) => [...x.querySelectorAll('.nbh-v')].filter((g) => getComputedStyle(g).display !== 'none').length));
-  check(`${name} — 손그림 위글(선 변형이 돌고, 한 번에 하나만)`, boils.size >= 3 && shown.every((n) => n === 1), JSON.stringify({ boils: [...boils], shown }));
-  check(`${name} — 배너 이미지는 위글 · 필터 없이 선명하게`, await page.$$eval('.nbh-sign__face img', (imgs) => imgs.every((im) => !im.closest('.nbh-v') && im.getAnimations().length === 0 && getComputedStyle(im).filter === 'none')));
-  check(`${name} — 링크는 새 탭 · noopener`, await page.$$eval('.nbh-sign', (a) => a.every((x) => x.target === '_blank' && /noopener/.test(x.rel))));
+  for (let i = 0; i < 8; i++) { boils.add(await page.$eval('.nbh', (n) => n.dataset.boil)); await page.waitForTimeout(110); }
+  const shownV = await page.$$eval('.nbh-art', (svgs) => svgs.map((s) => [...s.querySelectorAll('.nbh-v')].filter((g) => getComputedStyle(g).display !== 'none').length));
+  check(`${name} — 손그림 위글(선 변형이 돌고, 한 번에 하나만)`, boils.size >= 3 && shownV.every((n) => n === 1), JSON.stringify({ boils: [...boils], shownV }));
 
-  // 사이트 이름 — PC 는 올리면, 휴대폰은 늘
-  const capOpacity = () => page.$eval('.nbh-sign .nbh-sign__cap', (c) => getComputedStyle(c).opacity);
+  const tapOrHover = async (i) => {
+    const r = center((await rects(page, `.nbh-home[data-i="${i}"] .nbh-art`))[0]);
+    if (device) await page.touchscreen.tap(r.x, r.y);
+    else await page.mouse.move(r.x, r.y);
+    await page.waitForTimeout(400);
+    return r;
+  };
+  const popBox = async () => (await rects(page, '.nbh-pop'))[0];
   if (!device) {
-    check('PC — 사이트 이름은 처음엔 숨김', (await capOpacity()) === '0');
-    const f0 = faces[0];
-    await page.mouse.move((f0.x + f0.r) / 2, (f0.y + f0.b) / 2);
-    await page.waitForTimeout(350);
-    const hov = await page.$eval('.nbh-sign', (a) => ({ t: getComputedStyle(a).transform, o: getComputedStyle(a.querySelector('.nbh-sign__cap')).opacity }));
-    check('PC — 올리면 그 간판만 앞으로 + 이름 ↗', hov.t !== 'none' && hov.o === '1' && (await page.$$eval('.nbh-sign', (a) => a.slice(1).every((x) => getComputedStyle(x).transform === 'none'))), JSON.stringify(hov));
-    const fz = await rects(page, '.nbh-sign__face');
-    check('PC — 앞으로 나와도 크기는 거의 그대로(확대 효과 아님)', fz[0].w / f0.w < 1.04 && fz[0].w / f0.w > 0.995, (fz[0].w / f0.w).toFixed(3));
-    await page.mouse.move(5, 300);
+    // PC — 올리면 배너, 배너로 옮겨도 그대로, 벗어나면 닫힘, 누르면 새 탭
+    const h0 = await tapOrHover(0);
+    const pb = await popBox();
+    const pop = await page.evaluate(() => ({ src: document.querySelector('.nbh-pop__banner img').getAttribute('src'), name: document.querySelector('.nbh-pop__name').textContent, ratio: (() => { const b = document.querySelector('.nbh-pop__banner').getBoundingClientRect(); return b.width / b.height; })(), fit: getComputedStyle(document.querySelector('.nbh-pop__banner img')).objectFit }));
+    check('PC — 집에 올리면 그 배너가 집 위로(5:1 전체 · 이름)', (await popOpen(page)) && pop.src === 'https://img.test/love.png' && pop.name === 'hongjiwon.love' && Math.abs(pop.ratio - 5) < 0.1 && pop.fit === 'contain' && pb.b <= h0.y, JSON.stringify(pop));
+    check('PC — 배너가 화면 안 · 읽을 만한 크기', pb.x >= 0 && pb.r <= vw && pb.y >= 0 && pb.w >= 220, JSON.stringify(pb));
+    // 집 → 배너로 천천히 옮겨도 그대로
+    for (let k = 1; k <= 8; k++) { await page.mouse.move(h0.x, h0.y - ((h0.y - (pb.y + pb.h / 2)) * k) / 8); await page.waitForTimeout(25); }
+    await page.waitForTimeout(400);
+    check('PC — 집에서 배너로 옮겨도 닫히지 않음', await popOpen(page));
+    await page.mouse.move(20, 600);
+    await page.waitForTimeout(500);
+    check('PC — 벗어나면 닫힘', !(await popOpen(page)));
+    await tapOrHover(1);
+    await tapOrHover(0);
+    check('PC — 배너는 한 번에 하나', (await page.$$eval('.nbh-home.is-open', (x) => x.length)) === 1 && (await page.$eval('.nbh-pop__name', (n) => n.textContent)) === 'hongjiwon.love');
+    const h1 = center((await rects(page, '.nbh-home[data-i="1"] .nbh-art'))[0]);
+    await page.mouse.click(h1.x, h1.y);
+    await until(() => popups.length > 0, 6000);
+    check('PC — 집을 누르면 그 사이트 새 탭', popups.length === 1 && popups[0].url().startsWith('https://luvlog.me/lucky') && at() === '/neighbor', popups.map((x) => x.url()).join(','));
+    await Promise.all(popups.splice(0).map((x) => x.close()));
+    await page.mouse.move(20, 600);
+    await page.waitForTimeout(400);
+    // 키보드 — Tab 으로 집 → 배너, Enter → 방문하기로, Esc → 닫고 집으로, 방문하기 Enter → 새 탭
     await page.focus('.nbh__home');
     await page.keyboard.press('Tab');
-    const focused = await page.evaluate(() => ({ sign: document.activeElement?.classList.contains('nbh-sign'), t: getComputedStyle(document.activeElement).transform }));
-    check('PC — 키보드 Tab 으로 간판 포커스 → 앞으로', focused.sign && focused.t !== 'none', JSON.stringify(focused));
-    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(350);
+    check('PC — 키보드 포커스로 배너', (await page.evaluate(() => document.activeElement?.classList.contains('nbh-home'))) && (await popOpen(page)));
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    check('PC — Enter → 방문하기로 이동(아직 새 탭 아님)', (await page.evaluate(() => document.activeElement?.classList.contains('nbh-pop__go'))) && popups.length === 0);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(350);
+    check('PC — Esc → 배너 닫고 그 집으로(화면은 그대로)', !(await popOpen(page)) && (await page.evaluate(() => document.activeElement?.classList.contains('nbh-home'))) && at() === '/neighbor');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Enter');
+    await until(() => popups.length > 0, 6000);
+    check('PC — 방문하기 Enter → 새 탭', popups.length === 1 && popups[0].url().startsWith('https://hongjiwon.love'), popups.map((x) => x.url()).join(','));
+    await Promise.all(popups.splice(0).map((x) => x.close()));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
   } else {
-    check(`${name} — 사이트 이름 늘 보임`, (await capOpacity()) === '1');
+    // 휴대폰 — 한 번 누르면 배너 · 방문하기, 방문하기를 눌러야 이동, 바깥을 누르면 닫힘
+    await tapOrHover(0);
+    const pb = await popBox();
+    check(`${name} — 한 번 누르면 배너 · 이름 · 방문하기(이동은 아직)`, (await popOpen(page)) && popups.length === 0 && (await page.textContent('.nbh-pop__go')).includes('방문하기') && pb.x >= 0 && pb.r <= vw, JSON.stringify(pb));
+    await tapOrHover(2);
+    check(`${name} — 다른 집을 누르면 그 배너로(하나만) · 이미지 실패 → 이름`, (await page.$$eval('.nbh-home.is-open', (x) => x.length)) === 1 && (await page.$eval('.nbh-pop', (p) => p.classList.contains('is-broken'))) && (await page.textContent('.nbh-pop__alt')) === 'broken.example/home');
+    const go = center((await rects(page, '.nbh-pop__go'))[0]);
+    await page.touchscreen.tap(go.x, go.y);
+    await until(() => popups.length > 0, 6000);
+    check(`${name} — 방문하기 → 새 탭`, popups.length === 1 && popups[0].url().startsWith('https://broken.example/home'), popups.map((x) => x.url()).join(','));
+    await Promise.all(popups.splice(0).map((x) => x.close()));
+    await page.touchscreen.tap(10, 640);
+    await page.waitForTimeout(350);
+    check(`${name} — 바깥을 누르면 닫힘`, !(await popOpen(page)));
+    // 가장자리 집 — 배너가 잘리지 않게
+    const edge = await page.$$eval('.nbh-home', (b) => { const r = b.map((x) => x.getBoundingClientRect().left); return r.indexOf(Math.min(...r)); });
+    await tapOrHover(edge);
+    const pe = await popBox();
+    check(`${name} — 가장자리 집에서도 배너가 화면 안`, pe.x >= 0 && pe.r <= vw && pe.y >= 0, JSON.stringify(pe));
+    await page.touchscreen.tap(10, 640);
+    await page.waitForTimeout(300);
   }
 
-  // 누르면 새 탭
-  const f1 = faces[1];
-  if (device) await page.touchscreen.tap((f1.x + f1.r) / 2, (f1.y + f1.b) / 2);
-  else await page.mouse.click((f1.x + f1.r) / 2, (f1.y + f1.b) / 2);
-  await until(() => popups.length > 0, 6000);
-  check(`${name} — 간판 누르기 → 그 사이트 새 탭`, popups.length === 1 && popups[0].url().startsWith('https://luvlog.me/lucky') && at() === '/neighbor', popups.map((p) => p.url()).join(','));
-  await Promise.all(popups.splice(0).map((p) => p.close()));
+  // 새로고침 · 고르기 — 배치 · 모양 그대로
+  await page.reload();
+  await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
+  await villageReady(page);
+  check(`${name} — 새로고침해도 같은 배치 · 같은 집`, (await layoutOf(page)) === lay && JSON.stringify(await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house))) === JSON.stringify(looks));
 
-  // 돌리기
-  const a0 = await nbhAngle(page);
-  const gx = (faces[0].x + faces[0].r) / 2;
-  const gy = (faces[0].b + faces[1].y) / 2 + 14; // 간판 사이 빈 곳
-  if (!device) {
-    await page.mouse.move(gx, gy);
-    await page.mouse.down();
-    await page.mouse.move(gx + 60, gy, { steps: 6 });
-    await page.mouse.up();
-    await page.waitForTimeout(600);
-    const a1 = await nbhAngle(page);
-    check('PC — 가로로 끌면 세로축으로 돈다', a1 > a0 + 2.5, `${a0} → ${a1}`);
-    await page.mouse.move(gx, gy);
-    await page.mouse.down();
-    await page.mouse.move(gx + 700, gy, { steps: 10 });
-    await page.mouse.up();
-    await page.waitForTimeout(700);
-    const aMax = await nbhAngle(page);
-    await page.mouse.move(gx + 300, gy);
-    await page.mouse.down();
-    await page.mouse.move(gx - 900, gy, { steps: 12 });
-    await page.mouse.up();
-    await page.waitForTimeout(700);
-    const aMin = await nbhAngle(page);
-    check('PC — 좌우 ±12° 까지만', Math.abs(aMax - 12) < 0.05 && Math.abs(aMin + 12) < 0.05, `${aMax} / ${aMin}`);
-    const s1 = await nbhAngle(page);
-    await page.waitForTimeout(1200);
-    check('PC — 놓으면 멈춘다(저절로 돌지 않음)', Math.abs((await nbhAngle(page)) - s1) < 0.05);
-    // 간판 위에서 끌기 시작해 간판 위에서 놓아도 열리지 않는다
-    const fs0 = (await rects(page, '.nbh-sign__face'))[0];
-    await page.mouse.move(fs0.x + 30, (fs0.y + fs0.b) / 2);
-    await page.mouse.down();
-    await page.mouse.move(fs0.x + 110, (fs0.y + fs0.b) / 2, { steps: 6 });
-    await page.mouse.up();
-    await page.waitForTimeout(800);
-    check('PC — 끌고 난 뒤엔 간판 링크가 열리지 않음', popups.length === 0 && at() === '/neighbor', popups.map((p) => p.url()).join(','));
-  } else if (touch) {
-    const swipe = await swiper(context, page);
-    const scrollTop = () => page.$eval('.nbh__scroll', (s) => s.scrollTop);
-    const top0 = await scrollTop();
-    await swipe(gx, 620, gx + 8, 260);
-    await page.waitForTimeout(700);
-    const top1 = await scrollTop();
-    const aV = await nbhAngle(page);
-    check(`${name} — 세로로 밀면 돌지 않음(스크롤은 배너 60개에서)`, Math.abs(aV - a0) < 0.2 && top1 >= top0, `scroll ${top0}→${top1}, angle ${a0}→${aV}`);
-    const fm = (await rects(page, '.nbh-sign__face'))[0];
-    const yy = fm.b + 20;
-    await swipe(70, yy, 250, yy + 6);
-    await page.waitForTimeout(600);
-    const aH = await nbhAngle(page);
-    const top2 = await scrollTop();
-    check(`${name} — 가로로 밀면 돈다(스크롤은 그대로)`, Math.abs(aH - aV) > 2 && Math.abs(top2 - top1) < 6, `angle ${aV}→${aH}, scroll ${top1}→${top2}`);
-    await swipe(fm.x + 20, (fm.y + fm.b) / 2, fm.x + 170, (fm.y + fm.b) / 2 + 3);
-    await page.waitForTimeout(800);
-    check(`${name} — 가로로 민 뒤 간판 위에서 떼도 열리지 않음`, popups.length === 0, popups.map((p) => p.url()).join(','));
-  }
-
-  // 화면 폭 안 — 돌린 양 끝에서도 좌우가 잘리지 않는다(위 · 맨 아래)
-  for (const deg of [-12, 12]) {
-    await turn(page, deg);
-    await toTop(page);
-    const top = await sceneSpan(page);
-    await toBottom(page);
-    const bottom = await sceneSpan(page);
-    check(`${name} — ${deg}° 에서도 집 · 우체통이 화면 폭 안`, top.l >= 0 && top.r <= top.vw && bottom.l >= 0 && bottom.r <= bottom.vw, JSON.stringify({ top, bottom }));
-  }
-  await turn(page, 4);
-  check(`${name} — 가로 스크롤 없음`, await page.$eval('.nbh__scroll', (s) => s.scrollWidth <= s.clientWidth));
-
-  // 맨 아래 — 바닥 · 집 오른쪽 바깥 우체통
-  await toBottom(page);
-  const front = union(await rects(page, '.nbh-plane.is-front'));
-  const mail = union(await rects(page, '.nbh-mail .nbh-box__face'));
-  const vh = await page.evaluate(() => innerHeight);
-  check(`${name} — 끝까지 내리면 바닥과 우체통이 보인다`, front.b < vh && mail.b < vh && mail.y > 0, JSON.stringify({ front, mail, vh }));
-  check(`${name} — 우체통은 집 오른쪽 바깥, 바닥 높이에`, mail.x > front.r - 4 && Math.abs(mail.b - front.b) < 40, JSON.stringify({ frontR: front.r, mailX: mail.x, frontB: front.b, mailB: mail.b }));
-  check(`${name} — 우체통 옆 '배너교환은 여기에서'`, (await page.textContent('.nbh-mail__tip')).trim() === '배너교환은 여기에서');
-  check(`${name} — 우체통은 화면에 고정된 버튼이 아니다`, await page.$eval('.nbh-mail', (m) => { for (let n = m; n; n = n.parentElement) if (getComputedStyle(n).position === 'fixed' && !n.classList.contains('nbh')) return false; return true; }));
-  await page.screenshot({ path: path.join(OUT, `neighbor-${name}-bottom.png`) });
-
-  // 우체통 → 편지가 올라오고 → 패널
-  const mc = { x: (mail.x + mail.r) / 2, y: (mail.y + mail.b) / 2 };
-  const t0 = Date.now();
-  if (device) await page.touchscreen.tap(mc.x, mc.y);
-  else await page.mouse.click(mc.x, mc.y);
-  const lifted = await page.waitForFunction(() => document.querySelector('.nbh-letter')?.getAnimations().length > 0, null, { timeout: 1500 }).then(() => true).catch(() => false);
+  // 우체통 → 배너 교환
+  await clickMail(page);
   await page.waitForSelector('.nbh-panel.is-open', { timeout: 5000 });
-  check(`${name} — 우체통 → 편지가 살짝 올라온 뒤 패널`, lifted && Date.now() - t0 >= 300 && at() === '/neighbor/banner', `${Date.now() - t0}ms`);
+  check(`${name} — 우체통 → /neighbor/banner(배너 교환)`, at() === '/neighbor/banner');
   await page.waitForTimeout(300);
   const sheet = (await rects(page, '.nbh-panel__sheet'))[0];
-  const vw = await page.evaluate(() => innerWidth);
+  const vh = await page.evaluate(() => innerHeight);
   check(`${name} — 패널이 화면 안`, sheet.x >= 0 && sheet.r <= vw && sheet.y >= 0 && sheet.b <= vh + 1, JSON.stringify(sheet));
   const mine = await page.evaluate(() => ({
     img: document.querySelector('.nbh-mine__preview img').getAttribute('src'),
     vals: [...document.querySelectorAll('.nbh-mine__val')].map((v) => v.textContent),
     code: document.querySelector('.nbh-mine__code').textContent,
     copies: [...document.querySelectorAll('.nbh-mine__rows [data-copy]')].map((b) => b.dataset.copy),
-    text: document.querySelector('.nbh-sec[data-mode="exchange"]').textContent,
   }));
   check(`${name} — 내 배너: 실제 이미지 · 이름 · 주소 · 이미지 주소 · 삽입 코드`, mine.img === MY_IMAGE && mine.vals.join('|') === `바이브.me|https://xn--9g3b29an0p.me|${MY_IMAGE}`
-    && mine.code === `<a href="https://xn--9g3b29an0p.me" target="_blank" rel="noopener"><img src="${MY_IMAGE}" alt="바이브.me" width="200" height="40"></a>`
-    && mine.copies.length === 4, JSON.stringify(mine));
-  check(`${name} — 예시 주소 · 임시 이미지 없음`, !/(example|placeholder|lorem|TODO)/i.test(mine.text + mine.copies.join(' ')));
+    && mine.code === `<a href="https://xn--9g3b29an0p.me" target="_blank" rel="noopener"><img src="${MY_IMAGE}" alt="바이브.me" width="200" height="40"></a>` && mine.copies.length === 4, JSON.stringify(mine));
   check(`${name} — 방문자에게는 받은 신청 칸 없음`, await page.$eval('.nbh-review', (r) => r.hidden));
   if (!device && BROWSER === 'chromium') {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: VIBE_ORIGIN });
@@ -1306,20 +1262,15 @@ async function neighborCase(device, name) {
       got.push({ clip: await page.evaluate(() => navigator.clipboard.readText()), label: await page.textContent(`.nbh-mine__rows [data-copy] >> nth=${i}`) });
     }
     check('PC — 복사 버튼 넷 → 클립보드에 그 값 · 복사 완료 표시', got.every((g, i) => g.clip === mine.copies[i] && g.label.includes('복사됨')), JSON.stringify(got));
-  } else {
-    await page.click('.nbh-mine__rows [data-copy] >> nth=1');
-    await page.waitForTimeout(150);
-    check(`${name} — 복사 완료 표시`, (await page.textContent('.nbh-mine__rows [data-copy] >> nth=1')).includes('복사됨'));
   }
-
-  // Esc — 패널 → 집 → 홈
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);
   check(`${name} — Esc → 패널만 닫힘(/neighbor)`, at() === '/neighbor' && (await page.$eval('.nbh-panel', (p) => p.hidden)) && (await page.$eval('.nbh', (n) => !n.hidden)));
   await page.click('.nbh__home');
-  await page.waitForTimeout(500);
-  check(`${name} — ← home → 홈(/) · 집 화면 닫힘`, at() === '/' && (await page.$eval('.nbh', (n) => n.hidden)) && (await page.$eval('.hsh-plan', (p) => !p.hidden)), at());
-  check(`${name} — 닫으면 장면 정리`, await page.$eval('.nbh__scene', (s) => !s.hshHouse && !s.querySelector('.nbh-house')));
+  await page.waitForTimeout(600);
+  await page.waitForSelector('.hsh-plan.is-done', { timeout: 15000 }).catch(() => {});
+  check(`${name} — ← home → 홈(/) · 로딩 없이 평면도`, at() === '/' && (await page.evaluate(() => !document.querySelector('.nbh') || document.querySelector('.nbh').hidden)) && (await page.$eval('.hsh-plan', (p) => !p.hidden)) && !(await page.evaluate(() => window.__loaderSeen)), at());
+  check(`${name} — 닫으면 마을 정리`, await page.evaluate(() => { const s = document.querySelector('.nbh__village'); return !s || (!s.hshVillage && !s.querySelector('.nbh-town')); }));
   check(`콘솔 오류 없음(neighbor ${name})`, d.errors.length === 0, d.errors.join(' | '));
   await context.close();
 }
@@ -1329,82 +1280,87 @@ async function neighborApply() {
   const { page } = v;
   const at = () => new URL(page.url()).pathname;
   const F = '.nbh-form[data-form="apply"]';
+  const D = `${F} [data-diy="apply"]`;
   const err = (n) => page.$eval(`${F} [name="${n}"]`, (i) => i.closest('.nbh-field').querySelector('.nbh-field__err').textContent);
   const msg = () => page.textContent(`${F} .nbh-form__msg`);
+  const diyMsg = () => page.textContent(`${D} .nbh-diy__msg`);
+  const chosen = () => page.$$eval(`${D} [role="radio"][aria-checked="true"]`, (b) => b.map((x) => x.dataset.v).join('/'));
   db.banner_requests.length = 0;
   db.requestCalls = 0;
   await page.goto(`${VIBE_ORIGIN}/neighbor/banner?${Q}`);
   await page.waitForSelector('.nbh-panel.is-open', { timeout: 20000 });
-  check('/neighbor/banner 직접 → 집 + 배너 교환 패널', at() === '/neighbor/banner' && (await page.$eval('.nbh', (n) => !n.hidden)));
+  check('/neighbor/banner 직접 → 마을 + 배너 교환 패널', at() === '/neighbor/banner' && (await page.$eval('.nbh', (n) => !n.hidden)));
 
+  // 우리 집 꾸미기 — 고르면 바로, 같은 렌더러
+  const before = await page.$eval(`${D} .nbh-diy__preview`, (p) => p.innerHTML);
+  await page.click(`${D} [data-key="body"] [data-v="two"]`);
+  await page.click(`${D} [data-key="roof"] [data-v="trap"]`);
+  await page.click(`${D} [data-key="wall"] [data-v="#cdeed6"]`);
+  const after = await page.$eval(`${D} .nbh-diy__preview`, (p) => p.innerHTML);
+  check('꾸미기 — 고르면 미리보기가 바로 바뀐다', before !== after && after.includes('#cdeed6') && (await chosen()).startsWith('two/trap/'), await chosen());
+  check('꾸미기 — 마을과 같은 렌더러(.nbh-art · 위글 변형 4장)', await page.$eval(`${D} .nbh-diy__preview svg`, (s) => s.classList.contains('nbh-art') && s.querySelectorAll('.nbh-v').length === 4));
+  const r1 = await chosen();
+  await page.click(`${D} [data-diy="random"]`);
+  const r2 = await chosen();
+  await page.click(`${D} [data-key="door"] [data-v="side"]`);
+  check('꾸미기 — 랜덤으로 만들기 · 그 뒤 직접 고치기', r1 !== r2 && (await chosen()).split('/')[2] === 'side', `${r1} → ${r2}`);
+  await page.click(`${D} [data-diy="banner"]`);
+  check('꾸미기 — 배너 이미지 없으면 안내', (await diyMsg()).includes('배너 이미지 주소'));
+
+  // 입력 검사
   await page.click(`${F} [type="submit"]`);
   check('신청 — 빈 칸이면 칸마다 안내 · 보내지 않음', (await err('name')).length > 0 && (await err('url')).length > 0 && (await err('image')).length > 0 && db.requestCalls === 0);
   await page.fill(`${F} [name="name"]`, '새 이웃');
   await page.fill(`${F} [name="url"]`, 'javascript:alert(1)');
-  await page.fill(`${F} [name="image"]`, 'https://img.test/new.png');
+  await page.fill(`${F} [name="image"]`, `${PLAIN_ORIGIN}/share-card-default.png`); // 다른 출처 · 읽기 허용 없음
   await page.click(`${F} [type="submit"]`);
   check('신청 — http(s) 아닌 주소 거절', (await err('url')).includes('http') && db.requestCalls === 0, await err('url'));
   await page.fill(`${F} [name="url"]`, 'new-neighbor.example/home');
   await page.focus(`${F} [name="message"]`);
   check('신청 — 주소만 적으면 https:// 를 붙여 준다', (await page.inputValue(`${F} [name="url"]`)) === 'https://new-neighbor.example/home');
-  await page.fill(`${F} [name="image"]`, 'https://img.test/missing.png');
-  await page.click(`${F} [type="submit"]`);
-  await page.waitForFunction((F) => document.querySelector(`${F} [name="image"]`).getAttribute('aria-invalid') === 'true', F, { timeout: 10000 }).catch(() => {});
-  check('신청 — 열리지 않는 배너 이미지 거절', (await err('image')).includes('불러오지') && db.requestCalls === 0, await err('image'));
-  await page.fill(`${F} [name="image"]`, 'https://img.test/new.png');
-  await page.fill(`${F} [name="message"]`, '안녕하세요 ♡');
-  check('신청 — 배너 미리보기', await imgLoaded(page, `${F} .nbh-form__preview img`));
 
+  // 배너 색 — 읽을 수 없는 배너는 쉬운 말로 안내, 직접 고르기 · 랜덤은 그대로
+  await page.click(`${D} [data-diy="banner"]`);
+  await page.waitForFunction((D) => document.querySelector(`${D} .nbh-diy__msg`).textContent.includes('못했어요'), D, { timeout: 8000 }).catch(() => {});
+  const noColor = await diyMsg();
+  check('배너 색 — 못 읽으면 쉬운 안내(기술 용어 없음)', noColor.includes('가져오지 못했어요') && !/cors|origin|canvas|taint|security/i.test(noColor), noColor);
+  await page.click(`${D} [data-diy="random"]`);
+  check('배너 색 — 못 읽어도 랜덤 · 직접 고르기는 된다', (await chosen()).split('/').length === 8);
+  await page.fill(`${F} [name="image"]`, 'https://img.test/new.png');
+  await page.click(`${D} [data-diy="banner"]`);
+  await page.waitForFunction((D) => document.querySelector(`${D} .nbh-diy__msg`).textContent.includes('지었어요'), D, { timeout: 8000 }).catch(() => {});
+  const c1 = await chosen();
+  const walls = await page.$$eval(`${D} [data-key="wall"] [data-v]`, (b) => b.map((x) => x.dataset.v));
+  const l = (hex) => { const n = parseInt(hex.slice(1), 16); return (Math.max(n >> 16, (n >> 8) & 255, n & 255) + Math.min(n >> 16, (n >> 8) & 255, n & 255)) / 5.1; };
+  const [, , , , , wall, , door] = c1.split('/');
+  check('배너 색 — 배너에서 뽑은 색으로(벽은 밝게 · 문은 벽과 대비)', (await diyMsg()).includes('배너 색으로 지었어요') && walls.length === 9 && l(wall) >= 80 && Math.abs(l(wall) - l(door)) >= 20, JSON.stringify({ c1, walls }));
+  await page.click(`${D} [data-diy="banner"]`);
+  await page.waitForTimeout(150);
+  check('배너 색 — 다시 뽑기 → 같은 색으로 다른 조합', (await chosen()) !== c1 && (await page.textContent(`${D} [data-diy="banner"]`)).includes('다시 뽑기'), `${c1} → ${await chosen()}`);
+  check('배너 색 — 원본 배너 이미지는 그대로', (await page.$eval(`${F} .nbh-form__preview img`, (i) => i.getAttribute('src'))) === 'https://img.test/new.png');
+  const picked = await page.$eval(D, () => null).then(() => chosen());
+
+  // 실패 → 다시 시도, 연달아 눌러도 한 번, 저장(집 모양까지)
+  await page.fill(`${F} [name="message"]`, '안녕하세요 ♡');
   db.failSubmit = 1;
   await page.click(`${F} [type="submit"]`);
   await page.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'error', F, { timeout: 10000 }).catch(() => {});
-  check('신청 — 실패하면 다시 시도 안내 · 적은 내용 그대로', (await msg()).includes('다시 눌러') && (await page.inputValue(`${F} [name="name"]`)) === '새 이웃'
-    && !(await page.$eval(`${F} [type="submit"]`, (b) => b.disabled)) && db.banner_requests.length === 0, await msg());
+  check('신청 — 실패하면 다시 시도 안내 · 적은 내용 · 꾸민 집 그대로', (await msg()).includes('다시 눌러') && (await page.inputValue(`${F} [name="name"]`)) === '새 이웃' && (await chosen()) === picked && db.banner_requests.length === 0, await msg());
   const callsBefore = db.requestCalls;
-  await page.$eval(F, (f) => { f.requestSubmit(); f.requestSubmit(); f.requestSubmit(); }); // 연달아 눌러도
+  await page.$eval(F, (f) => { f.requestSubmit(); f.requestSubmit(); f.requestSubmit(); });
   await page.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'done', F, { timeout: 10000 }).catch(() => {});
-  check('신청 — 연달아 눌러도 한 번만 보낸다', db.requestCalls - callsBefore === 1 && db.banner_requests.length === 1, `${db.requestCalls - callsBefore} calls`);
   const saved = db.banner_requests[0];
-  check('신청 — 대기 목록에 저장(이름 · 주소 · 이미지 · 메시지)', saved?.status === 'pending' && saved.site_name === '새 이웃' && saved.site_url === 'https://new-neighbor.example/home'
-    && saved.image_url === 'https://img.test/new.png' && saved.message === '안녕하세요 ♡', JSON.stringify(saved));
-  check('신청 — 완료 안내 · 칸 잠김 · 다른 사이트 신청', (await msg()).includes('신청했어요') && (await page.$eval(`${F} [name="name"]`, (i) => i.disabled))
-    && (await page.$eval(`${F} [data-act="again"]`, (b) => !b.hidden)));
-
+  const [body, roof, dr, win, deco, wl, rc, dc] = picked.split('/');
+  check('신청 — 연달아 눌러도 한 번 · 대기 목록에 집 모양까지', db.requestCalls - callsBefore === 1 && db.banner_requests.length === 1 && saved.site_url === 'https://new-neighbor.example/home'
+    && JSON.stringify(saved.house) === JSON.stringify({ v: 1, body, roof, door: dr, window: win, deco, wall: wl, roofColor: rc, doorColor: dc }), JSON.stringify(saved));
+  check('신청 — 완료 안내 · 칸 잠김', (await msg()).includes('신청했어요') && (await page.$eval(`${F} [name="name"]`, (i) => i.disabled)));
   await page.click('.nbh-panel__x');
   await page.reload();
-  await page.waitForSelector('.nbh.is-open .nbh-sign', { state: 'attached', timeout: 15000 });
-  await page.waitForTimeout(400);
-  check('신청만으로는 공개 이웃 목록에 걸리지 않는다', (await page.$$('.nbh-sign')).length === 3 && db.banners.filter((b) => b.category_id === 4).length === 3);
-
-  // 다른 탭에서 같은 사이트(www · 끝 /) → 이미 신청됨
-  const p2 = await v.context.newPage();
-  await p2.goto(`${VIBE_ORIGIN}/neighbor/banner?${Q}`);
-  await p2.waitForSelector('.nbh-panel.is-open', { timeout: 20000 });
-  await p2.fill(`${F} [name="name"]`, '새 이웃');
-  await p2.fill(`${F} [name="url"]`, 'http://www.new-neighbor.example/home/');
-  await p2.fill(`${F} [name="image"]`, 'https://img.test/new.png');
-  await p2.click(`${F} [type="submit"]`);
-  await p2.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'done', F, { timeout: 10000 }).catch(() => {});
-  check('신청 — 같은 사이트를 또 → 이미 신청됨 안내 · 저장 안 함', (await p2.textContent(`${F} .nbh-form__msg`)).includes('이미 신청된') && db.banner_requests.length === 1);
-  await p2.click(`${F} [data-act="again"]`);
-  await p2.fill(`${F} [name="name"]`, 'love');
-  await p2.fill(`${F} [name="url"]`, 'https://hongjiwon.love/');
-  await p2.fill(`${F} [name="image"]`, 'https://img.test/new.png');
-  await p2.click(`${F} [type="submit"]`);
-  await p2.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'done', F, { timeout: 10000 }).catch(() => {});
-  check('신청 — 이미 걸린 사이트 → 안내', (await p2.textContent(`${F} .nbh-form__msg`)).includes('이미 이웃 목록에') && db.banner_requests.length === 1);
-  // DB 변경 적용 전(신청 RPC 없음) — 성공처럼 보이지 않고, 적은 내용 그대로
-  db.requestsMissing = true;
-  await p2.click(`${F} [data-act="again"]`);
-  await p2.fill(`${F} [name="name"]`, '준비 전');
-  await p2.fill(`${F} [name="url"]`, 'https://before-db.example');
-  await p2.fill(`${F} [name="image"]`, 'https://img.test/new.png');
-  await p2.click(`${F} [type="submit"]`);
-  await p2.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'error', F, { timeout: 10000 }).catch(() => {});
-  const before = await p2.textContent(`${F} .nbh-form__msg`);
-  check('신청 — DB 적용 전이면 저장 못 함 안내(성공 표시 없음)', before.includes('저장할 수 없어요') && !before.includes('신청했어요') && (await p2.inputValue(`${F} [name="name"]`)) === '준비 전' && db.banner_requests.length === 1, before);
-  db.requestsMissing = false;
-  const applyErrors = v.errors.filter((e) => !/503|submit 503/.test(e)); // 일부러 낸 503(다시 시도 안내 확인)은 빼고
+  await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 15000 });
+  await villageReady(page);
+  check('신청만으로는 마을에 집이 생기지 않는다', (await page.$$('.nbh-home')).length === 3 && db.banners.filter((b) => b.category_id === 4).length === 3);
+  // 일부러 낸 503(다시 시도 안내)과 읽기를 막은 배너 이미지(브라우저가 스스로 남기는 기록)는 빼고
+  const applyErrors = v.errors.filter((e) => !/503|submit 503|CORS policy|ERR_FAILED/.test(e));
   check('콘솔 오류 없음(neighbor 신청)', applyErrors.length === 0, applyErrors.join(' | '));
   await v.context.close();
 }
@@ -1414,55 +1370,67 @@ async function neighborOwner() {
   const { page } = o;
   page.on('dialog', (dlg) => dlg.accept());
   const at = () => new URL(page.url()).pathname;
-  db.banner_requests.push(
-    { id: 50, site_name: '대기 이웃', site_url: 'https://waiting.example', image_url: 'https://img.test/new.png', message: '잘 부탁해요', status: 'pending', created_at: '2026-10-26T01:00:00.000Z' },
-    { id: 51, site_name: '거절할 이웃', site_url: 'https://nope.example', image_url: 'https://img.test/new.png', message: null, status: 'pending', created_at: '2026-10-26T02:00:00.000Z' },
-  );
-  const pending = db.banner_requests.filter((r) => r.status === 'pending').length;
+  const pending = db.banner_requests.find((r) => r.status === 'pending');
   await page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
-  await page.waitForSelector('.nbh.is-open .nbh-sign', { state: 'attached', timeout: 20000 });
-  await toBottom(page);
+  await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
+  await villageReady(page);
   await page.click('.nbh__owner [data-act="edit"]');
   await page.waitForSelector('.nbh__owner [data-act="add"]:not([hidden])', { timeout: 15000 });
-  await page.waitForFunction((n) => document.querySelector('.nbh__count')?.textContent === String(n), pending, { timeout: 10000 }).catch(() => {});
-  check('주인 — edit → 간판마다 × · + add banner · 받은 신청 수', (await page.$$('.nbh-del')).length === 3 && (await page.textContent('.nbh__count')) === String(pending), await page.textContent('.nbh__count'));
+  await page.waitForFunction(() => document.querySelector('.nbh__count')?.textContent === '1', null, { timeout: 10000 }).catch(() => {});
+  check('주인 — edit → 집마다 고치기 표시 · + add banner · 받은 신청 수', (await page.$$('.nbh-home__edit')).length === 3 && (await page.textContent('.nbh__count')) === '1');
 
   await page.click('.nbh__owner [data-act="requests"]');
   await page.waitForSelector('.nbh-review:not([hidden]) .nbh-req', { timeout: 10000 });
-  const reqs = await page.$$eval('.nbh-req', (l) => l.map((x) => x.textContent));
-  check('주인 — 받은 신청 목록(이름 · 주소 · 메시지)', at() === '/neighbor/banner' && reqs.some((t) => t.includes('대기 이웃') && t.includes('waiting.example') && t.includes('잘 부탁해요')), reqs.join(' | '));
-  await page.click('.nbh-req[data-id="50"] [data-ok="1"]');
-  await until(() => db.banners.some((b) => b.url === 'https://waiting.example'), 8000);
-  await page.waitForFunction(() => document.querySelectorAll('.nbh-sign').length === 4, null, { timeout: 8000 }).catch(() => {});
-  const approved = db.banners.find((b) => b.url === 'https://waiting.example');
-  check('주인 — 승인 → 공개 목록 맨 뒤에 걸림', approved?.category_id === 4 && approved.sort_order === 3 && (await signLabels(page)).at(-1) === '대기 이웃'
-    && db.banner_requests.find((r) => r.id === 50).status === 'approved', JSON.stringify(approved));
-  await page.click('.nbh-req[data-id="51"] [data-ok="0"]');
-  await until(() => db.banner_requests.find((r) => r.id === 51).status === 'rejected', 8000);
-  await page.waitForTimeout(300);
-  check('주인 — 거절 → 목록에서 빠지고 공개 목록은 그대로', !(await page.$('.nbh-req[data-id="51"]')) && !db.banners.some((b) => b.url === 'https://nope.example'));
+  check('주인 — 받은 신청에 신청한 집 미리보기', at() === '/neighbor/banner' && (await page.$eval(`.nbh-req[data-id="${pending.id}"] .nbh-req__house svg`, (s, wall) => s.innerHTML.includes(wall), pending.house.wall)));
+  await page.click(`.nbh-req[data-id="${pending.id}"] [data-ok="1"]`);
+  await until(() => db.banners.some((b) => b.url === pending.site_url), 8000);
+  await page.waitForFunction(() => document.querySelectorAll('.nbh-home').length === 4, null, { timeout: 8000 }).catch(() => {});
+  const h = pending.house;
+  check('주인 — 승인 → 신청한 모습 그대로 마을에(맨 뒤)', (await page.$eval('.nbh-home[data-i="3"]', (b) => b.dataset.house)) === `${h.body}/${h.roof}/${h.door}/${h.window}/${h.deco}/${h.wall}/${h.roofColor}/${h.doorColor}`);
   await page.click('.nbh-panel__x');
   await page.waitForTimeout(300);
 
-  await page.click('.nbh-del[data-del="3"]');
+  // 기존 이웃집 고치기 — 지붕 · 색 → 저장, 기본 모양으로, 내리기
+  const h0 = (await rects(page, '.nbh-home[data-i="0"] .nbh-art'))[0];
+  await page.mouse.click(h0.x + h0.w / 2, h0.y + h0.h / 2);
+  await page.waitForSelector('.nbh-panel.is-open [data-mode="house"]:not([hidden])', { timeout: 5000 });
+  check('주인 — 집을 누르면 그 집 고치기(새 탭 아님)', (await page.textContent('.nbh-house__who')) === 'hongjiwon.love' && (await page.textContent('.nbh-panel__title')) === '이웃집 고치기');
+  const H = '[data-diy="house"]';
+  await page.click(`${H} [data-key="roof"] [data-v="round"]`);
+  await page.click(`${H} [data-key="roofColor"] [data-v="#b39ddb"]`);
+  await page.click('[data-house="save"]');
+  await until(() => db.banners.find((b) => b.id === 1).house?.roofColor === '#b39ddb', 8000);
+  await page.waitForTimeout(400);
+  check('주인 — 이웃집 모양 · 색 고치기 → 저장 · 마을에 반영', db.banners.find((b) => b.id === 1).house.roof === 'round' && (await page.$eval('.nbh-home[data-i="0"]', (b) => b.dataset.house)).includes('/round/') && (await page.$eval('.nbh-panel', (p) => p.hidden)));
+  await page.mouse.click(h0.x + h0.w / 2, h0.y + h0.h / 2);
+  await page.waitForSelector('.nbh-panel.is-open [data-mode="house"]:not([hidden])', { timeout: 5000 });
+  await page.click('[data-house="reset"]');
+  await page.click('[data-house="save"]');
+  await until(() => db.banners.find((b) => b.id === 1).house === null, 8000);
+  check('주인 — 기본 모양으로 → 저장(비워 두면 늘 같은 기본 모양)', db.banners.find((b) => b.id === 1).house === null);
+  await page.waitForTimeout(400);
+  const h2 = (await rects(page, '.nbh-home[data-i="2"] .nbh-art'))[0];
+  await page.mouse.click(h2.x + h2.w / 2, h2.y + h2.h / 2);
+  await page.waitForSelector('.nbh-panel.is-open [data-mode="house"]:not([hidden])', { timeout: 5000 });
+  await page.click('[data-house="delete"]');
   await until(() => !db.banners.some((b) => b.id === 3), 8000);
-  await page.waitForFunction(() => document.querySelectorAll('.nbh-sign').length === 3, null, { timeout: 8000 }).catch(() => {});
-  check('주인 — × → 배너 내리기', !db.banners.some((b) => b.id === 3) && (await page.$$('.nbh-sign')).length === 3);
+  await page.waitForFunction(() => document.querySelectorAll('.nbh-home').length === 3, null, { timeout: 8000 }).catch(() => {});
+  check('주인 — 내리기', !db.banners.some((b) => b.id === 3) && (await page.$$('.nbh-home')).length === 3);
+  // 간판 걸기 — 집 모양까지
   await page.click('.nbh__owner [data-act="add"]');
   await page.waitForSelector('.nbh-panel.is-open [data-form="add"]', { timeout: 5000 });
   const A = '.nbh-form[data-form="add"]';
   await page.fill(`${A} [name="name"]`, '새 간판');
   await page.fill(`${A} [name="url"]`, 'https://added.example');
   await page.fill(`${A} [name="image"]`, 'https://img.test/new.png');
+  await page.click(`${A} [data-diy="add"] [data-key="body"] [data-v="tall"]`);
   await page.click(`${A} [type="submit"]`);
   await until(() => db.banners.some((b) => b.url === 'https://added.example/'), 8000);
-  await page.waitForFunction(() => document.querySelectorAll('.nbh-sign').length === 4, null, { timeout: 8000 }).catch(() => {});
+  await page.waitForFunction(() => document.querySelectorAll('.nbh-home').length === 4, null, { timeout: 8000 }).catch(() => {});
   const added = db.banners.find((b) => b.url === 'https://added.example/');
-  await page.waitForFunction(() => document.querySelector('.nbh-panel').hidden, null, { timeout: 3000 }).catch(() => {});
-  const addedView = { labels: await signLabels(page), panelHidden: await page.$eval('.nbh-panel', (p) => p.hidden) };
-  check('주인 — + add banner → 맨 뒤에 걸기', added?.category_id === 4 && added.name === '새 간판' && addedView.labels.at(-1) === '새 간판' && addedView.panelHidden, JSON.stringify({ added, addedView }));
+  check('주인 — + add banner → 맨 뒤에 그 집 모양으로', added?.house?.body === 'tall' && (await page.$eval('.nbh-home[data-i="3"]', (b) => b.dataset.house)).startsWith('tall/'), JSON.stringify(added));
   await page.click('.nbh__owner [data-act="edit"]');
-  check('주인 — done → × 사라짐', (await page.$$('.nbh-del')).length === 0);
+  check('주인 — done → 고치기 표시 사라짐', (await page.$$('.nbh-home__edit')).length === 0);
   check('콘솔 오류 없음(neighbor 주인)', o.errors.length === 0, o.errors.join(' | '));
   await o.context.close();
 }
@@ -1470,111 +1438,65 @@ async function neighborOwner() {
 async function neighborShapes() {
   const saved = db.banners;
   const others = saved.filter((b) => b.category_id !== 4);
-  const m = await open(null, undefined, playwright.devices['iPhone 13']);
-  const { page } = m;
-  const go = async () => {
-    await page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
-    await page.waitForSelector('.nbh.is-open .nbh-house', { state: 'attached', timeout: 20000 });
-    await page.waitForFunction(() => document.querySelector('.nbh__scene').getAttribute('aria-busy') === 'false', null, { timeout: 15000 });
-    await page.waitForTimeout(400);
-  };
-
-  // 빈 집
-  db.banners = [...others];
-  await go();
-  const front = union(await rects(page, '.nbh-plane.is-front'));
-  check('배너 없음 — 빈 집 안내 · 아담한 집 모양 그대로', (await page.textContent('.nbh-note')).includes('아직 걸린 간판이 없어요') && (front.b - front.y) >= (front.r - front.x) * 0.9, JSON.stringify(front));
-  await toBottom(page);
-  const mail0 = union(await rects(page, '.nbh-mail .nbh-box__face'));
-  const front0 = union(await rects(page, '.nbh-plane.is-front'));
-  check('배너 없음 — 우체통은 그대로 바닥 오른쪽', mail0.x > front0.r - 4 && Math.abs(mail0.b - front0.b) < 40 && mail0.b <= 844);
-  await page.screenshot({ path: path.join(OUT, 'neighbor-empty.png') });
-
-  // 하나
-  db.banners = [...others, { id: 1, category_id: 4, user_id: OWNER_ID, name: '', url: 'https://hongjiwon.love', image_url: 'https://img.test/love.png', image_path: null, sort_order: 0 }];
-  await go();
-  const face = (await rects(page, '.nbh-sign__face'))[0];
-  const f1 = union(await rects(page, '.nbh-plane.is-front'));
-  const body = { top: f1.y + (f1.r - f1.x) * 0.42, bottom: f1.b };
-  const cy = (face.y + face.b) / 2;
-  check('배너 하나 — 집 몸통 가운데쯤에 한 줄', Math.abs((face.x + face.r) / 2 - (f1.x + f1.r) / 2) < 16 && cy > body.top && cy < body.bottom, JSON.stringify({ face, f1 }));
-  await page.screenshot({ path: path.join(OUT, 'neighbor-one.png') });
-
-  // 많을 때 — 60개. 화면에서 먼 덩어리는 그리지 않는다
-  db.banners = [...others, ...Array.from({ length: 60 }, (_, i) => ({ id: 1000 + i, category_id: 4, user_id: OWNER_ID, name: `이웃 ${i + 1}`, url: `https://n${i}.example`, image_url: `https://img.test/${i % 2 ? 'lucky' : 'love'}.png`, image_path: null, sort_order: i }))];
-  await go();
-  const total = await page.$$eval('.nbh-chunk', (c) => c.length);
-  const shownTop = await page.$$eval('.nbh-chunk', (c) => c.filter((x) => x.style.display !== 'none').length);
-  check('많을 때 — 60개 모두 한 줄로', (await page.$$('.nbh-sign')).length === 60 && (await signLabels(page)).at(-1) === '이웃 60');
-  if (BROWSER === 'chromium') {
-    const swipe = await swiper(m.context, page);
-    const a0 = await nbhAngle(page);
-    const t0 = await page.$eval('.nbh__scroll', (s) => s.scrollTop);
-    await swipe(200, 560, 206, 200);
-    await page.waitForTimeout(700);
-    const t1 = await page.$eval('.nbh__scroll', (s) => s.scrollTop);
-    check('휴대폰 — 세로로 밀면 페이지가 스크롤(집 안 스크롤 칸 없음 · 돌지 않음)', t1 > t0 + 150 && Math.abs((await nbhAngle(page)) - a0) < 0.2
-      && (await page.$$eval('.nbh-house *', (els) => els.every((el) => !/(auto|scroll)/.test(getComputedStyle(el).overflowY)))), `${t0}→${t1}`);
-    await page.$eval('.nbh__scroll', (s) => { s.scrollTop = 0; });
-    await page.waitForTimeout(300);
+  const make = (n) => Array.from({ length: n }, (_, i) => ({ id: 1000 + i, category_id: 4, user_id: OWNER_ID, name: `이웃 ${i + 1}`, url: `https://n${i}.example`, image_url: `https://img.test/${i % 2 ? 'lucky' : 'love'}.png`, image_path: null, sort_order: i }));
+  for (const [device, name] of [[null, 'PC'], [playwright.devices['iPhone 13'], '휴대폰']]) {
+    const m = await open(null, device ? undefined : { width: 1280, height: 860 }, device || {});
+    const { page } = m;
+    let prev = null;
+    for (const n of [0, 1, 3, 12, 30]) {
+      db.banners = [...others, ...make(n)];
+      await page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
+      await page.waitForSelector('.nbh.is-open .nbh-town', { state: 'attached', timeout: 20000 });
+      await villageReady(page);
+      await page.waitForTimeout(300);
+      const homes = await rects(page, '.nbh-home .nbh-art');
+      const town = (await rects(page, '.nbh-town'))[0];
+      const c = (await rects(page, '.nbh-center .nbh-art'))[0];
+      const ok = homes.length === n && (await overlaps(page)).length === 0 && (await inWidth(page)) && Math.abs(center(c).x - center(town).x) < town.w * 0.14;
+      check(`${name} — 이웃 ${n}채: 홍차네 집 가운데 · 겹침 없음 · 화면 폭 안`, ok, JSON.stringify({ n: homes.length, overlaps: await overlaps(page) }));
+      if (n === 0) check(`${name} — 이웃 없음: 안내 · 홍차네 집 · 우체통은 그대로`, (await page.textContent('.nbh-note')).includes('아직 이웃집이 없어요') && (await page.$$('.nbh-mailbox')).length === 1);
+      const scales = await page.$$eval('.nbh-home .nbh-art', (s) => s.map((x) => Math.round((x.width.baseVal.value / x.viewBox.baseVal.width) * 100) / 100));
+      if (prev && n > prev.n) {
+        check(`${name} — ${prev.n} → ${n}채: 집을 줄이지 않고 마을이 아래로`, town.h >= prev.h && scales.every((x) => x === prev.scale), JSON.stringify({ h: [prev.h, town.h], scale: [prev.scale, ...new Set(scales)] }));
+      }
+      if (homes.length) prev = { n, h: town.h, scale: scales[0] };
+      if (n === 30) {
+        await page.screenshot({ path: path.join(OUT, `neighbor-${name}-30.png`), fullPage: false });
+        check(`${name} — 30채: 페이지가 아래로 스크롤`, await page.$eval('.nbh__scroll', (s) => s.scrollHeight > s.clientHeight + 200));
+        await toBottom(page);
+        const last = (await rects(page, '.nbh-home[data-i="29"] .nbh-art'))[0];
+        check(`${name} — 30채: 끝까지 내리면 마지막 집`, last && last.b <= (await page.evaluate(() => innerHeight)));
+      }
+      if (n === 12) await page.screenshot({ path: path.join(OUT, `neighbor-${name}-12.png`) });
+    }
+    check(`콘솔 오류 없음(neighbor ${name} 3 · 12 · 30)`, m.errors.length === 0, m.errors.join(' | '));
+    await m.context.close();
   }
-  check('많을 때 — 화면 근처 덩어리만 그린다', total >= 5 && shownTop <= 3, `${shownTop}/${total}`);
-  const frames = await page.evaluate(() => new Promise((resolve) => {
-    const s = document.querySelector('.nbh__scroll');
-    const max = s.scrollHeight - s.clientHeight;
-    const scene = document.querySelector('.nbh__scene');
-    const times = [];
-    let i = 0;
-    let last = performance.now();
-    const step = (t) => {
-      times.push(t - last);
-      last = t;
-      i += 1;
-      s.scrollTop = (max * i) / 90;
-      if (i % 10 === 0) scene.hshHouse.turn(i % 20 ? 8 : -8);
-      if (i < 90) requestAnimationFrame(step);
-      else resolve(times.slice(2).sort((a, b) => a - b));
-    };
-    requestAnimationFrame(step);
-  }));
-  const median = frames[Math.floor(frames.length / 2)];
-  console.log(`        (60개 스크롤 + 돌리기 — 프레임 중간값 ${median.toFixed(1)}ms, 90%: ${frames[Math.floor(frames.length * 0.9)].toFixed(1)}ms)`);
-  check('많을 때 — 스크롤 · 돌리기 프레임(중간값 50ms 안 · 소프트웨어 렌더러 기준)', median < 50, `${median.toFixed(1)}ms`);
-  await toBottom(page);
-  const shownBottom = await page.$$eval('.nbh-chunk', (c) => c.filter((x) => x.style.display !== 'none').length);
-  const mailN = union(await rects(page, '.nbh-mail .nbh-box__face'));
-  check('많을 때 — 끝까지 내리면 우체통 · 덩어리 수는 그대로 적게', mailN.b < 844 && mailN.y > 0 && shownBottom <= 4, `${shownBottom}`);
-  check('콘솔 오류 없음(neighbor 빈 집 · 하나 · 많을 때)', m.errors.length === 0, m.errors.join(' | '));
-  await m.context.close();
   db.banners = saved;
 }
 
 async function neighbor() {
-  console.log('\n[neighbor — 이웃 간판 집]');
-  await neighborCase(null, 'PC');
-  await neighborCase(playwright.devices['iPhone 13'], '휴대폰');
+  console.log('\n[neighbor — 손그림 마을]');
+  await neighborVillage(null, 'PC');
+  await neighborVillage(playwright.devices['iPhone 13'], '휴대폰');
   await neighborApply();
   await neighborOwner();
   await neighborShapes();
 
-  // 모션 줄이기 — 편지 없이 바로 패널, 안내 화살표 · 간판 전환 없음
+  // 모션 줄이기 — 둥실 · 위글 · 나타남 없이
   const rm = await open(null, { width: 1000, height: 800 }, { reducedMotion: 'reduce' });
   await rm.page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
-  await rm.page.waitForSelector('.nbh.is-open .nbh-sign', { state: 'attached', timeout: 20000 });
+  await rm.page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
   const still = await rm.page.evaluate(() => ({
-    sign: getComputedStyle(document.querySelector('.nbh-sign')).transitionDuration,
-    hint: getComputedStyle(document.querySelector('.nbh__hint svg')).animationName,
-    float: getComputedStyle(document.querySelector('.nbh-float')).animationName,
-    house: getComputedStyle(document.querySelector('.nbh-house')).animationName,
+    bob: getComputedStyle(document.querySelector('.nbh-home__art')).animationName,
+    pop: getComputedStyle(document.querySelector('.nbh-pop')).transitionDuration,
   }));
-  still.boil = [];
-  for (let i = 0; i < 4; i++) { still.boil.push(await rm.page.$eval('.nbh-house', (h) => h.dataset.boil)); await rm.page.waitForTimeout(120); }
-  await toBottom(rm.page);
-  const t0 = Date.now();
-  await clickMail(rm.page);
-  await rm.page.waitForSelector('.nbh-panel.is-open', { timeout: 3000 });
-  check('모션 줄이기 — 둥실거림 · 위글 · 간판 전환 · 화살표 흔들림 없음, 편지 없이 바로 패널', still.sign === '0s' && still.hint === 'none' && still.float === 'none' && still.house === 'none' && still.boil.every((b) => b === '0') && Date.now() - t0 < 300
-    && (await rm.page.$eval('.nbh-letter', (l) => l.getAnimations().length)) === 0, JSON.stringify(still));
+  const boil = [];
+  for (let i = 0; i < 4; i++) { boil.push(await rm.page.$eval('.nbh', (n) => n.dataset.boil)); await rm.page.waitForTimeout(120); }
+  const h = center((await rects(rm.page, '.nbh-home[data-i="0"] .nbh-art'))[0]);
+  await rm.page.mouse.move(h.x, h.y);
+  await rm.page.waitForTimeout(150);
+  check('모션 줄이기 — 둥실 · 위글 · 나타남 없이, 배너는 그대로 보인다', still.bob === 'none' && still.pop === '0s' && boil.every((b) => b === '0') && (await popOpen(rm.page)), JSON.stringify({ still, boil }));
   check('콘솔 오류 없음(neighbor 모션 줄이기)', rm.errors.length === 0, rm.errors.join(' | '));
   await rm.context.close();
 }
@@ -1708,6 +1630,7 @@ try {
   await browser.close();
   webServer.close();
   vibeServer.close();
+  plainServer.close();
   globalThis.fetch = realFetch;
 }
 process.exit(summary() ? 0 : 1);
