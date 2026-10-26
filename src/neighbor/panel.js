@@ -1,5 +1,6 @@
 // neighbor 패널 — 우체통(주소 /neighbor/banner)은 배너 교환, 홍차네 집(/neighbor/mine)은 내 배너.
-//   ① 내 배너(mode 'mine'): 바이브.me 배너 미리보기 · 이름 · 주소 · 이미지 주소 · 삽입 코드(각각 복사)
+//   ① 내 배너(mode 'mine'): 바이브.me 배너 미리보기 · 이름 · 주소 · 이미지 주소 · 삽입 코드(각각 복사).
+//      주인에게는 '배너 바꾸기'(파일) — 바이브.me 전용 경로에 덮어쓴다(data.js uploadMyBanner). 아직 없으면 안내 글.
 //   ② 교환 신청: 사이트 이름 · 주소 · 배너 이미지 주소 · 메시지(선택) → submit_banner_request.
 //      신청은 대기 목록으로만 — 공개 이웃 목록에는 주인이 승인해야 걸린다.
 //      입력 검사(칸마다 안내) · 이미지가 실제로 열리는지 · 보내는 동안 다시 못 누름 · 실패하면 그대로 두고 다시 시도 안내.
@@ -9,7 +10,7 @@
 //     이웃집 고치기는 탭 둘: 집 고치기(모양 · 색 · 기본 모양으로 · 내리기) · 내용 고치기(이름 · 주소 · 배너 이미지).
 //     홍차네 집 고치기(item.home)는 모양만 — 내용 탭 · 내리기 없이, 저장은 set_home_house.
 
-import { MY_BANNER, bannerCode, httpUrl, siteLabel, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, setHomeHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
+import { MY_BANNER, uploadMyBanner, bannerCode, httpUrl, siteLabel, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, setHomeHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
 import { mountCustomizer } from './customizer.js';
 import { houseSvg, normalizeHouse, defaultHouse, randomHouse, HOME_HOUSE } from './house-art.js';
 
@@ -95,7 +96,11 @@ function markup() {
           </form>
         </section>
         <section class="nbh-sec" data-mode="mine" aria-label="내 배너" hidden>
-          <div class="nbh-mine__preview"><img src="${esc(MY_BANNER.image)}" alt="${esc(MY_BANNER.name)} 배너" width="3000" height="600" decoding="async"></div>
+          <div class="nbh-mine__preview"><img src="${esc(MY_BANNER.image)}" alt="${esc(MY_BANNER.name)} 배너" width="3000" height="600" decoding="async"><span class="nbh-mine__empty">아직 바이브.me 배너가 없어요</span></div>
+          <div class="nbh-mine__owner" data-owner hidden>
+            <label class="nbh-file"><input name="mybanner" type="file" accept="image/*"><span>배너 바꾸기</span></label>
+            <p class="nbh-form__msg nbh-mine__msg" role="status" aria-live="polite"></p>
+          </div>
           <dl class="nbh-mine__rows">${rows}
             <div class="nbh-mine__row is-code">
               <dt>삽입 코드</dt>
@@ -229,6 +234,35 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   for (const [form, diy] of [[apply, diyApply], [add, diyAdd]]) {
     for (const n of ['name', 'url']) form.elements[n].addEventListener('input', () => diy.renamed());
   }
+
+  // ---------- 내 배너 — 없으면 안내, 주인은 바꾸기 ----------
+
+  const mineBox = root.querySelector('[data-mode="mine"]');
+  const minePreview = mineBox.querySelector('.nbh-mine__preview');
+  const mineImg = minePreview.querySelector('img');
+  const mineOwner = mineBox.querySelector('.nbh-mine__owner');
+  const mineMsg = mineBox.querySelector('.nbh-mine__msg');
+  const mineFile = mineBox.querySelector('[name="mybanner"]');
+  mineImg.addEventListener('error', () => minePreview.classList.add('is-empty'));
+  mineImg.addEventListener('load', () => minePreview.classList.remove('is-empty'));
+  mineFile.addEventListener('change', async () => {
+    const file = mineFile.files?.[0];
+    const s = session();
+    mineFile.value = '';
+    if (!file || !s.owner) return;
+    mineMsg.textContent = '올리는 중…';
+    mineMsg.dataset.tone = '';
+    try {
+      mineImg.src = await uploadMyBanner(s.user.id, file);
+    } catch (err) {
+      console.error(err);
+      mineMsg.textContent = '올리지 못했어요. 다시 골라 주세요.';
+      mineMsg.dataset.tone = 'error';
+      return;
+    }
+    mineMsg.textContent = '바꿨어요 ♡ 다른 사이트에 붙인 배너도 1분쯤 뒤 바뀌어요.';
+    mineMsg.dataset.tone = 'done';
+  });
 
   // ---------- 복사 ----------
 
@@ -722,6 +756,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
       sheet.scrollTop = 0;
       sheet.focus({ preventScroll: true });
       if (next === 'exchange') { exTab(extra.tab || 'apply'); loadRequests(); }
+      if (next === 'mine') { mineOwner.hidden = !session().owner; mineMsg.textContent = ''; }
     },
     close,
     /** 받은 신청 칸까지 내려 보기 */
