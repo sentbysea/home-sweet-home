@@ -1789,6 +1789,8 @@ async function heads() {
   await o.page.screenshot({ path: path.join(OUT, 'heads-editor.png') });
   await o.page.fill('[name="head-title"]', '공지사항');
   await o.page.fill('[name="head-pill"]', 'E2E 알약');
+  await o.page.fill('[name="st-min"]', '7');
+  await o.page.fill('[name="st-max"]', '5');
   await o.page.setInputFiles('[name="photo"]', { name: 'wide.png', mimeType: 'image/png', buffer: png(300, 200, [200, 120, 160]) });
   await o.page.click('.hsh-win__ed-save');
   await until(() => db.site_settings.some((r) => r.key === 'vibe_room_heads'), 10000);
@@ -1798,15 +1800,20 @@ async function heads() {
   const photo = db.storage.get(photoKey);
   let h = await headLook(o.page);
   check('주인 — 저장 → 제목 · 검정 알약 · 사진이 바로 바뀜', h.title === '공지사항' && h.pill === 'E2E 알약' && h.thumb.includes('/vibe-rooms/'), JSON.stringify(h));
-  check('주인 — site_settings(vibe_room_heads) 한 칸 · 사진은 내 폴더 vibe-rooms 에 정사각형으로', saved.title === '공지사항' && saved.pill === 'E2E 알약' && saved.imagePath?.startsWith(`${OWNER_ID}/vibe-rooms/`) && photo && pngSize(Buffer.from(photo.bytes)).w === 200 && pngSize(Buffer.from(photo.bytes)).h === 200, JSON.stringify(saved));
+  const n1 = (await o.page.$$eval('.hsh-win__deco', (d) => d.length));
+  check('주인 — 스티커 개수 7 ~ 5 → 5 ~ 7 로 맞춰 저장, 바로 그만큼 다시 붙음', n1 >= 5 && n1 <= 7, String(n1));
+  check('주인 — site_settings(vibe_room_heads) 한 칸 · 사진은 내 폴더 vibe-rooms 에 정사각형으로', saved.title === '공지사항' && saved.pill === 'E2E 알약' && saved.stickers?.join('~') === '5~7' && saved.imagePath?.startsWith(`${OWNER_ID}/vibe-rooms/`) && photo && pngSize(Buffer.from(photo.bytes)).w === 200 && pngSize(Buffer.from(photo.bytes)).h === 200, JSON.stringify(saved));
 
   // 머리 숨기기 — edit 는 그대로 남는다
   await o.page.click('.hsh-win__edit');
   await o.page.check('[name="headless"]');
+  await o.page.fill('[name="st-min"]', '0');
+  await o.page.fill('[name="st-max"]', '');
   await o.page.click('.hsh-win__ed-save');
   await o.page.waitForSelector('.hsh-win__editor[hidden]', { state: 'attached', timeout: 10000 });
   h = await headLook(o.page);
   check('주인 — 상단 바 숨기기 → 사진 · 제목 · 알약 줄이 빠지고 edit 는 남음', !h.head && h.edit, JSON.stringify(h));
+  check('주인 — 스티커 한 칸만 0 → 딱 0개', (await o.page.$$eval('.hsh-win__deco', (d) => d.length)) === 0);
 
   // Esc — 고치기 창만 닫힌다
   await o.page.click('.hsh-win__edit');
@@ -1820,7 +1827,7 @@ async function heads() {
   await openNotice(v.page);
   await v.page.waitForTimeout(1500);
   h = await headLook(v.page);
-  check('방문자 — 주인이 숨긴 머리는 안 보임 · edit 없음', !h.head && !h.edit, JSON.stringify(h));
+  check('방문자 — 주인이 숨긴 머리는 안 보임 · edit 없음 · 스티커 0개', !h.head && !h.edit && (await v.page.$$eval('.hsh-win__deco', (d) => d.length)) === 0, JSON.stringify(h));
   await v.context.close();
 
   // 되돌리기 — 사진 지우기 · 칸 비우기 · 숨기기 끄기 → 기본값, 예전 사진은 지운다
@@ -1829,6 +1836,8 @@ async function heads() {
   await o.page.fill('[name="head-title"]', '');
   await o.page.fill('[name="head-pill"]', '');
   await o.page.uncheck('[name="headless"]');
+  await o.page.fill('[name="st-min"]', '');
+  await o.page.fill('[name="st-max"]', '');
   await o.page.click('.hsh-win__ed-save');
   await o.page.waitForSelector('.hsh-win__editor[hidden]', { state: 'attached', timeout: 10000 });
   await until(() => !db.storage.has(photoKey), 5000);
