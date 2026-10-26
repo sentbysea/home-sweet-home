@@ -1,6 +1,7 @@
 // neighbor — 브라우저 창 대신 흰 화면의 손그림 마을(village.js). 주소 /neighbor · /neighbor/banner(routes.js),
 // 여닫기 · 기록은 room-window.js 가 맡는다(archive 와 같은 길).
 //   · 가운데 홍차네 집, 둘레에 배너를 교환한 이웃집(banners · 배너 카테고리, 정렬 순서대로). 집을 고르면 그 배너.
+//     그 뒤에 홈페이지 없는 이웃(neighbor_residents) — 집 + 이름표만, 눌러도 배너 · 이동 없음.
 //   · 홍차네 집 옆 우체통 → 배너 교환 패널(panel.js) — 주소 /neighbor/banner.
 //   · 홍차네 집 → 내 배너(복사) — 주소 /neighbor/mine. 주인 고치기 중이면 홍차네 집 고치기(모양 · 색, neighbor_home 에 저장).
 //   · 주인: 아래 'edit' → Google 로그인(돌아오면 보던 주소로) → 집을 누르면 그 집 고치기, '+ add banner', 받은 신청.
@@ -9,7 +10,7 @@
 //     창 크기가 바뀌어도 그대로, 마을 뒤에 깔려 집 · 이름표를 가리거나 누르기를 막지 않는다.
 //   · 닫으면 마을을 치운다.
 
-import { fetchBanners, fetchHome, siteLabel, httpUrl, MY_BANNER } from './data.js';
+import { fetchBanners, fetchHome, fetchResidents, siteLabel, httpUrl, MY_BANNER } from './data.js';
 import { createVillage } from './village.js';
 import { mountPanel } from './panel.js';
 import { BOIL, HOME_NAME } from './house-art.js';
@@ -61,6 +62,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   let village = null;
   let panel = null;
   let banners = [];
+  let residents = []; // 홈페이지 없는 이웃(집 + 이름표만)
   let homeHouse = null; // 홍차네 집 — 주인이 고친 모양(없으면 기본)
   let state = 'loading';
   let loaded = false;
@@ -81,14 +83,25 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     msg.hidden = !text;
   };
 
-  const items = () => banners.map((b) => ({
-    id: b.id,
-    href: httpUrl(b.url) || '',
-    image: httpUrl(b.image_url) || '',
-    label: siteLabel(b),
-    house: b.house ?? null,
-    banner: b,
-  }));
+  // 배너 이웃 다음에 홈페이지 없는 이웃(집 + 이름표만 — 배너 · 링크 없음)
+  const items = () => [
+    ...banners.map((b) => ({
+      id: b.id,
+      href: httpUrl(b.url) || '',
+      image: httpUrl(b.image_url) || '',
+      label: siteLabel(b),
+      house: b.house ?? null,
+      banner: b,
+    })),
+    ...residents.map((r) => ({
+      id: `r${r.id}`,
+      href: '',
+      image: '',
+      label: r.name,
+      house: r.house ?? null,
+      resident: r,
+    })),
+  ];
 
   const paint = () => {
     village?.render({ items: items(), home: homeHouse, state, editing });
@@ -99,7 +112,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   const load = async ({ quiet = false } = {}) => {
     if (!quiet || state !== 'ready') { state = 'loading'; paint(); }
     try {
-      [banners, homeHouse] = await Promise.all([fetchBanners(), fetchHome()]);
+      [banners, homeHouse, residents] = await Promise.all([fetchBanners(), fetchHome(), fetchResidents()]);
       state = 'ready';
     } catch (e) {
       console.error(e);

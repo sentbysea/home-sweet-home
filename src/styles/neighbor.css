@@ -582,6 +582,21 @@
 
 .nbh-form__actions { display: flex; justify-content: flex-end; gap: 8px; }
 
+/* 입주 신청 두 단계 — ① 우리 집 꾸미기 → ② 사이트 정보. 지금 단계만 보인다 */
+.nbh-step { display: grid; gap: 12px; }
+.nbh-step[hidden],
+.nbh-field[hidden],
+.nbh-file[hidden] { display: none; } /* 홈페이지가 없어요 · 홈페이지 없는 이웃 고치기 — 주소 · 배너 칸을 뺀다 */
+.nbh-step__bar { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; color: var(--hsh-note); }
+.nbh-step__bar b { font-weight: 500; color: var(--hsh-text); text-decoration: underline 3px var(--hsh-butter); text-underline-offset: 4px; }
+.nbh-step [data-step-go="house"] { margin-right: auto; } /* 뒤로는 왼쪽 */
+
+/* 홈페이지가 없어요 */
+.nbh-check { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px dashed #c3c7ca; border-radius: 8px; background: #fff; font-size: 13.5px; cursor: pointer; }
+.nbh-check input { width: 17px; height: 17px; margin: 0; accent-color: var(--hsh-text); }
+.nbh-check em { font-style: normal; font-size: 11.5px; color: var(--hsh-note); }
+.nbh-check:has(input:checked) { border-style: solid; border-color: var(--hsh-text); background: color-mix(in srgb, var(--hsh-butter) 45%, #fff); }
+
 .nbh-file { justify-self: start; cursor: pointer; font-size: 12.5px; }
 .nbh-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .nbh-file span { text-decoration: underline 1px; text-underline-offset: 3px; }
@@ -607,6 +622,7 @@
 .nbh-req { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 1px dashed #d6d9db; }
 .nbh-req__img { border: 1px solid var(--nbh-ink-soft); background: #fff; }
 .nbh-req__img img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 1; object-fit: cover; }
+.nbh-req__img.is-none { display: grid; place-items: center; aspect-ratio: 5 / 1; border-style: dashed; font-size: 12.5px; color: var(--hsh-note); } /* 홈페이지 없는 신청 */
 .nbh-req__name { margin: 0; font-size: 13.5px; overflow-wrap: anywhere; }
 .nbh-req__name a { margin-left: 4px; font-family: var(--hsh-mono); font-size: 12px; color: var(--hsh-link); }
 .nbh-req__msg { margin: 0; padding: 7px 9px; border-radius: 4px; background: #f5f4f0; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }

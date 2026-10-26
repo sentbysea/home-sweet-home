@@ -138,6 +138,7 @@ function seed() {
   db.seq.banners = 100;
   db.banner_requests = [];
   db.requestCalls = 0;
+  db.residents = []; // 홈페이지 없는 이웃(neighbor_residents)
   // 흉내 DB 에 없는 RPC — 사이트 주인 · 배너 교환 신청(web supabase/migrations/20261026100000_banner_requests.sql 과 같은 규칙)
   const reply = (route, status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
   const key = (u) => String(u || '').trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/[/?#]+$/, '');
@@ -146,6 +147,7 @@ function seed() {
   db.homeHouse = undefined; // 홍차네 집(neighbor_home) — undefined 면 아직 한 번도 고치지 않은 것(빈 표)
   db.hooks.beforeRequest = async ({ route, url }) => {
     if (url.pathname === '/rest/v1/neighbor_home') { await reply(route, 200, db.homeHouse === undefined ? [] : [{ house: db.homeHouse }]); return true; }
+    if (url.pathname === '/rest/v1/neighbor_residents') { await reply(route, 200, [...db.residents].sort((a, b) => a.sort_order - b.sort_order)); return true; }
     if (url.pathname !== '/functions/v1/site-title') return false;
     await reply(route, 200, { title: db.titles[url.searchParams.get('url')] || '' });
     return true;
@@ -161,13 +163,14 @@ function seed() {
       const nm = String(args.p_site_name || '').trim();
       const url = String(args.p_site_url || '').trim();
       const img = String(args.p_image_url || '').trim();
+      const nosite = !url && !img; // 홈페이지 없는 신청(20261030100000_neighbor_residents.sql)
       if (nm.length < 1 || nm.length > 40) { await bad('site_name'); return true; }
-      if (!/^https?:\/\/[^\s/?#]+\.[^\s/?#]+(\S*)$/i.test(url)) { await bad('site_url'); return true; }
-      if (!/^https?:\/\/\S+$/i.test(img)) { await bad('image_url'); return true; }
+      if (!nosite && !/^https?:\/\/[^\s/?#]+\.[^\s/?#]+(\S*)$/i.test(url)) { await bad('site_url'); return true; }
+      if (!nosite && !/^https?:\/\/\S+$/i.test(img)) { await bad('image_url'); return true; }
       if (!houseOk(args.p_house)) { await bad('house'); return true; }
-      if (db.banners.some((b) => b.category_id === 4 && key(b.url) === key(url))) { await reply(route, 200, 'listed'); return true; }
-      if (db.banner_requests.some((r) => r.status === 'pending' && key(r.site_url) === key(url))) { await reply(route, 200, 'pending'); return true; }
-      db.banner_requests.push({ id: db.banner_requests.length + 1, site_name: nm, site_url: url, image_url: img, message: String(args.p_message || '').trim() || null, house: args.p_house ?? null, status: 'pending', created_at: new Date().toISOString() });
+      if (!nosite && db.banners.some((b) => b.category_id === 4 && key(b.url) === key(url))) { await reply(route, 200, 'listed'); return true; }
+      if (!nosite && db.banner_requests.some((r) => r.status === 'pending' && key(r.site_url) === key(url))) { await reply(route, 200, 'pending'); return true; }
+      db.banner_requests.push({ id: db.banner_requests.length + 1, site_name: nm, site_url: url || null, image_url: img || null, message: String(args.p_message || '').trim() || null, house: args.p_house ?? null, status: 'pending', created_at: new Date().toISOString() });
       await reply(route, 200, 'ok');
       return true;
     }
@@ -187,6 +190,17 @@ function seed() {
       await reply(route, 200, b ? 'ok' : 'missing');
       return true;
     }
+    if (name === 'update_resident' || name === 'delete_resident') {
+      if (uid !== OWNER_ID) { await reply(route, 403, { code: '42501', message: 'owner only' }); return true; }
+      const r = db.residents.find((x) => x.id === Number(args.p_id));
+      if (name === 'delete_resident') { if (r) db.residents.splice(db.residents.indexOf(r), 1); await reply(route, 200, r ? 'ok' : 'missing'); return true; }
+      const nm = String(args.p_name || '').trim();
+      if (nm.length < 1 || nm.length > 40) { await reply(route, 400, { code: '22023', message: 'name' }); return true; }
+      if (!houseOk(args.p_house)) { await reply(route, 400, { code: '22023', message: 'house' }); return true; }
+      if (r) { r.name = nm; r.house = args.p_house ?? null; }
+      await reply(route, 200, r ? 'ok' : 'missing');
+      return true;
+    }
     if (name === 'list_banner_requests' || name === 'review_banner_request') {
       if (uid !== OWNER_ID) { await reply(route, 403, { code: '42501', message: 'owner only' }); return true; }
       if (name === 'list_banner_requests') {
@@ -196,7 +210,9 @@ function seed() {
       const r = db.banner_requests.find((x) => x.id === Number(args.p_id));
       if (!r) { await reply(route, 200, 'missing'); return true; }
       if (r.status !== 'pending') { await reply(route, 200, r.status); return true; }
-      if (args.p_approve && !db.banners.some((b) => b.category_id === 4 && key(b.url) === key(r.site_url))) {
+      if (args.p_approve && !r.site_url) {
+        db.residents.push({ id: (db.seq.residents = (db.seq.residents || 0) + 1), name: r.site_name, house: r.house ?? null, sort_order: Math.max(-1, ...db.residents.map((x) => x.sort_order)) + 1 });
+      } else if (args.p_approve && !db.banners.some((b) => b.category_id === 4 && key(b.url) === key(r.site_url))) {
         const max = Math.max(-1, ...db.banners.filter((b) => b.category_id === 4).map((b) => b.sort_order));
         db.banners.push({ id: ++db.seq.banners, category_id: 4, user_id: OWNER_ID, name: r.site_name, url: r.site_url, image_url: r.image_url, image_path: null, sort_order: max + 1, house: r.house ?? null });
       }
@@ -1391,6 +1407,14 @@ async function neighborApply() {
   await page.click(`${D} [data-diy="banner"]`);
   check('꾸미기 — 배너 이미지 없으면 안내', (await diyMsg()).includes('배너 이미지 주소'));
 
+  // 두 단계 — 첫 화면은 집 꾸미기만, 다음으로 → 사이트 정보
+  const stepNow = () => page.$eval(F, (f) => ({ step: f.dataset.step, house: !f.querySelector('[data-step-pane="house"]').hidden, info: !f.querySelector('[data-step-pane="info"]').hidden }));
+  let st = await stepNow();
+  check('신청 — 처음엔 집 꾸미기만(사이트 칸 없음)', st.step === 'house' && st.house && !st.info && !(await page.isVisible(`${F} [name="url"]`)), JSON.stringify(st));
+  await page.click(`${F} [data-step-go="info"]`);
+  st = await stepNow();
+  check('신청 — 다음으로 → 사이트 정보(꾸미기는 숨김)', st.step === 'info' && !st.house && st.info && (await page.isVisible(`${F} [name="url"]`)) && !(await page.isVisible(`${D}`)), JSON.stringify(st));
+
   // 입력 검사
   await page.click(`${F} [type="submit"]`);
   check('신청 — 빈 칸이면 칸마다 안내 · 보내지 않음(이름은 선택)', (await err('name')) === '' && (await err('url')).length > 0 && (await err('image')).length > 0 && db.requestCalls === 0);
@@ -1404,14 +1428,17 @@ async function neighborApply() {
   await page.focus(`${F} [name="message"]`);
   check('신청 — 주소만 적으면 https:// 를 붙여 준다', (await page.inputValue(`${F} [name="url"]`)) === 'https://new-neighbor.example/home');
 
-  // 배너 색 — 읽을 수 없는 배너는 쉬운 말로 안내, 직접 고르기 · 랜덤은 그대로
+  // 배너 색 — 읽을 수 없는 배너는 쉬운 말로 안내, 직접 고르기 · 랜덤은 그대로(꾸미기는 첫 단계로 돌아가서)
+  await page.click(`${F} [data-step-go="house"]`);
   await page.click(`${D} [data-diy="banner"]`);
   await page.waitForFunction((D) => document.querySelector(`${D} .nbh-diy__msg`).textContent.includes('못했어요'), D, { timeout: 8000 }).catch(() => {});
   const noColor = await diyMsg();
   check('배너 색 — 못 읽으면 쉬운 안내(기술 용어 없음)', noColor.includes('가져오지 못했어요') && !/cors|origin|canvas|taint|security/i.test(noColor), noColor);
   await page.click(`${D} [data-diy="random"]`);
   check('배너 색 — 못 읽어도 랜덤 · 직접 고르기는 된다', (await chosen()).split('/').length === 9);
+  await page.click(`${F} [data-step-go="info"]`);
   await page.fill(`${F} [name="image"]`, 'https://img.test/new.png');
+  await page.click(`${F} [data-step-go="house"]`);
   await page.click(`${D} [data-diy="banner"]`);
   await page.waitForFunction((D) => document.querySelector(`${D} .nbh-diy__msg`).textContent.includes('지었어요'), D, { timeout: 8000 }).catch(() => {});
   const c1 = await chosen();
@@ -1425,8 +1452,15 @@ async function neighborApply() {
   check('배너 색 — 원본 배너 이미지는 그대로', (await page.$eval(`${F} .nbh-form__preview img`, (i) => i.getAttribute('src'))) === 'https://img.test/new.png');
   const picked = await page.$eval(D, () => null).then(() => chosen());
 
-  // 실패 → 다시 시도, 연달아 눌러도 한 번, 저장(집 모양까지)
+  // 브라우저에 저장 — 새로고침해도 단계 · 칸 · 꾸민 집 그대로
+  await page.click(`${F} [data-step-go="info"]`);
   await page.fill(`${F} [name="message"]`, '안녕하세요 ♡');
+  await page.reload();
+  await page.waitForSelector('.nbh-panel.is-open', { timeout: 20000 });
+  st = await stepNow();
+  check('신청 — 새로고침해도 적던 단계 · 칸 · 꾸민 집 그대로(브라우저에 저장)', st.step === 'info' && (await page.inputValue(`${F} [name="name"]`)) === '새 이웃' && (await page.inputValue(`${F} [name="image"]`)) === 'https://img.test/new.png' && (await page.inputValue(`${F} [name="message"]`)) === '안녕하세요 ♡' && (await chosen()) === picked, JSON.stringify({ st, spec: await chosen(), picked }));
+
+  // 실패 → 다시 시도, 연달아 눌러도 한 번, 저장(집 모양까지)
   db.failSubmit = 1;
   await page.click(`${F} [type="submit"]`);
   await page.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'error', F, { timeout: 10000 }).catch(() => {});
@@ -1437,7 +1471,7 @@ async function neighborApply() {
   const saved = db.banner_requests[0];
   check('신청 — 연달아 눌러도 한 번 · 대기 목록에 집 모양까지', db.requestCalls - callsBefore === 1 && db.banner_requests.length === 1 && saved.site_url === 'https://new-neighbor.example/home'
     && saved.house.v === 2 && keyOf(saved.house) === picked, JSON.stringify(saved));
-  check('신청 — 완료 안내 · 칸 잠김', (await msg()).includes('신청했어요') && (await page.$eval(`${F} [name="name"]`, (i) => i.disabled)));
+  check('신청 — 완료 안내 · 칸 잠김 · 저장해 둔 내용은 지움', (await msg()).includes('신청했어요') && (await page.$eval(`${F} [name="name"]`, (i) => i.disabled)) && (await page.evaluate(() => localStorage.getItem('hsh:nbh-apply'))) === null);
   await page.click('.nbh-panel__x');
   await page.reload();
   await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 15000 });
@@ -1447,6 +1481,102 @@ async function neighborApply() {
   const applyErrors = v.errors.filter((e) => !/503|submit 503|CORS policy|ERR_FAILED/.test(e));
   check('콘솔 오류 없음(neighbor 신청)', applyErrors.length === 0, applyErrors.join(' | '));
   await v.context.close();
+}
+
+// 홈페이지가 없어요 — 신청(이름표 · 집만) → 주인 승인 → 마을에 집 + 이름표(배너 없음) → 주인 이름 고치기 · 내리기
+async function neighborNosite() {
+  const v = await open(null, { width: 1280, height: 860 });
+  const { page } = v;
+  const F = '.nbh-form[data-form="apply"]';
+  const D = `${F} [data-diy="apply"]`;
+  const chosen = () => page.$eval(D, (d) => d.dataset.spec);
+  await page.goto(`${VIBE_ORIGIN}/neighbor/banner?${Q}`);
+  await page.waitForSelector('.nbh-panel.is-open', { timeout: 20000 });
+  await page.click(`${D} [data-key="body"] [data-v="tall"]`);
+  const spec = await chosen();
+  await page.screenshot({ path: path.join(OUT, 'neighbor-apply-1.png') });
+  await page.click(`${F} [data-step-go="info"]`);
+  await page.check(`${F} [name="nosite"]`);
+  const look = await page.evaluate((F) => ({
+    url: document.querySelector(`${F} [name="url"]`).closest('.nbh-field').offsetParent !== null,
+    image: document.querySelector(`${F} [name="image"]`).closest('.nbh-field').offsetParent !== null,
+    k: document.querySelector(`${F} [data-name-k]`).textContent,
+  }), F);
+  await page.screenshot({ path: path.join(OUT, 'neighbor-apply-2.png') });
+  check('홈페이지 없음 — 주소 · 배너 칸이 빠지고 이름표 칸만', !look.url && !look.image && look.k.startsWith('이름표'), JSON.stringify(look));
+  await page.click(`${F} [type="submit"]`);
+  check('홈페이지 없음 — 이름표는 꼭(비우면 안내 · 안 보냄)', (await page.$eval(`${F} [name="name"]`, (i) => i.closest('.nbh-field').querySelector('.nbh-field__err').textContent)).includes('이름표') && !db.banner_requests.some((r) => !r.site_url));
+  await page.fill(`${F} [name="name"]`, '집만 이웃');
+  await page.reload();
+  await page.waitForSelector('.nbh-panel.is-open', { timeout: 20000 });
+  check('홈페이지 없음 — 새로고침해도 체크 · 이름표 · 집 그대로', (await page.isChecked(`${F} [name="nosite"]`)) && (await page.inputValue(`${F} [name="name"]`)) === '집만 이웃' && (await chosen()) === spec && !(await page.isVisible(`${F} [name="url"]`)));
+  await page.click(`${F} [type="submit"]`);
+  await page.waitForFunction((F) => document.querySelector(`${F} .nbh-form__msg`).dataset.tone === 'done', F, { timeout: 10000 }).catch(() => {});
+  const req = db.banner_requests.find((r) => !r.site_url);
+  check('홈페이지 없음 — 신청(주소 · 이미지 없이 이름 · 집)', req?.site_name === '집만 이웃' && req.image_url === null && keyOf(req.house) === spec && (await page.textContent(`${F} .nbh-form__msg`)).includes('신청했어요'), JSON.stringify(req));
+  check('콘솔 오류 없음(neighbor 홈페이지 없음 신청)', v.errors.length === 0, v.errors.join(' | '));
+  await v.context.close();
+
+  const o = await open(USERS.owner, { width: 1280, height: 860 });
+  o.page.on('dialog', (dlg) => dlg.accept());
+  await o.page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
+  await o.page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
+  await o.page.click('.nbh__owner [data-act="edit"]');
+  await o.page.waitForSelector('.nbh__owner [data-act="requests"]:not([hidden])', { timeout: 15000 });
+  await o.page.click('.nbh__owner [data-act="requests"]');
+  await o.page.waitForSelector(`.nbh-req[data-id="${req.id}"]`, { timeout: 10000 });
+  check('주인 — 받은 신청에 홈페이지 없음 표시(링크 · 배너 없이)', await o.page.$eval(`.nbh-req[data-id="${req.id}"]`, (li) => li.classList.contains('is-nosite') && !li.querySelector('a') && li.textContent.includes('홈페이지 없음')));
+  await o.page.click(`.nbh-req[data-id="${req.id}"] [data-ok="1"]`);
+  await until(() => db.residents.length === 1, 8000);
+  check('주인 — 승인 → banners 가 아니라 홈페이지 없는 이웃으로', db.residents[0]?.name === '집만 이웃' && !db.banners.some((b) => b.name === '집만 이웃'), JSON.stringify(db.residents));
+  await o.page.click('.nbh-panel__x');
+  await o.page.waitForFunction(() => [...document.querySelectorAll('.nbh-home__tag')].some((t) => t.textContent === '집만 이웃'), null, { timeout: 10000 });
+  // 고치기 — 이름만(주소 · 배너 칸 없음)
+  const ri = await o.page.$$eval('.nbh-home', (b) => b.findIndex((x) => x.querySelector('.nbh-home__tag').textContent === '집만 이웃'));
+  await o.page.click(`.nbh-home[data-i="${ri}"]`);
+  await o.page.waitForSelector('[data-mode="house"]:not([hidden])');
+  await o.page.click('[data-house-tab="info"]');
+  check('주인 — 홈페이지 없는 이웃 내용 고치기는 이름만', (await o.page.isVisible('[data-form="info"] [name="name"]')) && !(await o.page.isVisible('[data-form="info"] [name="url"]')) && !(await o.page.isVisible('[data-form="info"] [name="file"]')));
+  await o.page.fill('[data-form="info"] [name="name"]', '집만 이웃2');
+  await o.page.click('[data-form="info"] [type="submit"]');
+  await until(() => db.residents[0]?.name === '집만 이웃2', 8000);
+  check('주인 — 이름 고치기 → 저장(집 모양은 그대로)', db.residents[0]?.name === '집만 이웃2' && keyOf(db.residents[0].house) === spec, JSON.stringify(db.residents));
+  await o.page.click('.nbh__owner [data-act="edit"]'); // done
+  await o.page.waitForFunction(() => [...document.querySelectorAll('.nbh-home__tag')].some((t) => t.textContent === '집만 이웃2'), null, { timeout: 10000 });
+  await o.context.close();
+
+  // 방문자 — 집 + 이름표만, 눌러도 배너 · 새 탭 없음
+  const w = await open(null, { width: 1280, height: 860 });
+  const popups = [];
+  w.context.on('page', (pg) => popups.push(pg));
+  await w.page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
+  await w.page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
+  await w.page.waitForFunction(() => [...document.querySelectorAll('.nbh-home__tag')].some((t) => t.textContent === '집만 이웃2'), null, { timeout: 10000 });
+  const wi = await w.page.$$eval('.nbh-home', (b) => b.findIndex((x) => x.querySelector('.nbh-home__tag').textContent === '집만 이웃2'));
+  const art = center((await rects(w.page, `.nbh-home[data-i="${wi}"] .nbh-art`))[0]);
+  await w.page.mouse.move(art.x, art.y);
+  await w.page.waitForTimeout(400);
+  await w.page.mouse.click(art.x, art.y);
+  await w.page.waitForTimeout(600);
+  check('방문자 — 홈페이지 없는 집: 올리거나 눌러도 배너 · 새 탭 없음', (await w.page.$eval('.nbh-pop', (p) => p.hidden)) && popups.length === 0 && (await w.page.$eval(`.nbh-home[data-i="${wi}"]`, (b) => !b.hasAttribute('aria-haspopup'))));
+  await w.page.screenshot({ path: path.join(OUT, 'neighbor-nosite.png') });
+  check('콘솔 오류 없음(neighbor 홈페이지 없는 집)', w.errors.length === 0, w.errors.join(' | '));
+  await w.context.close();
+
+  // 주인 — 내리기(다음 테스트는 처음 마을 그대로)
+  const o2 = await open(USERS.owner, { width: 1280, height: 860 });
+  o2.page.on('dialog', (dlg) => dlg.accept());
+  await o2.page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
+  await o2.page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
+  await o2.page.click('.nbh__owner [data-act="edit"]');
+  await o2.page.waitForSelector('.nbh__owner [data-act="add"]:not([hidden])', { timeout: 15000 });
+  const di = await o2.page.$$eval('.nbh-home', (b) => b.findIndex((x) => x.querySelector('.nbh-home__tag').textContent === '집만 이웃2'));
+  await o2.page.click(`.nbh-home[data-i="${di}"]`);
+  await o2.page.waitForSelector('[data-mode="house"]:not([hidden])');
+  await o2.page.click('[data-house="delete"]');
+  await until(() => db.residents.length === 0, 8000);
+  check('주인 — 홈페이지 없는 이웃 내리기', db.residents.length === 0);
+  await o2.context.close();
 }
 
 async function neighborOwner() {
@@ -1618,6 +1748,7 @@ async function neighbor() {
   await neighborVillage(playwright.devices['iPhone 13'], '휴대폰');
   await neighborApply();
   await neighborOwner();
+  await neighborNosite();
   await neighborShapes();
 
   // 모션 줄이기 — 둥실 · 위글 · 나타남 없이

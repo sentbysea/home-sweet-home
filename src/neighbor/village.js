@@ -8,6 +8,7 @@
 //     휴대폰은 한 번 누르면 배너 · 이름이 뜨고, 그 배너를 눌러야 이동. 바깥 · 다른 집을 누르면 닫힌다. Esc 로 닫기.
 //     배너 말풍선은 집과 같은 손그림 외곽선(위글 변형 4장) — 그림자 없이, 안에는 가로로 긴 배너만(이름은 집 아래 이름표).
 //     배너는 화면 가장자리에서 잘리지 않게 자리를 고친다(위에 자리가 없으면 아래로).
+//     홈페이지 없는 이웃(item.resident)은 집 + 이름표만 — 눌러도 배너 · 이동 없음.
 //   · 집마다 바로 아래 이름표(사이트 이름) — 홈 라벨 같은 색종이. 종이 색은 그 집에 쓴 색 중 하나(진하면 밝혀서, house-art.js tagTone),
 //     배너 링크를 올렸을 때 밑줄도 같은 색. 긴 이름은 줄을 바꾸고, 화면 밖으로 나가지 않게 폭을 정한다.
 //   · 우체통 위에 통통 튀는 화살표 · 바람에 떠는 빨간 세모 깃발로 누르기를 이끈다.
@@ -168,13 +169,16 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       b.className = 'nbh-home';
       b.dataset.i = String(i);
       b.dataset.house = houseKey(spec);
-      b.setAttribute('aria-label', `${it.label} — ${editing ? '집 고치기' : '배너 보기'}`);
+      // 홈페이지 없는 이웃(resident) — 배너 · 링크가 없어 이름만
+      b.setAttribute('aria-label', `${it.label} — ${editing ? '집 고치기' : it.resident ? '이웃집' : '배너 보기'}`);
       const tone = tagTone(spec);
       b.style.setProperty('--tag-bg', tone);
       b.style.setProperty('--hl', tone);
       b.style.setProperty('--tag-max', tagMax(x));
-      b.setAttribute('aria-haspopup', 'dialog');
-      b.setAttribute('aria-expanded', 'false');
+      if (!it.resident) {
+        b.setAttribute('aria-haspopup', 'dialog');
+        b.setAttribute('aria-expanded', 'false');
+      }
       b.innerHTML = `<span class="nbh-home__art">${art.svg}</span><span class="nbh-home__tag nbh-label" aria-hidden="true">${esc(it.label)}</span>${editing ? '<span class="nbh-home__edit" aria-hidden="true">✎</span>' : ''}`;
       b.style.left = `${f(x - art.w / 2)}px`;
       b.style.top = `${f(base - art.h)}px`;
@@ -326,7 +330,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   const openPop = (i, { pin = false } = {}) => {
     clearTimeout(closeTimer);
     const it = items[i];
-    if (!it) return;
+    if (!it || it.resident) return; // 홈페이지 없는 이웃 — 띄울 배너가 없다
     if (open !== i) {
       homes[open]?.setAttribute('aria-expanded', 'false');
       homes[open]?.classList.remove('is-open');
