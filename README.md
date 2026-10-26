@@ -73,7 +73,7 @@ ready.resolve();
 | --- | --- |
 | `/` | 홈(창 없음) |
 | `/about` `/teatime` `/notice` `/neighbor` | 방 버튼 창(about __VE · teatime? · notice · neighbor) |
-| `/archive` | 열쇠꾸러미(창 대신 흰 화면 — 아래 "archive") |
+| `/archive` | 열쇠꾸러미(창 대신 아이보리 화면 — 아래 "archive") |
 | `/neighbor/banner` | neighbor 의 '배너교환은 여기에서'(내 배너) |
 | `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
 | `/category/:id/read` · `/category/:id/folder/:fid/read` | 이어서 읽기 — 그 칸의 글을 목록 순서대로 한 화면에 |
@@ -90,7 +90,7 @@ ready.resolve();
 
 ## archive (열쇠꾸러미)
 
-홈의 archive 버튼 · `/archive` — 브라우저 창 꼴 대신 흰 화면 가운데 3D 열쇠꾸러미. 내 계정 · 사이트 주소 모음.
+홈의 archive 버튼 · `/archive` — 브라우저 창 꼴 대신 아이보리 화면(홈과 같은 바탕) 가운데 3D 열쇠꾸러미. 내 계정 · 사이트 주소 모음.
 
 ```
 src/archive/links.js     사이트 목록 — 이름 · 주소 · 오브젝트 · 순서(여기만 고친다)
@@ -100,14 +100,14 @@ src/archive/index.js     화면 — ← home · 사이트 버튼 줄 · '이름 
 src/styles/archive.css
 ```
 
-- 사이트 더하기 · 고치기: `links.js` 의 `ARCHIVE_LINKS` 한 줄. `url` 이 비어 있으면 열쇠 · 이름은 보이되 밖으로 나가지 않는다(링크 비활성 · "준비 중").
+- 사이트 더하기 · 고치기: `links.js` 의 `ARCHIVE_LINKS` 한 줄(`label` 은 아래 링크 글자 — love 는 hongjiwon.love). `url` 이 비어 있으면 열쇠 · 이름은 보이되 밖으로 나가지 않는다(링크 비활성 · "준비 중").
   지금: twitter(x.com/3luespark) · tistory(3luespark.tistory.com) · luvlog(v.luvlog.me) · love(hongjiwon.love).
   다른 갠홈은 `object: 'house'` 줄을 더 붙이면 열쇠가 하나씩 늘어난다(색은 은색 · 버터색, 창 색은 하늘 · 연보라 · 버터를 번갈아).
 - 조작: 끌면 꾸러미가 돌고(위아래는 조금) 놓으면 관성으로 돌다 멈춘다. 열쇠마다 고리의 한 점에 매달린 진자라 따로 흔들리고,
   각도는 한도 안이라 떨어지거나 화면 밖으로 날아가지 않는다. 열쇠 한 번 → 앞으로 나오며 이름표, 아래에 '이름 ↗'.
   같은 열쇠를 또 누르거나 링크 → 새 탭. (고른 열쇠는 제자리에서 화면 쪽으로 나오고 커진다) 다른 열쇠 → 선택 바뀜, 빈 곳 → 풀림, 5px(손가락 10px) 넘게 끌면 누름이 아니다.
   아래 버튼 줄로도 고른다(키보드 Tab · ← → · Enter). Esc 는 선택 풀기 → 한 번 더 누르면 홈.
-- home sweet home 가죽 이름표: 작은 고리로 큰 고리 오른쪽 끝에 걸려 아래로 늘어진다(세로 글씨, 맨 앞 줄).
+- home sweet home 가죽 이름표: 작은 고리로 큰 고리 오른쪽 끝에 걸려 아래로 늘어진다(세로 글씨 + 빨간 집, 맨 앞 줄).
 - 배치: 고리를 거의 정면으로 보고 왼쪽부터 파랑새 · twitter · tistory · luvlog · love 열쇠 · home sweet home 이름표로 펼친다.
   조각은 먼 것부터 하나씩 통째로 덧그려(drawLayered) 흔들려도 서로 뚫고 지나가 보이지 않는다 — 이름표 · 파랑새 · 고른 열쇠가 앞.
 - 손그림: 윤곽은 짙은 회색(`#55595d`, 평면도 선보다 한 단 짙게), 굵기가 조금씩 다르고 3장이 190ms 마다 바뀐다(평면도 위글과 같은 박자).

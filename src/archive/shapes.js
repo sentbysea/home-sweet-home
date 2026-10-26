@@ -82,16 +82,19 @@ function heartPts(cx, cy, s) {
 
 const BLADE = { w: 0.12, collar: 0.19, tip: -2.02 };
 
-/** 오른쪽 위(머리와 만나는 곳) → 날 오른쪽 이빨 → 끝 → 왼쪽 위 */
-function blade(pen, y0) {
-  const { w, collar, tip } = BLADE;
+/** 오른쪽 위(머리와 만나는 곳) → 날 오른쪽 이빨 → 끝 → 왼쪽 위. k — 날 폭 배율(1 = 보통, 작을수록 얇다) */
+function blade(pen, y0, k = 1) {
+  const { tip } = BLADE;
+  const w = BLADE.w * k;
+  const collar = BLADE.collar * k;
+  const x = (v) => v * k; // 이빨 끝도 같은 배율로
   const c0 = y0 - 0.1;
   const c1 = c0 - 0.08;
   pen.l(w, y0).l(w, c0).l(collar, c0).l(collar, c1).l(w, c1)
-    .l(w, -1.12).l(0.2, -1.19).l(w, -1.26)
-    .l(w, -1.36).l(0.19, -1.41).l(0.22, -1.5).l(w, -1.56)
-    .l(w, -1.66).l(0.2, -1.73).l(0.2, -1.83).l(w, -1.89)
-    .l(w, tip).l(-0.04, tip).l(-w, tip + 0.1)
+    .l(w, -1.12).l(x(0.2), -1.19).l(w, -1.26)
+    .l(w, -1.36).l(x(0.19), -1.41).l(x(0.22), -1.5).l(w, -1.56)
+    .l(w, -1.66).l(x(0.2), -1.73).l(x(0.2), -1.83).l(w, -1.89)
+    .l(w, tip).l(x(-0.04), tip).l(-w, tip + 0.1)
     .l(-w, c1).l(-collar, c1).l(-collar, c0).l(-w, c0).l(-w, y0);
   return pen;
 }
@@ -138,12 +141,13 @@ function heartKey() {
 function houseKey(win = '#cfe0fb', door = '#f6c6d6') {
   const peak = 0.27;
   const slope = (x) => peak - (x / 0.46) * 0.4; // 지붕 오른쪽 경사
-  const pen = new Pen().m(-BLADE.w, -0.64)
+  const k = 0.78; // 집 머리 열쇠는 날을 조금 얇게
+  const pen = new Pen().m(-BLADE.w * k, -0.64)
     .l(-0.33, -0.64).l(-0.33, -0.13).l(-0.46, -0.13)
     .l(0, peak)
     .l(0.19, slope(0.19)).l(0.19, 0.2).l(0.29, 0.2).l(0.29, slope(0.29))
-    .l(0.46, -0.13).l(0.33, -0.13).l(0.33, -0.64).l(BLADE.w, -0.64);
-  blade(pen, -0.64);
+    .l(0.46, -0.13).l(0.33, -0.13).l(0.33, -0.64).l(BLADE.w * k, -0.64);
+  blade(pen, -0.64, k);
   return {
     outline: pen.done(),
     holes: [circle(0, 0, 0.085)],

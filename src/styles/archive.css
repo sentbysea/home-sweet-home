@@ -1,6 +1,6 @@
 /* =========================================================
    home sweet home — archive 열쇠꾸러미(src/archive/)
-   흰 바탕 한가운데 3D 꾸러미, 위에 ← home · 제목, 아래에 사이트 버튼 줄과 '사이트 이름 ↗'.
+   아이보리 바탕(홈과 같은 색) 한가운데 3D 꾸러미, 위에 ← home · 제목, 아래에 사이트 버튼 줄과 '사이트 이름 ↗'.
    글꼴 · 선 회색은 방 창(room.css)과 같다. 꾸러미 윤곽만 한 단 짙은 회색(--hsh-arc-ink).
    ========================================================= */
 
@@ -9,6 +9,7 @@
   --hsh-arc-ink: #55595d; /* 꾸러미 윤곽(keyring.js INK) */
   --hsh-arc-text: #3a3b3e;
   --hsh-arc-note: #7d8386;
+  --hsh-arc-paper: #fcfbf8; /* 홈(로딩 · 평면도) 바탕과 같은 아이보리 */
   --hsh-arc-mono: "Nanum Gothic Coding", "Pretendard Variable", Pretendard, ui-monospace, Menlo, Consolas, monospace;
   --hsh-arc-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
 
@@ -19,7 +20,7 @@
   z-index: 60;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  background: #fff;
+  background: var(--hsh-arc-paper);
   color: var(--hsh-arc-text);
   opacity: 0;
   transition: opacity 200ms ease-out;
@@ -77,13 +78,13 @@
   padding: 0 14px 0 12px;
   border: 1px solid var(--hsh-arc-line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--hsh-arc-paper);
   font-family: var(--hsh-arc-mono);
   font-size: 13px;
   color: var(--hsh-arc-text);
   cursor: pointer;
 }
-.hsh-arc__home:hover { background: #f7f8f9; }
+.hsh-arc__home:hover { background: #f4f2ec; }
 .hsh-arc__home:focus-visible,
 .hsh-arc__chip:focus-visible,
 .hsh-arc__link:focus-visible,
@@ -92,11 +93,11 @@
 .hsh-arc__title {
   margin: 0;
   font-family: var(--hsh-arc-mono);
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 400;
   letter-spacing: 0.02em;
-  text-decoration: underline 3px #fbe7a1;
-  text-underline-offset: 4px;
+  text-decoration: underline 4px #fbe7a1;
+  text-underline-offset: 5px;
 }
 
 /* ---------- 가운데 — 꾸러미 ---------- */
@@ -127,7 +128,7 @@
   padding: 5px 11px 6px;
   border: 1.5px solid var(--hsh-arc-ink);
   border-radius: 9px 9px 9px 3px;
-  background: #fff;
+  background: var(--hsh-arc-paper);
   box-shadow: 2px 2px 0 #cfe0fb;
   font-family: var(--hsh-arc-mono);
   font-size: 15px;
@@ -153,43 +154,59 @@
 }
 .hsh-arc__foot[hidden] { display: none; }
 
+/* 사이트 줄 — 한 줄에 칸을 똑같이 나눈 동그란 배지 + 이름(몇 개든 줄이 갈라지지 않게) */
 .hsh-arc__chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  max-width: 560px;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+  gap: 4px;
+  width: min(420px, 100%);
 }
 
 .hsh-arc__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 0 14px 0 7px;
-  border: 1px solid var(--hsh-arc-line);
-  border-radius: 999px;
-  background: #fff;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 2px 6px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
   font-family: var(--hsh-arc-mono);
-  font-size: 13px;
-  color: var(--hsh-arc-text);
+  font-size: 11.5px;
+  color: var(--hsh-arc-note);
   cursor: pointer;
-  transition: background-color 160ms, border-color 160ms, translate 160ms, box-shadow 160ms;
 }
-.hsh-arc__chip[aria-pressed="true"] {
+
+.hsh-arc__badge {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1.2px solid var(--hsh-arc-ink);
+  border-radius: 50%;
   background: var(--c);
-  border-color: var(--hsh-arc-ink);
-  translate: 0 -2px;
-  box-shadow: 0 2px 0 var(--hsh-arc-ink);
+  transition: translate 160ms ease-out, box-shadow 160ms ease-out;
 }
+
+.hsh-arc__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-bottom: 2px;
+  background: linear-gradient(var(--c), var(--c)) center bottom / 0 3px no-repeat;
+  transition: background-size 180ms ease-out, color 160ms;
+}
+
+.hsh-arc__chip:hover .hsh-arc__badge { translate: 0 -1px; }
+.hsh-arc__chip[aria-pressed="true"] { color: var(--hsh-arc-text); }
+.hsh-arc__chip[aria-pressed="true"] .hsh-arc__badge { translate: -1px -2px; box-shadow: 2px 3px 0 var(--hsh-arc-ink); }
+.hsh-arc__chip[aria-pressed="true"] .hsh-arc__name { background-size: 100% 3px; }
 
 .hsh-arc__icon {
   flex: none;
   width: 26px;
   height: 26px;
-  padding: 2px;
-  border-radius: 50%;
-  background: var(--c);
   fill: none;
   stroke: var(--hsh-arc-ink);
   stroke-width: 1.4;
@@ -198,40 +215,57 @@
 }
 .hsh-arc__icon .dot { fill: var(--hsh-arc-ink); stroke: none; }
 .hsh-arc__icon .fill { fill: #f6b9cb; }
-.hsh-arc__chip[aria-pressed="true"] .hsh-arc__icon { background: #fff; }
 
+/* 고른 사이트로 가는 링크 — 작은 알약, 오른쪽 동그라미 안에 ↗ (사이트 색) */
 .hsh-arc__go {
-  min-height: 34px;
+  min-height: 36px;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.hsh-arc__hint {
-  font-family: var(--hsh-arc-font);
-  font-size: 12.5px;
-  color: var(--hsh-arc-note);
 }
 
 .hsh-arc__link {
-  font-family: var(--hsh-arc-mono);
-  font-size: 19px;
-  color: var(--hsh-arc-text);
-  text-decoration: underline 3px #cfe0fb;
-  text-underline-offset: 5px;
-  cursor: pointer;
-}
-.hsh-arc__link.is-off { color: #9a9ea2; text-decoration-color: #eceef0; cursor: default; }
-
-.hsh-arc__soon {
-  padding: 2px 8px;
-  border: 1px dashed var(--hsh-arc-line);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 5px 0 15px;
+  border: 1.2px solid var(--hsh-arc-ink);
   border-radius: 999px;
-  font-family: var(--hsh-arc-font);
-  font-size: 11.5px;
-  color: var(--hsh-arc-note);
+  background: var(--hsh-arc-paper);
+  box-shadow: 2px 2px 0 var(--c, #cfe0fb);
+  font-family: var(--hsh-arc-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  color: var(--hsh-arc-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: translate 140ms ease-out, box-shadow 140ms ease-out;
 }
+.hsh-arc__link:hover { translate: -1px -1px; box-shadow: 3px 3px 0 var(--c, #cfe0fb); }
+.hsh-arc__link:active { translate: 1px 1px; box-shadow: 0 0 0 var(--c, #cfe0fb); }
+
+.hsh-arc__arrow-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--hsh-arc-ink);
+  border-radius: 50%;
+  background: var(--c, #cfe0fb);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.hsh-arc__link.is-off {
+  border-style: dashed;
+  border-color: var(--hsh-arc-line);
+  box-shadow: none;
+  color: #9a9ea2;
+  cursor: default;
+  translate: none;
+}
+.hsh-arc__link.is-off .hsh-arc__arrow-dot { width: auto; padding: 0 8px; border-style: dashed; border-color: var(--hsh-arc-line); background: none; border-radius: 999px; font-family: var(--hsh-arc-font); font-size: 11px; }
 
 /* ---------- 3D 를 쓸 수 없을 때 — 같은 데이터로 목록 ---------- */
 
@@ -256,7 +290,7 @@
   padding: 0 16px 0 10px;
   border: 1px solid var(--hsh-arc-line);
   border-radius: 14px;
-  background: #fff;
+  background: var(--hsh-arc-paper);
   font-family: var(--hsh-arc-mono);
   font-size: 15px;
   color: var(--hsh-arc-text);
@@ -264,20 +298,29 @@
 }
 .hsh-arc__row > span:nth-of-type(1) { flex: 1; }
 .hsh-arc__row.is-off { color: #9a9ea2; }
+.hsh-arc__row .hsh-arc__icon { padding: 2px; border-radius: 50%; background: var(--c); }
+.hsh-arc__soon {
+  padding: 2px 8px;
+  border: 1px dashed var(--hsh-arc-line);
+  border-radius: 999px;
+  font-family: var(--hsh-arc-font);
+  font-size: 11.5px;
+  color: var(--hsh-arc-note);
+}
 .hsh-arc__arrow { color: var(--hsh-arc-note); }
 
 /* ---------- 휴대폰 — 버튼 · 이름표를 조금 크게 ---------- */
 
 @media (max-width: 560px) {
-  .hsh-arc__chip { min-height: 44px; font-size: 14px; }
   .hsh-arc__tag { font-size: 16px; }
-  .hsh-arc__link { font-size: 20px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hsh-arc,
   .hsh-arc__canvas,
-  .hsh-arc__chip { transition: none; }
+  .hsh-arc__badge,
+  .hsh-arc__name,
+  .hsh-arc__link { transition: none; }
   .hsh-arc__spark { animation: none; }
 }
 .hsh-arc.is-reduced .hsh-arc__spark { animation: none; } /* ?reduced=1 흉내 */
