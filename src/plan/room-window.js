@@ -357,7 +357,10 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   });
   const thumb = win.querySelector('.hsh-win__thumb');
   const noteTabs = win.querySelector('.hsh-note__tabs');
-  const scroller = win.querySelector('.hsh-win__scroll');
+  // 스크롤하는 칸 — 보통은 둥근 상자 안 칸, 글 · 갤러리 · 메모 창은 창 몸통 하나(상자 없이 몸통이 끝까지 내려간다)
+  const inner = win.querySelector('.hsh-win__scroll');
+  const winBody = win.querySelector('.hsh-win__body');
+  let scroller = inner;
   const rail = win.querySelector('.hsh-win__rail');
   const knob = win.querySelector('.hsh-win__knob');
   let pill = win.querySelector('.hsh-win__pill');
@@ -403,6 +406,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     // 카테고리 버튼이면 글 · 갤러리 · 메모(그리기는 content.show 가 상태를 받아서)
     const isContent = Boolean(win.dataset.category);
     ctBox.hidden = !isContent;
+    scroller = isContent ? winBody : inner;
     empty.hidden = isNotice || isNeighbor || isAbout || isContent;
     banner.hidden = true;
     if (isNotice) pickTab(0);
@@ -427,13 +431,17 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     const { scrollHeight: h, clientHeight: c, scrollTop: t } = scroller;
     rail.hidden = h - c < 2 || !veBox.hidden; // about __VE 는 막대 없이 손으로 내려 읽기만
     if (rail.hidden) return;
+    // 몸통이 스크롤하면 막대는 창(frame) 기준 — 몸통 오른쪽 끝, 위아래는 몸통 안쪽
+    rail.style.top = scroller === winBody ? `${winBody.offsetTop + 12}px` : '';
     const track = rail.clientHeight;
     const size = Math.max(28, (track * c) / h);
     knob.style.height = `${size}px`;
     knob.style.translate = `0 ${((track - size) * t) / (h - c)}px`;
   };
-  scroller.addEventListener('scroll', syncRail, { passive: true });
-  new ResizeObserver(syncRail).observe(scroller);
+  for (const el of [inner, winBody]) {
+    el.addEventListener('scroll', syncRail, { passive: true });
+    new ResizeObserver(syncRail).observe(el);
+  }
   knob.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     knob.setPointerCapture(e.pointerId);

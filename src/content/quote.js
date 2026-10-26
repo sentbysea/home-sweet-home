@@ -140,8 +140,9 @@ export function quotePicker({ content, text, h, onGo, onResize }) {
 }
 
 /**
- * Quote 화면 — 같은 출처 iframe(quote.html). 높이는 창 안 고정(content.css), 안쪽이 스크롤한다 —
- * 그쪽 모바일 발췌 칸은 화면 높이(vh) 기준이라 iframe 을 내용에 맞춰 늘이면 서로 키우며 커진다.
+ * Quote 화면 — 같은 출처 iframe(quote.html). 높이는 안쪽 내용만큼 늘여 창 몸통 하나만 스크롤한다.
+ * 그쪽 발췌 칸은 화면 높이(vh) 기준이라 iframe 을 늘이면 서로 키우며 커진다 — 그래서 대지 높이는
+ * 바깥 화면 높이로 정해 넘긴다(--hsh-q-stage, quote.css).
  * @param {HTMLElement} host
  * @param {{ contentType: string, html: string, title: string, presetId: number|null, postId: number, viewer: boolean, tint?: string, ink?: string, note?: string }} post
  * @param {() => void} onResize
@@ -153,8 +154,21 @@ export function mountQuote(host, post, onResize) {
   frame.allow = 'clipboard-write; web-share';
   frame.src = new URL('../../quote.html', import.meta.url).href + location.search; // ?content-origin 그대로(로컬 시험)
   host.append(frame);
+  const fit = () => {
+    if (!frame.isConnected) { removeEventListener('resize', fit); return; } // 다른 화면으로 갔다
+    const doc = frame.contentDocument;
+    if (!doc?.body) return;
+    // 대지 = 바깥 화면의 55%(그쪽 데스크톱 clamp(440px, 55vh, 620px) 와 같은 비율, 휴대폰은 아래를 300px 까지)
+    const stage = Math.round(Math.min(620, Math.max(innerWidth <= 600 ? 300 : 440, innerHeight * 0.55)));
+    doc.body.style.setProperty('--hsh-q-stage', `${stage}px`);
+    const h = Math.ceil(doc.body.scrollHeight);
+    if (h > 0 && Math.abs(frame.offsetHeight - h) > 1) { frame.style.height = `${h}px`; onResize(); }
+  };
+  addEventListener('resize', fit);
   frame.addEventListener('load', async () => {
     const win = frame.contentWindow;
+    new win.ResizeObserver(fit).observe(win.document.body);
+    fit();
     for (let i = 0; i < 200 && !win.hshQuote; i++) await new Promise((r) => setTimeout(r, 50));
     try {
       await win.hshQuote.open(post);
