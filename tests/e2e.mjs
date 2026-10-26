@@ -648,10 +648,23 @@ async function routing() {
   check('콘솔 오류 없음(routing)', errors.length === 0, errors.join(' | '));
   await context.close();
 
+  // 로딩 화면을 거쳐도(?plan=only 없이) — 창 주소면 집을 누르지 않아도 들어가 그 창이 열린다. 홈은 지금처럼 누르기를 기다린다
+  const ld = await open(null);
+  await ld.page.goto(`${VIBE_ORIGIN}/notice?${Q}`);
+  await ld.page.waitForSelector('.hsh-win:not([hidden]) .hsh-note', { timeout: 30000 }).catch(() => {});
+  await ld.page.waitForFunction(() => !document.querySelector('.hsh-loader'), null, { timeout: 10000 }).catch(() => {}); // 로딩이 바래 사라질 때까지
+  check('로딩 화면 → 누르지 않아도 /notice 창', !(await ld.page.$('.hsh-loader')) && (await ld.page.$eval('.hsh-win', (w) => !w.hidden)));
+  await ld.page.goto(`${VIBE_ORIGIN}/?${Q}`);
+  await ld.page.waitForSelector('.hsh-loader.is-ready', { timeout: 30000 });
+  await ld.page.waitForTimeout(1500);
+  check('홈(/)은 집을 누를 때까지 로딩 화면', Boolean(await ld.page.$('.hsh-loader')));
+  await ld.context.close();
+
   // 이웃 로그인 — 로그인 전에 보던 주소로 돌아온다(복귀 주소 자체는 허용 목록의 /)
   const lg = await open(USERS.owner);
   await lg.page.goto(`${VIBE_ORIGIN}/?plan=only&${Q}`);
   await lg.page.evaluate(() => sessionStorage.setItem('hsh:auth-return', '/neighbor'));
+  await lg.page.goto('about:blank'); // 실제 복귀처럼 다른 문서에서 넘어온다(같은 주소 + #해시는 WebKit 이 다시 불러오지 않는다)
   await lg.page.goto(`${VIBE_ORIGIN}/?plan=only&${Q}#access_token=token-owner.mock-session-0001&token_type=bearer&expires_in=3600`);
   await lg.page.waitForSelector('.hsh-win:not([hidden]) .hsh-nb', { timeout: 20000 }).catch(() => {});
   check('로그인에서 돌아오면 → 보던 /neighbor', new URL(lg.page.url()).pathname === '/neighbor' && !lg.page.url().includes('access_token'), lg.page.url());

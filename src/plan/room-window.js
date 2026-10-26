@@ -665,7 +665,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     const saved = takeReturnPath();
     if (AUTH_RETURN) {
       // Google 로그인에서 돌아왔다 — 주소의 토큰을 supabase-js 가 받은 뒤에(주소를 바꾸면 토큰을 잃는다), 로그인 전 화면으로
-      try { await (await getClient()).auth.getSession(); } catch { /* 로그인 실패여도 화면은 연다 */ }
+      // initialize() — supabase-js 가 주소의 토큰을 읽고 주소를 정리하는 일이 끝날 때까지(그 전에 주소를 바꾸면 그 정리가 덮어쓴다)
+      try { const c = await getClient(); await c.auth.initialize?.(); await c.auth.getSession(); } catch { /* 로그인 실패여도 화면은 연다 */ }
       if (saved) target = saved;
     }
     const url = new URL(target, location.origin);
