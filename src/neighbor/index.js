@@ -8,6 +8,8 @@
 //   · 손그림 위글: 선 변형 4장을 190ms 마다(로딩 · 평면도와 같은 박자) — 이 화면의 모든 집(패널 미리보기까지)이 같이. 모션 줄이기면 멈춘다.
 //   · 바탕은 홈과 같은 아이보리, 여백에 홈 · archive 와 같은 작은 별(shared/star.js)을 성글게 — 자리는 고정 비율이라
 //     창 크기가 바뀌어도 그대로, 마을 뒤에 깔려 집 · 이름표를 가리거나 누르기를 막지 않는다.
+//   · 오른쪽 위 스위치 — 마을(village) ↔ 배너(banner) 보기. 배너 보기는 받은 배너만 한 줄에 하나씩(이름 없이,
+//     누르면 그 사이트 새 탭 — 홈페이지 없는 이웃은 빠진다). 고른 보기는 이 브라우저에 기억한다(hsh:nbh-view). 주인 고치기는 마을에서만.
 //   · 닫으면 마을을 치운다.
 
 import { fetchBanners, fetchHome, fetchResidents, siteLabel, httpUrl, MY_BANNER } from './data.js';
@@ -18,6 +20,14 @@ import { starSvg } from '../shared/star.js';
 import { getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError, rememberReturnPath } from '../content/supabase.js';
 
 const BOIL_MS = 190;
+const VIEW_KEY = 'hsh:nbh-view'; // 'village' | 'banner'
+const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const readView = () => { try { return localStorage.getItem(VIEW_KEY) === 'banner' ? 'banner' : 'village'; } catch { return 'village'; } };
+
+// 스위치 손잡이 그림 — 집(마을) · 배너(가로로 긴 네모에 글줄)
+const VIEW_ICONS = `
+  <svg class="nbh-view__ico is-village" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.5L10 4l6.5 5.5"/><path d="M5.5 8.2V16h9V8.2"/><path d="M8.6 16v-3.6h2.8V16"/></svg>
+  <svg class="nbh-view__ico is-banner" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="6.5" width="15" height="7" rx="1.4"/><path d="M5.5 10h5"/><circle cx="14" cy="10" r="1.2"/></svg>`;
 
 // 여백 별 [x%, y%, 기울기, 크기] — ← home(왼쪽 위) · 제목(가운데 위)은 비켜서 가장자리 위주로
 const STARS = [
@@ -40,6 +50,7 @@ function build() {
       <button class="nbh__home" type="button"><span aria-hidden="true">←</span> home</button>
       <h2 class="nbh__title" id="nbh-title">Neighbor</h2>
       <div class="nbh__village" role="group" aria-label="이웃 마을 — 집을 고르면 그 집의 배너가 보여요"></div>
+      <div class="nbh__banners" role="region" aria-label="이웃 배너" hidden></div>
       <footer class="nbh__foot">
         <p class="nbh__msg" role="status" aria-live="polite" hidden></p>
         <div class="nbh__owner">
@@ -48,6 +59,13 @@ function build() {
           <button class="nbh__link" type="button" data-act="edit">edit</button>
         </div>
       </footer>
+      <!-- 보기 스위치 — 화면 오른쪽 위에 고정. Tab 은 이웃집 · edit 다음에 -->
+      <button class="nbh-view" type="button" role="switch" aria-checked="false" aria-label="배너로 보기">
+        <span class="nbh-view__txt is-village" aria-hidden="true">village</span>
+        <span class="nbh-view__txt is-banner" aria-hidden="true">banner</span>
+        <span class="nbh-view__knob" aria-hidden="true">${VIEW_ICONS}</span>
+        <span class="nbh-view__spark" aria-hidden="true"><i></i><i></i><i></i></span>
+      </button>
     </div>
     <div class="nbh-panel" hidden></div>`;
   return root;
@@ -103,8 +121,60 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     })),
   ];
 
+  // ---------- 보기 — 마을 ↔ 배너 ----------
+
+  let view = readView();
+
+  // 배너 보기 — 받은 배너만 한 줄에 하나씩(이름 없이, 누르면 그 사이트 새 탭). 홈페이지 없는 이웃은 배너가 없어 빠진다
+  const paintBanners = () => {
+    const box = $('.nbh__banners');
+    if (state !== 'ready') {
+      box.innerHTML = `<p class="nbh-bl__note">${state === 'error' ? '이웃을 불러오지 못했어요.' : '불러오는 중…'}</p>`;
+      return;
+    }
+    const list = items().filter((it) => !it.resident);
+    box.innerHTML = list.length
+      ? `<ul class="nbh-bl">${list.map((it) => `
+        <li><a class="nbh-bl__a"${it.href ? ` href="${esc(it.href)}" target="_blank" rel="noopener noreferrer"` : ''} aria-label="${esc(it.label)} 방문하기 — 새 탭">${it.image ? `<img src="${esc(it.image)}" alt="" loading="lazy" decoding="async">` : ''}<span class="nbh-bl__alt">${esc(it.label)}</span></a></li>`).join('')}</ul>`
+      : '<p class="nbh-bl__note">아직 배너를 건 이웃이 없어요.</p>';
+    // 못 불러온 배너 — 그 칸에 이름으로
+    box.querySelectorAll('.nbh-bl__a img').forEach((img) => {
+      const broke = () => img.closest('.nbh-bl__a').classList.add('is-broken');
+      if (img.complete && !img.naturalWidth) broke();
+      else img.addEventListener('error', broke, { once: true });
+    });
+    box.querySelectorAll('.nbh-bl__a:not(:has(img))').forEach((el) => el.classList.add('is-broken'));
+  };
+
+  const paintView = () => {
+    const banner = view === 'banner';
+    const sw = $('.nbh-view');
+    sw.setAttribute('aria-checked', String(banner));
+    sw.setAttribute('aria-label', banner ? '마을로 보기' : '배너로 보기');
+    root.dataset.view = view;
+    $('.nbh__village').hidden = banner;
+    $('.nbh__banners').hidden = !banner;
+  };
+
+  const setView = (next, { animate = true } = {}) => {
+    if (next === view) return;
+    view = next;
+    try { localStorage.setItem(VIEW_KEY, view); } catch { /* 이번 화면에서만 */ }
+    village?.close();
+    paintView();
+    paint();
+    if (animate && !reduced) {
+      // 손잡이가 눌렸다 튀어 오르며 넘어가고, 반짝이가 톡 — 다시 눌러도 처음부터
+      const sw = $('.nbh-view');
+      sw.classList.remove('is-flip');
+      void sw.offsetWidth;
+      sw.classList.add('is-flip');
+    }
+  };
+
   const paint = () => {
-    village?.render({ items: items(), home: homeHouse, state, editing });
+    if (view === 'banner') paintBanners();
+    else village?.render({ items: items(), home: homeHouse, state, editing });
     $('.nbh__village').setAttribute('aria-busy', String(state === 'loading'));
   };
 
@@ -134,6 +204,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
   // edit — 로그인 안 했으면 Google 로, 주인이면 고치기 모드
   const toggleEdit = async () => {
     if (editing) { editing = false; paintOwner(); paint(); return; }
+    setView('village'); // 고치기는 마을에서
     say('확인 중…');
     let client;
     try { client = await getClient(); } catch { say('불러오지 못했어요.'); return; }
@@ -204,6 +275,9 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       onCount: (n) => { $('.nbh__count').textContent = String(n); },
     });
     $('.nbh__home').addEventListener('click', () => onHome());
+    $('.nbh-view').addEventListener('click', () => setView(view === 'banner' ? 'village' : 'banner'));
+    $('.nbh-view').addEventListener('animationend', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('is-flip'); });
+    paintView();
     root.addEventListener('click', (e) => {
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'edit') toggleEdit();

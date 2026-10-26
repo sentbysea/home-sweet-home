@@ -1579,6 +1579,46 @@ async function neighborNosite() {
   await o2.context.close();
 }
 
+// 보기 스위치 — 오른쪽 위, 마을 ↔ 배너(받은 배너만 한 줄에 하나씩, 이름 없이). 고른 보기는 기억
+async function neighborView(device, name) {
+  const v = await open(null, device ? undefined : { width: 1280, height: 860 }, device || {});
+  const { page } = v;
+  await page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
+  await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
+  const vw = await page.evaluate(() => document.documentElement.clientWidth);
+  const sw = await page.$eval('.nbh-view', (b) => { const r = b.getBoundingClientRect(); return { checked: b.getAttribute('aria-checked'), role: b.getAttribute('role'), right: innerWidth - r.right, top: r.top }; });
+  check(`${name} — 오른쪽 위 보기 스위치(처음은 마을)`, sw.role === 'switch' && sw.checked === 'false' && sw.right < 24 && sw.top < 30 && (await page.isVisible('.nbh__village')) && !(await page.isVisible('.nbh__banners')), JSON.stringify(sw));
+  await page.click('.nbh-view');
+  await page.waitForTimeout(700);
+  const bl = await page.evaluate(() => {
+    const items = [...document.querySelectorAll('.nbh-bl__a')];
+    const r = document.querySelector('.nbh-bl').getBoundingClientRect();
+    return {
+      checked: document.querySelector('.nbh-view').getAttribute('aria-checked'),
+      village: document.querySelector('.nbh__village').offsetParent !== null,
+      n: items.length,
+      links: items.every((a) => a.target === '_blank' && /noopener/.test(a.rel) && a.href),
+      cols: new Set(items.map((a) => Math.round(a.getBoundingClientRect().left))).size,
+      ratio: items[0].getBoundingClientRect().width / items[0].getBoundingClientRect().height,
+      names: document.querySelectorAll('.nbh__banners .nbh-label, .nbh-bl__name').length,
+      visibleText: items.filter((a) => !a.classList.contains('is-broken')).some((a) => a.textContent.trim() && a.querySelector('.nbh-bl__alt').offsetParent !== null),
+      w: r.width,
+    };
+  });
+  check(`${name} — 스위치 → 배너 보기: 받은 배너만 한 줄에 하나씩(5:1 · 이름 없음 · 새 탭)`, bl.checked === 'true' && !bl.village && bl.n === 3 && bl.links && bl.cols === 1 && Math.abs(bl.ratio - 5) < 0.1 && bl.names === 0 && !bl.visibleText, JSON.stringify(bl));
+  if (device) check(`${name} — 배너 폭은 화면의 70%`, Math.abs(bl.w - vw * 0.7) < 2, JSON.stringify({ w: bl.w, vw }));
+  await page.screenshot({ path: path.join(OUT, `neighbor-${name}-banners.png`) });
+  await page.reload();
+  await page.waitForSelector('.nbh.is-open', { timeout: 20000 });
+  await page.waitForSelector('.nbh-bl__a', { timeout: 10000 });
+  check(`${name} — 새로고침해도 배너 보기 그대로(기억)`, (await page.$eval('.nbh-view', (b) => b.getAttribute('aria-checked'))) === 'true' && !(await page.isVisible('.nbh__village')));
+  await page.click('.nbh-view');
+  await page.waitForTimeout(600);
+  check(`${name} — 다시 누르면 마을`, (await page.$eval('.nbh-view', (b) => b.getAttribute('aria-checked'))) === 'false' && (await page.$$('.nbh-home')).length === 3);
+  check(`콘솔 오류 없음(neighbor 보기 ${name})`, v.errors.length === 0, v.errors.join(' | '));
+  await v.context.close();
+}
+
 async function neighborOwner() {
   const o = await open(USERS.owner, { width: 1280, height: 860 });
   const { page } = o;
@@ -1746,6 +1786,8 @@ async function neighbor() {
   console.log('\n[neighbor — 손그림 마을]');
   await neighborVillage(null, 'PC');
   await neighborVillage(playwright.devices['iPhone 13'], '휴대폰');
+  await neighborView(null, 'PC');
+  await neighborView(playwright.devices['iPhone 13'], '휴대폰');
   await neighborApply();
   await neighborOwner();
   await neighborNosite();
