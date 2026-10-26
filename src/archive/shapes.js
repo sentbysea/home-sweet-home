@@ -214,7 +214,7 @@ function diary() {
     outline: pen.done(),
     holes: [circle(0, 0, 0.04)],
     fills: [
-      { pts: rect(-0.24, -0.15, -0.16, -0.74), color: '#b8a3e8' },
+      { pts: rect(-0.24, -0.15, -0.16, -0.74), color: '#cdbcef' },
       { pts: rect(0.15, -0.38, 0.26, -0.5), color: '#fbe7a1' },
       { pts: heartPts(0.01, -0.46, 0.09), color: '#f6b9cb' },
     ],

@@ -5,10 +5,7 @@
 
 .hsh-loader {
   --hsh-fill: var(--hsh-tone-house); /* 집 색 — base.css 의 [data-hsh-tone] */
-  --hsh-line: #8f9497;
   --hsh-ink: #2a2a2a;
-  --hsh-note: #7d8386;
-  --hsh-paper: #fcfbf8; /* 순백이 아닌 아주 연한 아이보리 */
   --hsh-pattern: var(--hsh-tone-stars); /* 배경 별 — 집 색보다 채도 · 명도 낮게 */
   --hsh-fade: 900ms; /* 누른 뒤 사라질 때까지 — 집이 다가오는 시간 */
 
@@ -126,7 +123,7 @@
 /* ---------- 글자 ---------- */
 
 .hsh-loader__text {
-  font-family: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--hsh-hand);
   font-size: 41px; /* viewBox 단위. 집을 90%로 줄일 때 글자는 화면 크기를 지키려고 키웠다 */
   font-weight: 400;
   fill: var(--hsh-ink);
@@ -156,7 +153,7 @@
   gap: 6px;
   height: 24px;
   margin: 22px 0 0;
-  font-family: "Nanum Gothic Coding", ui-monospace, monospace;
+  font-family: var(--hsh-mono);
   font-size: 13px;
   line-height: 1;
   color: var(--hsh-note);

@@ -964,7 +964,7 @@ async function archive() {
   await rm.page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
   await rm.page.click('.hsh-arc__chip[data-i="1"]');
   await rm.page.waitForTimeout(300);
-  check('모션 줄이기 — 고르기 · 별 움직임 없음', (await pressed(rm.page)) === 1 && (await rm.page.$eval('.hsh-arc__spark', (s) => getComputedStyle(s).animationName)) === 'none');
+  check('모션 줄이기 — 고르기 · 별 움직임 없음', (await pressed(rm.page)) === 1 && (await rm.page.$eval('.hsh-arc .hsh-star', (s) => getComputedStyle(s).animationName)) === 'none');
   check('콘솔 오류 없음(archive 모션 줄이기)', rm.errors.length === 0, rm.errors.join(' | '));
   await rm.context.close();
 
