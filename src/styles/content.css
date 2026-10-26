@@ -1,0 +1,388 @@
+/* =========================================================
+   home sweet home — 글 · 갤러리 · 메모 창 안쪽(content/viewer.js)
+   방 창(room.css)과 같은 말투: 얇은 회색 선(--hsh-win-line) · 종이색 바탕 · 누른 버튼의 바탕색(--hsh-win-tint)과
+   글자색(--hsh-win-ink) · Pretendard 본문 + Nanum Gothic Coding 작은 글자 · 검정 알약 버튼 · 살짝 기운 종이.
+   ★ 글 본문(.post-detail-content 안)은 여기서 꾸미지 않는다 — 글꼴 · 색 · 크기 · 강조 · 줄 간격은 Quote Preset 이
+     인라인으로 정하고, 블록 · 기본값은 hongjiwon.love 의 CSS 를 그대로 받는다(content/render.js).
+     여기서 닿는 것은 본문 둘레(종이 · 여백)와 사진이 창 밖으로 넘치지 않게 하는 것뿐이다.
+   ========================================================= */
+
+.hsh-ct-box[hidden] { display: none; }
+
+/* 글 창은 읽기 좋게 조금 넓게. 칸 폭은 화면에 묶는다 — 넓은 HTML 글이 창을 밀어 넓히지 않고 줄어들게 */
+.hsh-win[data-category] { grid-template-columns: minmax(0, 1fr); }
+.hsh-win[data-category] .hsh-win__frame { width: min(680px, 100%); justify-self: center; }
+.hsh-win[data-category] .hsh-win__scroll { min-width: 0; }
+
+.hsh-ct {
+  --hsh-ct-mono: "Nanum Gothic Coding", ui-monospace, Menlo, Consolas, monospace;
+  --hsh-ct-soft: color-mix(in srgb, var(--hsh-win-tint) 45%, transparent);
+  padding: 18px 22px 24px;
+  font-family: var(--hsh-win-font);
+  color: var(--hsh-win-text);
+  text-align: left;
+}
+
+/* 창 쪽 요소에만 — 본문(.post-detail-content) 안의 복사 버튼 등은 hongjiwon.love CSS 그대로 */
+.hsh-ct [hidden]:not(.post-detail-content *) { display: none !important; }
+
+.hsh-ct button:not(.post-detail-content *) { font: inherit; color: inherit; }
+.hsh-ct button:focus-visible:not(.post-detail-content *),
+.hsh-ct a:focus-visible:not(.post-detail-content *),
+.hsh-ct input:focus-visible:not(.post-detail-content *) { outline: 1.5px solid var(--hsh-win-line); outline-offset: 2px; }
+
+/* ---------- 상태(불러오는 중 · 비어 있음 · 오류) ---------- */
+
+.hsh-ct__state,
+.hsh-ct__empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--hsh-win-note);
+  text-align: center;
+}
+
+.hsh-ct__state p { margin: 0; }
+
+.hsh-ct__dots { display: inline-block; width: 1.4em; text-align: left; animation: hsh-ct-dots 1.2s steps(4, end) infinite; overflow: hidden; vertical-align: bottom; }
+@keyframes hsh-ct-dots { from { width: 0; } to { width: 1.4em; } }
+
+/* ---------- 버튼 · 링크 ---------- */
+
+.hsh-ct__btn {
+  padding: 5px 14px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: #262628;
+  color: #fff !important;
+  font-size: 12px !important;
+  cursor: pointer;
+}
+.hsh-ct__btn:disabled { opacity: 0.5; cursor: default; }
+.hsh-ct__btn.is-ghost { background: transparent; color: var(--hsh-win-text) !important; border: 1px solid var(--hsh-win-line); }
+
+.hsh-ct__link {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font-family: var(--hsh-ct-mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em;
+  color: var(--hsh-win-note) !important;
+  text-decoration: underline 1px var(--hsh-win-line);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.hsh-ct__link:hover:not(:disabled) { color: var(--hsh-win-text) !important; text-decoration-color: var(--hsh-win-ink); }
+.hsh-ct__link:disabled { opacity: 0.35; cursor: default; text-decoration: none; }
+
+/* 손그림 아이콘 — 선은 창 선, 칠은 버튼 바탕색 */
+.hsh-ct__icon { display: inline-grid; flex: none; }
+.hsh-ct__icon svg { width: 100%; height: 100%; overflow: visible; fill: none; stroke: var(--hsh-win-line); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.hsh-ct__icon .f { fill: var(--hsh-win-paper); }
+.hsh-ct__icon.is-folder .f { fill: var(--hsh-win-tint); }
+
+/* ---------- 위치(카테고리 › 폴더) ---------- */
+
+.hsh-ct__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-bottom: 14px;
+  font-family: var(--hsh-ct-mono);
+  font-size: 11px;
+  color: var(--hsh-win-note);
+}
+.hsh-ct__crumbs button { padding: 0; border: 0; background: none; cursor: pointer; text-decoration: underline 1px var(--hsh-win-line); text-underline-offset: 3px; color: var(--hsh-win-note); }
+.hsh-ct__crumbs button:hover { color: var(--hsh-win-text); }
+.hsh-ct__crumbs [aria-current] { color: var(--hsh-win-text); }
+
+/* 폴더 머리 — FOLDER · 이름 · UP */
+.hsh-ct__folder-head { display: grid; justify-items: start; gap: 4px; margin-bottom: 18px; }
+.hsh-ct__kicker { margin: 0; font-size: 10.5px; font-style: italic; font-weight: 600; letter-spacing: 0.16em; color: var(--hsh-win-note); }
+.hsh-ct__folder-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-decoration: underline 2px var(--hsh-win-ink);
+  text-underline-offset: 5px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 폴더 타일 ---------- */
+
+.hsh-ct__folders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.hsh-ct__folder {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 12px 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 200ms ease;
+}
+.hsh-ct__folder:hover { border-color: var(--hsh-win-line); transform: rotate(-1.5deg); }
+.hsh-ct__folder .hsh-ct__icon { width: 52px; height: 41px; }
+.hsh-ct__folder-name { max-width: 100%; font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+.hsh-ct__mark { font-size: 10.5px; color: var(--hsh-win-note); }
+.hsh-ct__count { font-family: var(--hsh-ct-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--hsh-win-note); }
+
+/* ---------- 글 목록(log) ---------- */
+
+.hsh-ct__rows { margin: 0; padding: 0; list-style: none; border-top: 1px dashed var(--hsh-win-line); }
+.hsh-ct__rows li { border-bottom: 1px dashed var(--hsh-win-line); }
+
+.hsh-ct__row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 8px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+.hsh-ct__row:hover { background: var(--hsh-ct-soft); }
+.hsh-ct__row .hsh-ct__icon { width: 16px; height: 19px; }
+.hsh-ct__row-title { min-width: 0; font-size: 14px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hsh-ct__date { font-family: var(--hsh-ct-mono); font-size: 10.5px; color: var(--hsh-win-note); white-space: nowrap; }
+
+/* ---------- 메모(memo) — 짧은 쪽지 ---------- */
+
+.hsh-ct__memos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 18px 14px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hsh-ct__memos li { transform: rotate(var(--tilt, 0deg)); }
+
+.hsh-ct__memo {
+  position: relative;
+  width: 100%;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 14px 10px;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 3px;
+  /* 줄 노트 */
+  background:
+    repeating-linear-gradient(transparent 0 21px, color-mix(in srgb, var(--hsh-win-line) 22%, transparent) 21px 22px) 0 12px / 100% calc(100% - 12px) no-repeat,
+    var(--hsh-win-paper);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 200ms ease;
+}
+/* 위에 붙인 테이프 */
+.hsh-ct__memo::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 46px;
+  height: 15px;
+  translate: -50% 0;
+  rotate: -3deg;
+  background: color-mix(in srgb, var(--hsh-win-tint) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hsh-win-line) 45%, transparent);
+}
+.hsh-ct__memo:hover { transform: translateY(-2px) rotate(0.6deg); }
+.hsh-ct__memo .hsh-ct__row-title { white-space: normal; font-size: 13.5px; line-height: 22px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+.hsh-ct__memo .hsh-ct__date { align-self: flex-end; }
+
+/* ---------- 갤러리 — 폴라로이드 ---------- */
+
+.hsh-ct__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hsh-ct__grid li { transform: rotate(var(--tilt, 0deg)); }
+
+.hsh-ct__card {
+  width: 100%;
+  display: grid;
+  gap: 7px;
+  padding: 7px 7px 9px;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 3px;
+  background: var(--hsh-win-paper);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 200ms ease;
+}
+.hsh-ct__card:hover { transform: translateY(-2px) scale(1.02); }
+
+.hsh-ct__ph {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--hsh-win-line) 40%, transparent);
+  background: #f1f1ef;
+}
+.hsh-ct__ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hsh-ct__ph .hsh-ct__icon { width: 34%; height: 34%; }
+.hsh-ct__ph.is-locked { background: repeating-linear-gradient(45deg, var(--hsh-ct-soft) 0 6px, transparent 6px 12px), #f6f5f2; }
+.hsh-ct__card-title { min-width: 0; font-size: 12px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 페이지 */
+.hsh-ct__pager { display: flex; justify-content: center; gap: 4px; margin-top: 22px; }
+.hsh-ct__page {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  font-family: var(--hsh-ct-mono) !important;
+  font-size: 11px !important;
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+}
+.hsh-ct__page:hover:not(:disabled) { border-color: var(--hsh-win-line); }
+.hsh-ct__page:disabled { opacity: 0.3; cursor: default; }
+.hsh-ct__page.is-current { background: #262628; color: #fff; }
+
+/* ---------- 비밀번호 칸(비밀글 · 비밀번호 폴더) ---------- */
+
+.hsh-ct__gate { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 12px; padding: 34px 8px 30px; text-align: center; }
+.hsh-ct__gate .hsh-ct__icon { width: 30px; height: 30px; }
+.hsh-ct__gate-label { margin: 0; font-size: 13px; color: var(--hsh-win-note); word-break: keep-all; }
+.hsh-ct__gate-row { display: flex; gap: 8px; width: min(100%, 300px); }
+.hsh-ct__input {
+  flex: 1;
+  width: 0; /* 입력칸 기본 폭(글자 20칸)이 줄을 밀어 넓히지 않게 */
+  min-width: 0;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 999px;
+  background: var(--hsh-win-paper);
+  font: inherit;
+  font-size: 16px; /* iOS 가 확대하지 않게 */
+  color: var(--hsh-win-text);
+}
+.hsh-ct__gate-msg { min-height: 1.2em; margin: 0; font-size: 12px; color: #e65d98; }
+
+/* ---------- 글 ---------- */
+
+.hsh-ct__back {
+  margin-bottom: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--hsh-ct-mono) !important;
+  font-size: 11px !important;
+  color: var(--hsh-win-note) !important;
+  cursor: pointer;
+}
+.hsh-ct__back:hover { color: var(--hsh-win-text) !important; }
+
+.hsh-ct__post-head { display: grid; gap: 8px; padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--hsh-win-line); }
+.hsh-ct__post-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.hsh-ct__post-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; font-family: var(--hsh-ct-mono); font-size: 11px; color: var(--hsh-win-note); }
+
+.hsh-ct__scale { display: inline-flex; gap: 4px; }
+.hsh-ct__scale-btn {
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--hsh-win-line);
+  border-radius: 999px;
+  background: var(--hsh-win-paper);
+  font-size: 13px !important;
+  line-height: 1;
+  cursor: pointer;
+}
+.hsh-ct__scale-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* 본문 둘레 — 안쪽은 프리셋 · hongjiwon.love CSS 그대로 */
+.hsh-ct__sheet { min-height: 120px; }
+/* 사진이 창 밖으로 넘치지 않게 — 누르면 크게 */
+.hsh-ct__sheet .post-detail-content img { display: block; max-width: 100%; height: auto; cursor: zoom-in; }
+
+.hsh-ct__post-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--hsh-win-line);
+}
+.hsh-ct__post-pos { font-family: var(--hsh-ct-mono); font-size: 10.5px; color: var(--hsh-win-note); }
+
+.hsh-ct__owner { display: block; margin-top: 16px; font-family: var(--hsh-ct-mono); font-size: 11px; color: var(--hsh-win-note); text-align: right; }
+
+/* 사진 크게 — 창 안을 덮는다. 누르거나 Esc 로 닫는다 */
+.hsh-ct__zoom {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(252 251 248 / 0.95);
+  cursor: zoom-out;
+}
+.hsh-ct__zoom img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid var(--hsh-win-line); background: #fff; }
+
+/* ---------- 휴대폰 ---------- */
+
+@media (max-width: 600px) {
+  .hsh-ct { padding: 16px 14px 20px; }
+  .hsh-ct__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+  .hsh-ct__memos { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+  .hsh-ct__folders { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  /* 글을 읽는 동안은 창 머리(썸네일 · 제목)를 접어 본문 자리를 넓힌다 */
+  .hsh-win:has(.hsh-ct[data-view="post"]) .hsh-win__head { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hsh-ct__dots { animation: none; width: auto; }
+  .hsh-ct__folder,
+  .hsh-ct__memo,
+  .hsh-ct__card { transition: none; }
+  .hsh-ct__folder:hover,
+  .hsh-ct__memo:hover,
+  .hsh-ct__card:hover { transform: none; }
+}

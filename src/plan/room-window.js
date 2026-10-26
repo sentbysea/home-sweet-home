@@ -7,9 +7,12 @@
 //   주소창: 지금 사이트 주소 / 방 이름. 하트: 누르면 채워지고 이 브라우저에 기억한다(방마다).
 //   about __VE 방은 Vibe · Echo 카드 두 장(about.js).
 //   neighbor 방의 칩은 '배너교환은 여기에서' 버튼 — 누르면 hsh:banner 이벤트, 지금은 배너 정보 자리로 바꿔 보여 준다.
+//   버튼에 data-category(hongjiwon.love 카테고리 id 또는 slug)가 있으면 그 카테고리의 글 · 갤러리 · 메모 창
+//   (content/viewer.js). 목록 → 폴더 → 글로 갈 때마다 창 기록을 한 칸씩 쌓는다 — < > · 휴대폰 뒤로 가기가 그대로 오간다.
 
 import { mountAbout } from './about.js';
 import { mountNeighbor } from './neighbor.js';
+import { mountContent } from '../content/viewer.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const LIKE_KEY = 'hsh:liked';
@@ -282,6 +285,7 @@ function build() {
             <div class="hsh-win__note hsh-note" hidden></div>
             <div class="hsh-ve" hidden></div>
             <div class="hsh-nb" hidden></div>
+            <div class="hsh-ct-box" hidden></div>
             <div class="hsh-banner" hidden>
               <img class="hsh-banner__img" src="${BANNER.image}" alt="hongjiwon.love 배너" width="3000" height="600" loading="lazy" decoding="async">
               <dl class="hsh-banner__rows">
@@ -327,6 +331,22 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const neighbor = mountNeighbor(nbBox, () => syncRail());
   const veBox = win.querySelector('.hsh-ve');
   const about = mountAbout(veBox, () => syncRail());
+  const ctBox = win.querySelector('.hsh-ct-box');
+  const content = mountContent(ctBox, {
+    // 창 안에서 다른 화면으로 — 지금 칸에 스크롤 위치를 적어 두고(뒤로 오면 그 자리로) 한 칸 쌓는다
+    onNavigate: (state) => {
+      if (steps[at]) steps[at].state = { ...steps[at].state, scroll: scroller.scrollTop };
+      step({ detail: steps[at].detail, page: 'content', state });
+      scroller.scrollTop = 0;
+    },
+    onResize: () => syncRail(),
+    // 주소창: 사이트 / 방 / (카테고리) / 폴더 … / 글 제목
+    onTitle: (name, trail = []) => {
+      const label = title.textContent;
+      const parts = [label, name && name.toLowerCase() !== label.toLowerCase() ? name : null, ...trail].filter(Boolean);
+      url.textContent = `${siteHost()} / ${parts.join(' / ')}`;
+    },
+  });
   const thumb = win.querySelector('.hsh-win__thumb');
   const noteTabs = win.querySelector('.hsh-note__tabs');
   const scroller = win.querySelector('.hsh-win__scroll');
@@ -372,7 +392,10 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     const isAbout = label === 'about __VE';
     veBox.hidden = !isAbout;
     if (isAbout) about.reset();
-    empty.hidden = isNotice || isNeighbor || isAbout;
+    // 카테고리 버튼이면 글 · 갤러리 · 메모(그리기는 content.show 가 상태를 받아서)
+    const isContent = Boolean(win.dataset.category);
+    ctBox.hidden = !isContent;
+    empty.hidden = isNotice || isNeighbor || isAbout || isContent;
     banner.hidden = true;
     if (isNotice) pickTab(0);
     else scroller.scrollTop = 0;
@@ -461,6 +484,13 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     if (win.hidden || win.classList.contains('is-closing')) openWindow(view.detail, back);
     else show(view.detail.label, '곧 채워질 방이에요.');
     if (view.page === 'banner') showBanner();
+    if (view.page === 'content') {
+      scroller.scrollTop = 0;
+      const shown = view;
+      content.show(view.state).then(() => {
+        if (steps[at] === shown) { scroller.scrollTop = view.state.scroll || 0; syncRail(); }
+      });
+    }
     paintNav();
   };
 
@@ -482,6 +512,12 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     steps = [];
     at = -1;
     openWindow(detail, from);
+    if (detail.category) {
+      const state = content.initial(detail);
+      step({ detail, page: 'content', state });
+      content.show(state);
+      return;
+    }
     step({ detail, page: 'room' });
   };
 
@@ -495,11 +531,13 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     closeWindow();
   };
 
-  const openWindow = ({ room, label, name, bg, fg }, from) => {
+  const openWindow = ({ room, label, name, bg, fg, category }, from) => {
     clearTimeout(closing);
     back = from ?? null;
-    current = room;
+    current = category ? `${room}:${category}` : room; // 하트는 버튼마다
     win.dataset.room = room;
+    if (category) win.dataset.category = category;
+    else delete win.dataset.category;
     win.style.setProperty('--hsh-win-tint', bg);
     win.style.setProperty('--hsh-win-ink', fg);
     show(label, '곧 채워질 방이에요.');
@@ -516,6 +554,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
 
   const closeWindow = () => {
     if (win.hidden || win.classList.contains('is-closing')) return;
+    content.close();
     win.classList.remove('is-open');
     win.classList.add('is-closing');
     closing = setTimeout(() => {

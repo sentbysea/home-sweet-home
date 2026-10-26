@@ -8,7 +8,7 @@
   <link rel="preload" href="src/fonts/nanum-gothic-coding-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="src/fonts/nanum-gothic-coding-status.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="favicon-32.png?v=2" sizes="32x32" type="image/png"> <!-- SVG 아이콘을 못 읽는 브라우저(Safari 등)용 -->
-  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" id="siteFaviconLink"> <!-- 관리자 Settings > Home 에서 바꾸면 이 자리(src/content/home-settings.js) -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
   <!-- 평면도 SVG · 모듈을 미리 받아 둔다 — main.js 를 읽고 나서야 하나씩 알게 되는 줄줄이 대기를 없앤다 -->
   <link rel="preload" href="src/plan/floorplan.svg" as="fetch" crossorigin>
@@ -28,6 +28,9 @@
   <link rel="modulepreload" href="src/plan/room-window.js">
   <link rel="modulepreload" href="src/plan/about.js">
   <link rel="modulepreload" href="src/plan/neighbor.js">
+  <link rel="modulepreload" href="src/content/viewer.js">
+  <link rel="modulepreload" href="src/content/supabase.js">
+  <link rel="modulepreload" href="src/content/remote.js">
   <!-- 방 창 안쪽 글자 — Pretendard(필요한 글자만 받는 subset). 로딩 화면은 안 쓰므로 첫 화면을 막지 않게 뒤에서 받는다 -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
@@ -35,6 +38,7 @@
   <link rel="stylesheet" href="src/styles/loader.css">
   <link rel="stylesheet" href="src/styles/plan.css">
   <link rel="stylesheet" href="src/styles/room.css">
+  <link rel="stylesheet" href="src/styles/content.css">
   <noscript><style>.hsh-loader__text { visibility: visible; }</style><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></noscript>
 </head>
 <body>

@@ -1,0 +1,58 @@
+/* =========================================================
+   home sweet home — 관리자(admin/index.html) 둘레
+   화면 자체는 hongjiwon.love 관리자 CSS 를 그대로 받는다(src/admin/shell.js).
+   여기에는 불러오는 동안의 화면 · 이 사이트 안내 · 주인이 아닐 때 닫는 규칙만.
+   ========================================================= */
+
+.hsh-admin-boot {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  margin: 0;
+  background: #fcfbf8;
+  font-family: "Nanum Gothic Coding", ui-monospace, Menlo, Consolas, monospace;
+  text-align: center;
+  color: #3a3b3e;
+}
+.hsh-admin-boot p { margin: 0; }
+.hsh-admin-boot__title { font-size: 14px; letter-spacing: 0.06em; }
+.hsh-admin-boot__msg { font-size: 12px; color: #7d8386; }
+
+/* 이 사이트에서 달라지는 점 — 패널 머리 아래 한 줄 */
+.hsh-admin-note {
+  margin: 8px 0 14px;
+  padding: 8px 12px;
+  border: 1px dashed #8f9497;
+  border-radius: 8px;
+  background: #fffefb;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #6b7074;
+  word-break: keep-all;
+}
+.hsh-admin-note a { color: inherit; }
+
+/* 주인 계정이 아니면 — 로그인 화면은 그대로, 관리 화면만 닫는다 */
+[data-not-owner] #adminDashboard { display: none !important; }
+.hsh-admin-denied {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+  font-size: 13px;
+  color: #3a3b3e;
+}
+.hsh-admin-denied[hidden] { display: none; }
+.hsh-admin-denied p { margin: 0; }
+.hsh-admin-denied button {
+  padding: 5px 14px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: #262628;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}

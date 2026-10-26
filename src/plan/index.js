@@ -1,7 +1,7 @@
 // 평면도 — 불러오기 · 등장(선 그리기 → 색 뽀잉 → 스티커) · 기울기 · 위글 · 방 스티커 버튼
 //   선 · 색 · 스티커는 레이어가 나뉘어 있다(.hsh-plan__lines / __color / __stickers, tools/floorplan.mjs).
 //   방 버튼을 누르면 hsh:room 이벤트(detail.room = 'v' | 'kitchen' | 'living' | 'entry' | 'e', 버튼 이름 · 색)가 올라가고
-//   room-window.js 가 그 방 창을 띄운다.
+//   room-window.js 가 그 방 창을 띄운다. 버튼에 data-category 가 있으면 detail.category · look 도 실린다.
 
 import { enableTilt } from './tilt.js';
 import { mountClock } from './clock.js';
@@ -267,9 +267,10 @@ function activate(s) {
     [{ scale: '0.9' }, { scale: '1.12', offset: 0.5 }, { scale: '1' }],
     { duration: 300, easing: 'ease-out' },
   );
-  const { room, label, bg, fg } = s.dataset;
+  // data-category(+ data-look)가 있는 버튼은 hongjiwon.love 그 카테고리의 글 · 갤러리 · 메모 창을 연다(room-window.js)
+  const { room, label, bg, fg, category, look } = s.dataset;
   const name = s.getAttribute('aria-label');
-  s.dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room, label, name, bg, fg } }));
+  s.dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room, label, name, bg, fg, category, look } }));
 }
 
 // 방 버튼 네모 폭을 글자에 맞춘다(글꼴마다 글자 폭이 달라서 화면에서 잰다)
