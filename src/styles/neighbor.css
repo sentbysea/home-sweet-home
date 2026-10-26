@@ -497,7 +497,7 @@
   rotate: -1.5deg;
 }
 
-/* 탭 — 배너 교환(교환 신청 · 내 배너 · 받은 신청) · 이웃집 고치기(집 · 내용). 고른 탭만 색 띠 */
+/* 탭 — 배너 교환(입주 신청 · 받은 신청) · 이웃집 고치기(집 · 내용). 고른 탭만 색 띠 */
 .nbh-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .nbh-tabs__tab { border: 0; color: var(--hsh-text); cursor: pointer; }
 .nbh-tabs__tab[aria-selected="false"] { background: transparent; color: var(--hsh-note); rotate: 0deg; }

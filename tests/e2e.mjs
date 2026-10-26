@@ -1294,7 +1294,7 @@ async function neighborVillage(device, name) {
   const vh = await page.evaluate(() => innerHeight);
   check(`${name} — 패널이 화면 안`, sheet.x >= 0 && sheet.r <= vw && sheet.y >= 0 && sheet.b <= vh + 1, JSON.stringify(sheet));
   const tabs = await page.$$eval('.nbh-tabs[data-mode="exchange"] [role="tab"]', (b) => b.filter((x) => !x.hidden).map((x) => `${x.textContent.trim()}:${x.getAttribute('aria-selected')}`));
-  check(`${name} — 우체통: 교환 신청만(내 배너는 홍차네 집으로)`, tabs.join('|') === '교환 신청:true' && !(await page.$('[data-ex-tab="mine"]')) && (await page.$eval('[data-mode="mine"]', (x) => x.hidden)) && !(await page.$eval('[data-ex="apply"]', (x) => x.hidden)), tabs.join('|'));
+  check(`${name} — 우체통: 입주 신청만(내 배너는 홍차네 집으로)`, tabs.join('|') === '입주 신청:true' && !(await page.$('[data-ex-tab="mine"]')) && (await page.$eval('[data-mode="mine"]', (x) => x.hidden)) && !(await page.$eval('[data-ex="apply"]', (x) => x.hidden)), tabs.join('|'));
   check(`${name} — 방문자에게는 받은 신청 칸 없음`, await page.$eval('.nbh-review', (r) => r.hidden));
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);

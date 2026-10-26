@@ -192,7 +192,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     mailBtn = document.createElement('button');
     mailBtn.type = 'button';
     mailBtn.className = 'nbh-mailbox';
-    mailBtn.setAttribute('aria-label', '배너교환은 여기에서 — 내 배너 정보 · 교환 신청');
+    mailBtn.setAttribute('aria-label', '배너교환은 여기에서 — 입주 신청');
     mailBtn.innerHTML = `<span class="nbh-mailbox__arrow" aria-hidden="true">${arrow(g.scale)}</span>${mailbox(g.scale)}`;
     const ms = 34 * g.scale;
     const mx = cx + hs.w / 2 + 4;
