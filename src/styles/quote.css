@@ -1,0 +1,131 @@
+/* =========================================================
+   home sweet home — Quote 화면(quote.html · src/quote/studio.js)
+   hongjiwon.love 에디터 CSS 위에 얹는다. 보이는 것은 발췌 칸(PREVIEW)과 copy · export 버튼뿐.
+   ★ 저장되는 이미지(.post-editor-preview-page 와 그 안)는 여기서 건드리지 않는다 — 캡처 대상은 그 페이지다.
+     조작 칸(정렬 · 제목/출처 · 비율 · 배경 · 확대 · 장 넘기기 · 버튼)만 바이브.me 말투로.
+   ========================================================= */
+
+html,
+body {
+  height: auto !important;
+  min-height: 100%;
+  overflow: auto !important;
+  background: #fffefb !important;
+}
+
+.hsh-quote__boot {
+  margin: 0;
+  padding: 80px 16px;
+  font-family: "Nanum Gothic Coding", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #7d8386;
+  text-align: center;
+}
+
+/* 에디터의 나머지(제목 · 툴바 · 본문 칸 · 설정 · 저장)는 숨긴다 — 기능은 그대로 실려 있다 */
+#postArea > .post-container > :not(#postEditor) { display: none !important; }
+#postEditor > :not(#postEditorPreviewSection):not(.post-editor-actions):not(#postEditorMessage):not(.hsh-quote__range) { display: none !important; }
+#postEditorCancelButton,
+#postEditorDeleteButton,
+#postEditorSaveButton { display: none !important; }
+
+#postArea { position: static !important; inset: auto !important; height: auto !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; background: transparent !important; }
+#postArea .post-container { max-width: none !important; margin: 0 !important; padding: 14px 14px 20px !important; }
+#postEditor { margin: 0 !important; padding: 0 !important; }
+
+/* ---------- 바이브.me 말투 — 조작 칸만 ---------- */
+
+.hsh-quote {
+  --hsh-q-line: #8f9497;
+  --hsh-q-text: #3a3b3e;
+  --hsh-q-note: #7d8386;
+  --hsh-q-paper: #fffefb;
+  --hsh-q-tint: #fbd5e3; /* 글 창이 누른 버튼 바탕색으로 바꿔 준다(studio.js) */
+  --hsh-q-ink: #4a98e4;
+  --hsh-q-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  --hsh-q-mono: "Nanum Gothic Coding", ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* 설정 줄 이름(body · gap · size · image) */
+.hsh-quote .post-editor-preview-subrow-label {
+  font-family: var(--hsh-q-mono) !important;
+  font-size: 10.5px !important;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  color: var(--hsh-q-note) !important;
+}
+
+/* 토글 · 비율 · 배경 · 장 넘기기 · 확대 — 얇은 회색 선 알약, 켜지면 버튼 바탕색 */
+.hsh-quote .post-editor-preview-visibility-toggle,
+.hsh-quote .post-editor-preview-ratio-button,
+.hsh-quote .post-editor-preview-sheet button:not(.post-editor-preview-page-button):not(.post-editor-preview-zoom-button),
+.hsh-quote .post-editor-preview-select,
+.hsh-quote .post-editor-preview-ratio-custom-input,
+.hsh-quote .post-editor-preview-sheet input[type="number"] {
+  border: 1px solid var(--hsh-q-line) !important;
+  border-radius: 999px !important;
+  background: var(--hsh-q-paper) !important;
+  font-family: var(--hsh-q-font) !important;
+  color: var(--hsh-q-text) !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+.hsh-quote .post-editor-preview-visibility-toggle[aria-pressed="true"],
+.hsh-quote .post-editor-preview-ratio-button[aria-pressed="true"] {
+  background: var(--hsh-q-tint) !important;
+  border-color: var(--hsh-q-line) !important;
+  color: var(--hsh-q-text) !important;
+}
+.hsh-quote .post-editor-preview-visibility-toggle[aria-pressed="false"] { color: var(--hsh-q-note) !important; text-decoration: line-through !important; }
+.hsh-quote .post-editor-preview-sheet button:disabled { opacity: 0.4; }
+
+.hsh-quote .post-editor-preview-page-button,
+.hsh-quote .post-editor-preview-zoom-button {
+  border: 1px solid var(--hsh-q-line) !important;
+  background: var(--hsh-q-paper) !important;
+  color: var(--hsh-q-text) !important;
+  box-shadow: none !important;
+}
+.hsh-quote .post-editor-preview-page-indicator,
+.hsh-quote .post-editor-preview-zoom-level,
+.hsh-quote .post-editor-preview-export-size,
+.hsh-quote .post-editor-preview-background-message {
+  font-family: var(--hsh-q-mono) !important;
+  color: var(--hsh-q-note) !important;
+}
+.hsh-quote .post-editor-preview-pagination,
+.hsh-quote .post-editor-preview-zoom { background: transparent !important; box-shadow: none !important; }
+
+/* 대지 — 페이지 밖 바탕만 종이색 점선 테두리(페이지 안은 그대로) */
+.hsh-quote .post-editor-preview-stage {
+  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--hsh-q-tint) 30%, transparent) 0 6px, transparent 6px 12px), var(--hsh-q-paper) !important;
+  border: 1px dashed var(--hsh-q-line) !important;
+  border-radius: 12px !important;
+}
+
+/* copy · export — 검정 알약(방 창 이름표 · 복사 버튼과 같다) */
+.hsh-quote .post-editor-actions { justify-content: flex-end; gap: 8px; }
+.hsh-quote .post-editor-actions .post-editor-button {
+  padding: 6px 16px 7px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #262628 !important;
+  color: #fff !important;
+  font-family: var(--hsh-q-font) !important;
+  font-size: 12.5px !important;
+}
+.hsh-quote .post-editor-actions .post-editor-button.copy { background: var(--hsh-q-paper) !important; color: var(--hsh-q-text) !important; border: 1px solid var(--hsh-q-line) !important; }
+.hsh-quote .post-editor-message { font-family: var(--hsh-q-font) !important; font-size: 12px !important; color: var(--hsh-q-note) !important; text-align: right; }
+
+/* 발췌 구간을 골랐을 때 위에 한 줄 */
+.hsh-quote__range {
+  margin: 0 0 10px;
+  padding: 6px 12px;
+  border: 1px dashed var(--hsh-q-line);
+  border-radius: 8px;
+  font-family: var(--hsh-q-font);
+  font-size: 12px;
+  color: var(--hsh-q-note);
+}
+.hsh-quote__range[hidden] { display: none; }
+#postEditorPreviewSection { margin-top: 0 !important; }

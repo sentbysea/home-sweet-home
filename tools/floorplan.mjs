@@ -587,10 +587,15 @@ ln(ellipse(717, 1291, 1.8, 1.8, 0), 'hsh-fine');
 const TAG = { font: 33, track: 2, padX: 17, h: 52, scale: 1.2 }; // scale — 버튼 전체를 키운다(글자 맞춤은 안쪽 단위 그대로)
 const stickers = [];
 // 버튼 글자는 앞글자만 대문자로 보인다(data-label 은 소문자 그대로 — 창 제목 · 방 구분에 쓴다)
-const tag = (roomId, text, name, x, y, bg, fg, tilt = 0) => {
+// 마지막 칸 { category, look } — hongjiwon.love 카테고리(id 또는 slug)의 글 · 갤러리 · 메모 창을 여는 버튼.
+//   look: 'log'(목록) · 'memo'(쪽지) · 'gallery'(사진 칸). 비우면 카테고리 유형대로. 예)
+//   tag('e', 'log', '기록', 712, 1180, '#cfe0fb', '#8a62dc', 3, { category: 1 });
+//   tag('kitchen', 'memo', '메모', 662, 462, '#fbd5e3', '#4a98e4', 3, { category: 3, look: 'memo' });
+const tag = (roomId, text, name, x, y, bg, fg, tilt = 0, { category, look } = {}) => {
   const w = Math.round(text.length * (TAG.font * 0.58 + TAG.track) + TAG.padX * 2); // 대략 — 화면에서 다시 맞춘다
+  const content = (category != null ? ` data-category="${category}"` : '') + (look ? ` data-look="${look}"` : '');
   stickers.push(
-    `<g class="hsh-sticker hsh-tag" data-room="${roomId}" data-label="${text}" data-bg="${bg}" data-fg="${fg}" role="button" tabindex="0" aria-label="${name}" transform="translate(${x} ${y}) rotate(${tilt}) scale(${TAG.scale})">` +
+    `<g class="hsh-sticker hsh-tag" data-room="${roomId}" data-label="${text}" data-bg="${bg}" data-fg="${fg}"${content} role="button" tabindex="0" aria-label="${name}" transform="translate(${x} ${y}) rotate(${tilt}) scale(${TAG.scale})">` +
     `<g class="hsh-sticker__body">` +
     `<rect class="hsh-tag__bg" x="${-w / 2}" y="${-TAG.h / 2}" width="${w}" height="${TAG.h}" fill="${bg}"/>` +
     `<text class="hsh-tag__text" x="0" y="1" fill="${fg}" text-anchor="middle" dominant-baseline="central">${text[0].toUpperCase() + text.slice(1)}</text>` +

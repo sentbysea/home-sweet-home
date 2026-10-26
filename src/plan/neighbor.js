@@ -3,13 +3,12 @@
 //   고치기: 사이트 주인만 — 맨 아래 'edit' 를 누르면 supabase-js 를 불러 Google 로 로그인하고,
 //     추가(파일 올리기 또는 이미지 주소) · 삭제를 한다. 방식은 hongjiwon.love 의 posts-view-banner-form.js 와 같다
 //     (이미지 파일은 user-banners 버킷 {user_id}/category-banners/{uuid}/image).
+//   클라이언트는 글 창 · 관리자와 같은 하나(content/supabase.js).
 
-const SUPABASE_URL = 'https://iokdgqzfprtggsnrusez.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_N9mPjBMUQJEhKYPo9ZMlZg_9i7GEsYp'; // 공개(publishable) 키
-const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js'; // hongjiwon.love 와 같은 판
+import { SUPABASE_URL, SUPABASE_KEY, getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError, rememberReturnPath } from '../content/supabase.js';
+
 const CATEGORY_ID = 4; // hongjiwon.love 배너 카테고리
 const BUCKET = 'user-banners';
-const AUTH_KEY = 'sb-iokdgqzfprtggsnrusez-auth-token'; // supabase-js 가 로그인 정보를 두는 자리
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -30,26 +29,6 @@ async function fetchBanners() {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/banners?${q}`, { headers: { apikey: SUPABASE_KEY } });
   if (!res.ok) throw new Error(`banners ${res.status}`);
   return res.json();
-}
-
-// supabase-js 는 고칠 때만 — 한 번만 불러 같은 클라이언트를 쓴다
-let clientPromise = null;
-function getClient() {
-  clientPromise ??= new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = SUPABASE_JS;
-    s.onload = () => resolve(window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
-    s.onerror = () => { clientPromise = null; reject(new Error('supabase-js')); };
-    document.head.append(s);
-  });
-  return clientPromise;
-}
-
-async function ownerSession(client) {
-  const { data: { user } } = await client.auth.getUser();
-  if (!user) return { user: null, owner: false };
-  const { data: ownerId } = await client.rpc('site_owner_id');
-  return { user, owner: ownerId === user.id };
 }
 
 /**
@@ -141,9 +120,11 @@ export function mountNeighbor(root, onResize = () => {}) {
     session = await ownerSession(client);
     if (!session.user) {
       say('Google 로그인으로 이동 중...');
+      // 돌아오는 곳은 허용 목록의 루트(/) 하나 — 보던 주소(/neighbor 등)는 적어 두었다가 돌아온 뒤 연다
+      rememberReturnPath();
       const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${location.origin}${location.pathname}` },
+        options: { redirectTo: HOME_REDIRECT },
       });
       if (error) { console.error(error); say('로그인하지 못했어요.'); }
       return;
@@ -226,16 +207,16 @@ export function mountNeighbor(root, onResize = () => {}) {
   });
 
   // Google 로그인에서 돌아왔거나 이미 로그인돼 있으면 클라이언트를 미리 깨워 둔다(주소의 토큰을 받아 저장)
+  // 로그인이 실패해 돌아왔으면 주소를 정리하고, 이 방을 열었을 때 이유를 보여 준다
+  const authError = consumeAuthError();
   const back = /access_token=|[?&]code=/.test(location.hash + location.search);
-  let saved = false;
-  try { saved = Boolean(localStorage.getItem(AUTH_KEY)); } catch { /* 없음 */ }
-  if (back || saved) getClient().catch(() => {});
+  if (back || hasSavedLogin()) getClient().catch(() => {});
 
   let loaded = false;
   return {
     /** 방을 열 때마다 — 처음 한 번만 불러온다 */
     show() {
-      if (!loaded) { loaded = true; load(); }
+      if (!loaded) { loaded = true; load().then(() => { if (authError) say(`로그인하지 못했어요 — ${authError}`); }); }
       else onResize();
     },
   };
