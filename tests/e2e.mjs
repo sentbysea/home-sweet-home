@@ -1592,7 +1592,7 @@ async function neighborView(device, name) {
     return { home: mid('.nbh__home'), title: mid('.nbh__title'), sw: mid('.nbh-view') };
   });
   check(`${name} — ← home · 제목 · 스위치가 한 줄(겹치지 않게) · 스위치는 짧게`, Math.abs(row.home.y - row.sw.y) < 3 && Math.abs(row.title.y - row.sw.y) < 8 && row.home.r < row.title.l && row.title.r < row.sw.l && row.sw.w <= 90, JSON.stringify(row));
-  check(`${name} — 오른쪽 위 보기 스위치(처음은 마을)`, sw.role === 'switch' && sw.checked === 'false' && sw.right < 24 && sw.top < 30 && (await page.isVisible('.nbh__village')) && !(await page.isVisible('.nbh__banners')), JSON.stringify(sw));
+  check(`${name} — 오른쪽 위 보기 스위치(처음은 마을)`, sw.role === 'switch' && sw.checked === 'false' && sw.right < Math.max(24, vw / 2 - Math.max(vw / 6, 200) + 3) && sw.top < 30 && (await page.isVisible('.nbh__village')) && !(await page.isVisible('.nbh__banners')), JSON.stringify(sw));
   await page.click('.nbh-view');
   await page.waitForTimeout(700);
   const bl = await page.evaluate(() => {
@@ -1613,6 +1613,10 @@ async function neighborView(device, name) {
   });
   check(`${name} — 스위치 → 배너 보기: 맨 위 내 배너 + 받은 배너만 한 줄에 하나씩(5:1 · 이름 없음 · 새 탭)`, bl.checked === 'true' && !bl.village && bl.n === 4 && bl.first === 'https://xn--9g3b29an0p.me' && bl.links && bl.cols === 1 && Math.abs(bl.ratio - 5) < 0.1 && bl.names === 0 && !bl.visibleText, JSON.stringify(bl));
   if (device) check(`${name} — 배너 폭은 화면의 70%`, Math.abs(bl.w - vw * 0.7) < 2, JSON.stringify({ w: bl.w, vw }));
+  else {
+    const band = Math.max(vw / 6, 200); // 가운데 1/3 의 반(좁으면 200)
+    check(`${name} — 배너 폭 294px · ← home · 스위치는 가운데 1/3 구역 양끝`, Math.abs(bl.w - 294) < 2 && Math.abs(row.home.l - (vw / 2 - band)) < 3 && Math.abs(vw - row.sw.r - (vw / 2 - band)) < 3, JSON.stringify({ w: bl.w, row, vw }));
+  }
   await page.screenshot({ path: path.join(OUT, `neighbor-${name}-banners.png`) });
   await page.reload();
   await page.waitForSelector('.nbh.is-open', { timeout: 20000 });
