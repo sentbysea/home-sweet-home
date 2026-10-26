@@ -101,6 +101,7 @@ src/styles/archive.css
 ```
 
 - 사이트 더하기 · 고치기: `links.js` 의 `ARCHIVE_LINKS` 한 줄. `url` 이 비어 있으면 열쇠 · 이름은 보이되 밖으로 나가지 않는다(링크 비활성 · "준비 중").
+  지금: twitter(x.com/3luespark) · tistory(3luespark.tistory.com) · luvlog(v.luvlog.me) · love(hongjiwon.love).
   다른 갠홈은 `object: 'house'` 줄을 더 붙이면 열쇠가 하나씩 늘어난다(색은 은색 · 버터색, 창 색은 하늘 · 연보라 · 버터를 번갈아).
 - 조작: 끌면 꾸러미가 돌고(위아래는 조금) 놓으면 관성으로 돌다 멈춘다. 열쇠마다 고리의 한 점에 매달린 진자라 따로 흔들리고,
   각도는 한도 안이라 떨어지거나 화면 밖으로 날아가지 않는다. 열쇠 한 번 → 고리를 타고 맨 앞으로 나오며 이름표, 아래에 '이름 ↗'.

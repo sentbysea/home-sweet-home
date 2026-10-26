@@ -832,10 +832,12 @@ async function archiveCase(device, name) {
     };
     requestAnimationFrame(look);
   });
-  // 첫 사이트(twitter)에만 시험 주소를 넣는다 — 나머지는 빈 주소 그대로
+  // twitter 는 시험 주소로(진짜 사이트에 가지 않게), luvlog 는 빈 주소로 바꿔 '빈 주소는 막힘'도 본다
   await context.route('**/src/archive/links.js', async (route) => {
     const res = await route.fetch();
-    const body = (await res.text()).replace("{ id: 'twitter', name: 'twitter', url: ''", `{ id: 'twitter', name: 'twitter', url: '${TEST_URL}'`);
+    const body = (await res.text())
+      .replace(/(id: 'twitter',[^}]*url: )'[^']*'/, `$1'${TEST_URL}'`)
+      .replace(/(id: 'luvlog',[^}]*url: )'[^']*'/, "$1''");
     await route.fulfill({ response: res, body });
   });
   await context.route('https://example.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>ok</title>ok' }));
@@ -966,7 +968,7 @@ async function archive() {
   check('콘솔 오류 없음(archive 모션 줄이기)', rm.errors.length === 0, rm.errors.join(' | '));
   await rm.context.close();
 
-  // 3D 를 쓸 수 없는 환경 — 같은 데이터로 목록(빈 주소는 막힘)
+  // 3D 를 쓸 수 없는 환경 — 같은 데이터로 목록(진짜 주소 그대로 — 누르지는 않는다)
   const nw = await open(null, { width: 1000, height: 800 });
   await nw.context.addInitScript(() => {
     const get = HTMLCanvasElement.prototype.getContext;
@@ -975,8 +977,10 @@ async function archive() {
   await nw.page.goto(`${VIBE_ORIGIN}/archive?${Q}`);
   await nw.page.waitForSelector('.hsh-arc__list:not([hidden])', { timeout: 15000 });
   const rowsText = await nw.page.$$eval('.hsh-arc__row', (r) => r.map((x) => x.textContent.trim()));
-  check('WebGL 없음 → 간단한 목록', rowsText.length === 4 && rowsText[0].startsWith('twitter') && rowsText[3].startsWith('다른 갠홈'), rowsText.join(' / '));
-  check('목록 — 빈 주소는 링크 아님', (await nw.page.$$('.hsh-arc__list a')).length === 0);
+  check('WebGL 없음 → 간단한 목록', rowsText.length === 4 && rowsText[0].startsWith('twitter') && rowsText[3].startsWith('love'), rowsText.join(' / '));
+  const hrefs = await nw.page.$$eval('.hsh-arc__list a', (a) => a.map((x) => x.getAttribute('href')));
+  check('목록 — 사이트마다 새 탭 링크', hrefs.join(' ') === 'https://x.com/3luespark https://3luespark.tistory.com https://v.luvlog.me https://hongjiwon.love'
+    && (await nw.page.$$eval('.hsh-arc__list a', (a) => a.every((x) => x.target === '_blank' && /noopener/.test(x.rel)))), hrefs.join(' '));
   check('목록 — 설정 · 코드 안내 문구 없음', !/(links\.js|url:|TODO|설정)/.test(await nw.page.textContent('.hsh-arc')));
   check('콘솔 오류 없음(archive 목록)', nw.errors.length === 0, nw.errors.join(' | '));
   await nw.context.close();

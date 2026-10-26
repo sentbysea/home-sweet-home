@@ -40,9 +40,11 @@ const BOIL_MS = 190;
 const BOIL_FRAMES = 3;
 
 // 사이트 오브젝트 → 열쇠 + 키링
+//   keySize    열쇠 크기(1 = 보통) — twitter 열쇠는 눈에 띄게 작다(새 키링은 그대로)
+//   charmFront 고르면 키링이 열쇠 옆이 아니라 열쇠 앞(화면 쪽)으로 나온다
 const OBJECTS = {
-  bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky' },
-  diary: { key: 'roundKey', tone: 'butter', charm: 'diary', charmTone: 'lilac' },
+  bird: { key: 'roundKey', tone: 'silver', charm: 'bird', charmTone: 'sky', keySize: 0.68 },
+  diary: { key: 'roundKey', tone: 'butter', charm: 'diary', charmTone: 'lilac', charmFront: true },
   heart: { key: 'heartKey', tone: 'butter', charm: 'heartLock', charmTone: 'lilac' },
   house: { key: 'houseKey', tone: 'silver' },
 };
@@ -79,13 +81,15 @@ function subdivide(pts, step, closed) {
   return out;
 }
 
-/** 손그림 떨림 — 선을 따라 천천히 바뀌는 만큼 법선 방향으로 민다 */
+/** 손그림 떨림 — 선을 따라 잘게 출렁이는 만큼 법선 방향으로 민다(큰 물결 + 잔물결 두 겹) */
 function wobble(pts, amp, seed, closed) {
   const r = rng(seed);
-  const f1 = 6 + r() * 5;
-  const f2 = 15 + r() * 9;
+  const f1 = 14 + r() * 6;
+  const f2 = 32 + r() * 14;
+  const f3 = 70 + r() * 30;
   const p1 = r() * 6.28;
   const p2 = r() * 6.28;
+  const p3 = r() * 6.28;
   let s = 0;
   const n = pts.length;
   return pts.map((p, i) => {
@@ -96,7 +100,7 @@ function wobble(pts, amp, seed, closed) {
     let ty = b[1] - a[1];
     const l = Math.hypot(tx, ty) || 1;
     tx /= l; ty /= l;
-    const d = amp * (Math.sin(s * f1 + p1) * 0.65 + Math.sin(s * f2 + p2) * 0.35);
+    const d = amp * (Math.sin(s * f1 + p1) * 0.5 + Math.sin(s * f2 + p2) * 0.32 + Math.sin(s * f3 + p3) * 0.18);
     return [p[0] - ty * d, p[1] + tx * d];
   });
 }
@@ -104,7 +108,7 @@ function wobble(pts, amp, seed, closed) {
 /** 펜 선 — 굵기가 조금씩 다른 납작한 띠(삼각형). 꺾이는 곳은 각을 살리되 너무 뾰족하지 않게 */
 function ribbon(pts, closed, width, seed, acc) {
   const r = rng(seed);
-  const f = 5 + r() * 4;
+  const f = 12 + r() * 8;
   const p = r() * 6.28;
   const n = pts.length;
   if (n < 2) return;
@@ -205,13 +209,13 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   // ---------- 조각(열쇠 · 키링 · 라벨) ----------
 
   /** 2D 모양 → 두께 있는 몸통 + 칠 + 위글 선 3장 */
-  const buildPiece = (def, tone, depth, seed) => {
+  const buildPiece = (def, tone, depth, seed, pen = PEN) => {
     const group = new T.Group();
     const faceMat = toon(TONES[tone].face);
     const sideMat = toon(TONES[tone].side);
     const ink = inkMat();
     const fills = [];
-    const outline = wobble(subdivide(def.outline, 0.035, true), 0.007, seed, true);
+    const outline = wobble(subdivide(def.outline, 0.018, true), 0.005, seed, true);
     const shape = new T.Shape(outline.map(([x, y]) => new T.Vector2(x, y)));
     for (const [hi, h] of def.holes.entries()) {
       shape.holes.push(new T.Path(wobble(subdivide(h, 0.02, true), 0.004, seed + 7 + hi, true).map(([x, y]) => new T.Vector2(x, y))));
@@ -239,9 +243,9 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     for (let k = 0; k < BOIL_FRAMES; k++) {
       const acc = { pos: [], idx: [] };
       const s = seed * 31 + k * 101;
-      ribbon(wobble(subdivide(def.outline, 0.03, true), 0.01, s + 1, true), true, PEN, s + 2, acc);
-      def.holes.forEach((h, i) => ribbon(wobble(subdivide(h, 0.02, true), 0.006, s + 10 + i, true), true, PEN * 0.8, s + 11 + i, acc));
-      def.lines.forEach((ln, i) => ribbon(wobble(subdivide(ln.pts, 0.025, Boolean(ln.closed)), 0.008, s + 20 + i, Boolean(ln.closed)), Boolean(ln.closed), PEN * (ln.w ?? 1), s + 21 + i, acc));
+      ribbon(wobble(subdivide(def.outline, 0.012, true), 0.008, s + 1, true), true, pen, s + 2, acc);
+      def.holes.forEach((h, i) => ribbon(wobble(subdivide(h, 0.01, true), 0.005, s + 10 + i, true), true, pen * 0.8, s + 11 + i, acc));
+      def.lines.forEach((ln, i) => ribbon(wobble(subdivide(ln.pts, 0.012, Boolean(ln.closed)), 0.0065, s + 20 + i, Boolean(ln.closed)), Boolean(ln.closed), pen * (ln.w ?? 1), s + 21 + i, acc));
       const g = keep(new T.BufferGeometry());
       g.setAttribute('position', new T.Float32BufferAttribute(acc.pos, 3));
       g.setIndex(acc.idx);
@@ -307,8 +311,8 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     bundle.add(holder);
     const p = {
       piece, holder, site: o.site ?? null, kind: o.kind, follow: o.follow ?? null,
-      phi: o.phi, phiT: o.phi, phi0: o.phi, phiOff: o.phiOff ?? 0,
-      a0: o.a0, aSel: o.aSel ?? 0, b0: o.b0 ?? 0, c0: o.c0 ?? 0,
+      phi: o.phi, phiT: o.phi, phi0: o.phi, phiOff: o.phiOff ?? 0, phiSel: o.phiSel ?? (o.phiOff ?? 0) * 1.6,
+      a0: o.a0, aSel: o.aSel ?? 0, b0: o.b0 ?? 0, bSel: o.bSel ?? -0.34, c0: o.c0 ?? 0, size: o.size ?? 1,
       a: o.a0, b: o.b0 ?? 0, c: o.c0 ?? 0, va: 0, vb: 0, vc: 0,
       sel: 0, dim: 0, mass: o.mass ?? 1,
       seed: o.seed, pa: rng(o.seed)() * 6.28, pb: rng(o.seed + 1)() * 6.28,
@@ -338,8 +342,10 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     const side = i % 2 ? -1 : 1;
     const a0 = side * (0.24 + 0.2 * ((i * 0.618) % 1));
     // c0 — 고리 철사에 끼운 채 조금씩 돌아가 있어, 비스듬히 본 꾸러미에서도 열쇠 앞면이 보인다
-    const key = addPendulum(buildPiece(def, tone, 0.075, 11 + i * 17), {
-      site: i, kind: 'key', phi, a0, b0: 0, c0: 0.55 + (rand() - 0.5) * 0.3, seed: 300 + i * 13, mass: 1,
+    const size = spec.keySize ?? 1;
+    // 작게 줄인 열쇠도 선 굵기는 같게(펜을 그만큼 굵게)
+    const key = addPendulum(buildPiece(def, tone, 0.075, 11 + i * 17, PEN / size), {
+      site: i, kind: 'key', phi, a0, b0: 0, c0: 0.55 + (rand() - 0.5) * 0.3, seed: 300 + i * 13, mass: size, size,
     });
     keys.push(key);
     if (spec.charm) {
@@ -347,7 +353,9 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       piece.group.add(jumpRing());
       addPendulum(piece, {
         site: i, kind: 'charm', follow: key, phi: phi + 0.2 * side, phiOff: 0.2 * side,
-        a0: a0 - side * 0.55, aSel: -side * 0.6, b0: 0.05, c0: 0.4 + (rand() - 0.5) * 0.5, seed: 500 + i * 7, mass: 0.6,
+        a0: a0 - side * 0.55, b0: 0.05, c0: 0.4 + (rand() - 0.5) * 0.5, seed: 500 + i * 7, mass: 0.6,
+        // 고르면 — 열쇠 앞(고리 앞쪽 · 화면 쪽으로 더 흔들려 나옴) 또는 열쇠 옆으로 비켜
+        ...(spec.charmFront ? { phiSel: 0.2, aSel: -side * 0.12, bSel: -0.6 } : { aSel: -side * 0.6 }),
       });
     }
   });
@@ -547,13 +555,13 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       const toDim = any && !mine ? 1 : 0;
       p.dim += (toDim - p.dim) * Math.min(1, dt * 8);
       // 고리 위 자리 — 키링은 제 열쇠 옆을 따라간다
-      const phiT = p.follow ? p.follow.phiT + p.phiOff * (mine ? 1.6 : 1) : p.phiT;
+      const phiT = p.follow ? p.follow.phiT + (mine ? p.phiSel : p.phiOff) : p.phiT;
       p.phi += (phiT - p.phi) * Math.min(1, dt * (reduced ? 30 : 5.5));
 
       // 쉬는 자세 — 고르면 똑바로 · 살짝 앞으로(b<0 이 화면 쪽) · 앞면이 화면을 보게
       const faceTwist = Math.max(-LIMIT.c, Math.min(LIMIT.c, -wrap(st.yaw)));
-      const aRest = p.a0 * (1 - p.sel) + p.aSel * p.sel; // 고른 키링은 열쇠 옆으로 비켜 보이게
-      const bRest = (p.b0 * (1 - p.sel) + -0.34 * p.sel) - st.pitch; // 고리가 기울어도 매달린 것은 아래로
+      const aRest = p.a0 * (1 - p.sel) + p.aSel * p.sel;
+      const bRest = (p.b0 * (1 - p.sel) + p.bSel * p.sel) - st.pitch; // 고리가 기울어도 매달린 것은 아래로
       const cRest = p.c0 * (1 - p.sel) + faceTwist * p.sel;
       const m = p.mass;
       const na = idle * Math.sin(time * 0.9 + p.pa) * 0.9;
@@ -574,7 +582,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       ringPoint(p.phi, tmp);
       p.holder.position.copy(tmp);
       p.holder.rotation.set(p.b, p.c, p.a, 'YXZ');
-      p.piece.group.scale.setScalar(1 + 0.12 * p.sel * (p.kind === 'key' ? 1 : 0.6));
+      p.piece.group.scale.setScalar(p.size * (1 + 0.12 * p.sel * (p.kind === 'key' ? 1 : 0.6)));
       // 고르지 않은 것은 조금 바랜다
       const fade = p.dim * 0.4;
       const { mats, base } = p.piece;

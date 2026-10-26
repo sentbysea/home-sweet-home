@@ -6,10 +6,10 @@
 //   다른 갠홈은 object: 'house' 줄을 더 붙이면 된다(id 는 겹치지 않게).
 
 export const ARCHIVE_LINKS = [
-  { id: 'twitter', name: 'twitter', url: '', object: 'bird', order: 1 },
-  { id: 'tistory', name: 'tistory', url: '', object: 'diary', order: 2 },
-  { id: 'luvlog', name: 'luvlog', url: '', object: 'heart', order: 3 },
-  { id: 'home-1', name: '다른 갠홈', url: '', object: 'house', order: 4 },
+  { id: 'twitter', name: 'twitter', url: 'https://x.com/3luespark', object: 'bird', order: 1 },
+  { id: 'tistory', name: 'tistory', url: 'https://3luespark.tistory.com', object: 'diary', order: 2 },
+  { id: 'luvlog', name: 'luvlog', url: 'https://v.luvlog.me', object: 'heart', order: 3 },
+  { id: 'love', name: 'love', url: 'https://hongjiwon.love', object: 'house', order: 4 },
 ];
 
 /** 순서대로, 주소는 http(s) 만 */
