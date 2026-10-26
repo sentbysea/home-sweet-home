@@ -602,9 +602,9 @@ const tag = (roomId, text, name, x, y, bg, fg, tilt = 0, { category, look } = {}
     `</g></g>`,
   );
 };
-tag('v', 'about __VE', '지원 · 우연 소개', 298, 340, '#e4d4fb', '#34b468', -3);
+tag('v', 'about __VE', '지원 · 우연 소개', 298, 340, '#fbefae', '#e8893a', -3);
 tag('kitchen', 'teatime?', '티타임', 662, 462, '#fbd5e3', '#4a98e4', 3);
-tag('living', 'notice', '공지', 582, 726, '#fbefae', '#e8893a', -2);
+tag('living', 'notice', '공지', 582, 726, '#e4d4fb', '#34b468', -2);
 tag('entry', 'neighbor', '이웃', 359, 1150, '#cdeed6', '#e65d98', -4);
 tag('e', 'archive', '기록', 712, 1180, '#cfe0fb', '#8a62dc', 3);
 

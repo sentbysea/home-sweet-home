@@ -405,7 +405,7 @@
 }
 
 /* ---------- about __VE — 아스키 집 · 짧은 글(about-note.js) ----------
-   집은 고정폭 글꼴로 가운데, 화면이 좁으면 글자 크기가 따라 줄어 한 줄이 넘치지 않는다(40칸).
+   집(homesweethome 을 이어 쓴 글자 집)은 고정폭 글꼴로 가운데, 화면이 좁으면 글자 크기가 따라 줄어 한 줄이 넘치지 않는다(35칸).
    글쓴이는 가운데 · 본문보다 살짝 연한 검정. */
 
 .hsh-ab {
@@ -426,7 +426,7 @@
   white-space: pre;
 }
 .hsh-ab__text { max-width: 34em; font-size: 14px; line-height: 1.95; word-break: keep-all; overflow-wrap: anywhere; }
-.hsh-ab__text p { margin: 0 0 1.1em; }
+.hsh-ab__text p { margin: 0 0 1.1em; text-indent: 1em; } /* 문단마다 한 칸 들여쓰기 */
 .hsh-ab__text p:last-child { margin-bottom: 0; }
 .hsh-ab__credit { margin: 0; text-align: center; font-size: 12px; color: #6f7275; }
 
