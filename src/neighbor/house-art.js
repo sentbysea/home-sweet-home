@@ -176,7 +176,8 @@ const BODY = { cozy: [56, 44], tall: [44, 70], wide: [78, 40], two: [60, 72], ti
 
 /**
  * 집 모양 → 도형 목록(변형 v 와 상관없이 같은 뼈대). 좌표는 바닥 가운데가 (0, 0), 위가 -y.
- * @returns {{ shapes: Array<{ kind: 'poly' | 'ellipse', pts?: number[][], e?: number[], fill?: string, roof?: boolean, closed?: boolean, seed: number, r?: number }>, box: { x: number, y: number, w: number, h: number } }}
+ * d — 안쪽 선(창 · 문 · 2층 바닥 · 우체통 틈 …): CSS 가 겉선보다 얇게 그린다(path.d)
+ * @returns {{ shapes: Array<{ kind: 'poly' | 'ellipse', pts?: number[][], e?: number[], fill?: string, roof?: boolean, d?: boolean, closed?: boolean, seed: number, r?: number }>, box: { x: number, y: number, w: number, h: number } }}
  */
 function plan(h) {
   const [w, bh] = BODY[h.body];
@@ -236,26 +237,26 @@ function plan(h) {
   add({ kind: 'poly', pts: roofPts, roof: true, r: h.roof === 'round' ? 1 : 2.5 });
   // 몸체
   add({ kind: 'poly', pts: [[x0, top], [-x0, top], [-x0, 0], [x0, 0]], fill: h.wall });
-  if (h.body === 'two') add({ kind: 'poly', pts: [[x0 + 3, top + bh * 0.48], [-x0 - 3, top + bh * 0.48]], closed: false });
+  if (h.body === 'two') add({ d: true, kind: 'poly', pts: [[x0 + 3, top + bh * 0.48], [-x0 - 3, top + bh * 0.48]], closed: false });
   // 문
   const dw = h.body === 'wide' ? 13 : 11;
   const dh = Math.min(20, bh * 0.46);
   const dx = side ? x0 + 6 : -dw / 2;
-  if (h.door === 'arch') add({ kind: 'poly', pts: archPts(dx, -dh, dw, dh, 5), fill: h.doorColor, r: 1 });
-  else add({ kind: 'poly', pts: [[dx, -dh], [dx + dw, -dh], [dx + dw, 0], [dx, 0]], fill: h.doorColor, r: 1.5 });
-  add({ kind: 'ellipse', e: [dx + dw - 3, -dh / 2, 0.9, 0.9], fill: INK });
+  if (h.door === 'arch') add({ d: true, kind: 'poly', pts: archPts(dx, -dh, dw, dh, 5), fill: h.doorColor, r: 1 });
+  else add({ d: true, kind: 'poly', pts: [[dx, -dh], [dx + dw, -dh], [dx + dw, 0], [dx, 0]], fill: h.doorColor, r: 1.5 });
+  add({ d: true, kind: 'ellipse', e: [dx + dw - 3, -dh / 2, 0.9, 0.9], fill: INK });
   // 창 — 1층(문 옆) · 2층(2층집 · 길쭉한 집). 긴 창은 가로로 길고 세 칸
   const win = (cx, cy, s, bw = s) => {
-    if (h.window === 'round') { add({ kind: 'ellipse', e: [cx, cy, s / 2, s / 2], fill: '#ffffff' }); return; }
+    if (h.window === 'round') { add({ d: true, kind: 'ellipse', e: [cx, cy, s / 2, s / 2], fill: '#ffffff' }); return; }
     const hw = bw / 2;
     const hh = (h.window === 'band' ? s * 0.8 : s) / 2;
-    add({ kind: 'poly', pts: [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]], fill: '#ffffff', r: 1.2 });
+    add({ d: true, kind: 'poly', pts: [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]], fill: '#ffffff', r: 1.2 });
     if (h.window === 'cross') {
-      add({ kind: 'poly', pts: [[cx, cy - hh + 1], [cx, cy + hh - 1]], closed: false });
-      add({ kind: 'poly', pts: [[cx - hw + 1, cy], [cx + hw - 1, cy]], closed: false });
+      add({ d: true, kind: 'poly', pts: [[cx, cy - hh + 1], [cx, cy + hh - 1]], closed: false });
+      add({ d: true, kind: 'poly', pts: [[cx - hw + 1, cy], [cx + hw - 1, cy]], closed: false });
     }
     if (h.window === 'band' && bw >= 12) {
-      for (const k of [-1, 1]) add({ kind: 'poly', pts: [[cx + k * bw / 6, cy - hh + 1], [cx + k * bw / 6, cy + hh - 1]], closed: false });
+      for (const k of [-1, 1]) add({ d: true, kind: 'poly', pts: [[cx + k * bw / 6, cy - hh + 1], [cx + k * bw / 6, cy + hh - 1]], closed: false });
     }
   };
   const ws = h.window === 'two' ? 8 : 10;
@@ -291,14 +292,14 @@ function plan(h) {
     const m = (da + db) / 2;
     add({ kind: 'poly', pts: [[da + 1, -9], [db - 1, -9], [db - 1, 0], [da + 1, 0]], fill: '#f3e6d8', r: 1 });
     add({ kind: 'poly', pts: [[da - 1, -8], [m, -15], [db + 1, -8]], fill: h.roofColor, r: 1.2 });
-    add({ kind: 'poly', pts: archPts(m - 2.5, -5.5, 5, 5.5, 4), fill: INK, r: 0.8 });
+    add({ d: true, kind: 'poly', pts: archPts(m - 2.5, -5.5, 5, 5.5, 4), fill: INK, r: 0.8 });
   }
   // 우체통 — 집 오른쪽 앞(화분 · 옆 문이면 조금 더 밖에)
   const mx = -x0 + (has('pot') && side ? 10 : 8);
   if (has('mailbox')) {
     add({ kind: 'poly', pts: [[mx, 0], [mx, -10]], closed: false });
     add({ kind: 'poly', pts: [[mx - 4.5, -16], [mx + 4.5, -16], [mx + 4.5, -10], [mx - 4.5, -10]], fill: '#e88a8a', r: 1.5 });
-    add({ kind: 'poly', pts: [[mx - 2.2, -13], [mx + 2, -13]], closed: false });
+    add({ d: true, kind: 'poly', pts: [[mx - 2.2, -13], [mx + 2, -13]], closed: false });
   }
   let minX = x0 - over;
   if (has('tree')) minX = Math.min(minX, tx - 8);
@@ -330,7 +331,7 @@ export function houseSvg(house, { scale = 1, seed = 0, still = false, cls = 'nbh
       ? sketchEllipse(s.e[0], s.e[1], s.e[2], s.e[3], sd, v)
       : sketch(s.pts, { closed: s.closed, seed: sd, v, radius: s.r ?? 2.5 });
     const fill = s.closed === false ? 'none' : s.roof ? roof.fill : s.fill || 'none';
-    return `<path d="${d}" fill="${fill}"/>`;
+    return `<path d="${d}" fill="${fill}"${s.d ? ' class="d"' : ''}/>`;
   }).join('');
   const body = still
     ? `<g class="nbh-ink">${layer(0)}</g>`
@@ -394,6 +395,22 @@ function toHex(h, s, l) {
   return `#${[c(0), c(8), c(4)].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 }
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+// ---------- 이름표 색종이 ----------
+
+export const TAG_FALLBACK = '#cdeed6'; // 쓸 색이 없을 때 — 공통 연두(--hsh-mint)
+
+/**
+ * 이름표 종이 색 — 그 집에 쓴 색(벽 · 지붕 · 문) 중 하나를 집마다 늘 같게 고른다.
+ * 너무 진하면(명도 80 아래) 같은 색조로 80 까지 밝히고 채도도 눌러 파스텔로 — 짙은 회색 글자가 읽히게.
+ * 바탕(아이보리)과 구별이 안 되는 거의 흰색은 고르지 않는다. 저장된 집 색은 바꾸지 않는다(이름표에만).
+ */
+export function tagTone(house, key) {
+  const usable = [house.wall, house.roofColor, house.doorColor].filter((c) => toHsl(c)[2] < 94);
+  if (!usable.length) return TAG_FALLBACK;
+  const [h, s, l] = toHsl(usable[hash(`tag:${key}`) % usable.length]);
+  return l >= 80 ? toHex(h, s, l) : toHex(h, Math.min(s, 70), 80);
+}
 
 /**
  * 배너 이미지의 대표 색(많은 순, 서로 다른 것만) — 못 읽으면 throw(외부 이미지 정책 등)

@@ -4,15 +4,24 @@
 //   · 홍차네 집 옆 우체통 → 배너 교환 패널(panel.js) — 주소 /neighbor/banner.
 //   · 주인: 아래 'edit' → Google 로그인(돌아오면 보던 주소로) → 집을 누르면 그 집 고치기, '+ add banner', 받은 신청.
 //   · 손그림 위글: 선 변형 4장을 190ms 마다(로딩 · 평면도와 같은 박자) — 이 화면의 모든 집(패널 미리보기까지)이 같이. 모션 줄이기면 멈춘다.
+//   · 바탕은 홈과 같은 아이보리, 여백에 홈 · archive 와 같은 작은 별(shared/star.js)을 성글게 — 자리는 고정 비율이라
+//     창 크기가 바뀌어도 그대로, 마을 뒤에 깔려 집 · 이름표를 가리거나 누르기를 막지 않는다.
 //   · 닫으면 마을을 치운다.
 
 import { fetchBanners, siteLabel, httpUrl } from './data.js';
 import { createVillage } from './village.js';
 import { mountPanel } from './panel.js';
 import { BOIL } from './house-art.js';
+import { starSvg } from '../shared/star.js';
 import { getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError, rememberReturnPath } from '../content/supabase.js';
 
 const BOIL_MS = 190;
+
+// 여백 별 [x%, y%, 기울기, 크기] — ← home(왼쪽 위) · 제목(가운데 위)은 비켜서 가장자리 위주로
+const STARS = [
+  [94, 6, 14, 1.1], [3.5, 22, 8, 1], [97, 27, -6, 1.2], [5, 44, 20, 1.1], [95.5, 52, -16, 1],
+  [2.5, 67, -10, 1.2], [97, 76, 6, 1], [6, 90, 12, 1.1], [93, 95, -12, 1], [22, 97, 4, 0.9], [78, 3, -8, 0.9],
+];
 
 function build() {
   const root = document.createElement('section');
@@ -24,6 +33,7 @@ function build() {
   root.setAttribute('aria-labelledby', 'nbh-title');
   root.tabIndex = -1;
   root.innerHTML = `
+    <div class="nbh__stars" aria-hidden="true">${STARS.map(([x, y, rot, size]) => starSvg(x, y, rot, size)).join('')}</div>
     <div class="nbh__scroll">
       <button class="nbh__home" type="button"><span aria-hidden="true">←</span> home</button>
       <h2 class="nbh__title" id="nbh-title">Neighbor</h2>

@@ -163,7 +163,7 @@
 
 /* 테두리 없는 단색 네모 + 성글게 띄운 둥근 글자(레퍼런스 'today's energy') */
 .hsh-tag__text {
-  font-family: "Varela Round", "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--hsh-tag-font);
   font-size: 33px; /* 평면도 단위 — tools/floorplan.mjs 의 TAG.font 와 같다 */
   font-weight: 400;
   font-style: italic;
