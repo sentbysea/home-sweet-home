@@ -217,17 +217,37 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     const dr = rng(DECO_SEED);
     for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(dr() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
     const GAP = 14;
-    free.slice(0, 2 + Math.floor(dr() * 3)).forEach((s, i) => {
-      const d = document.createElement('div');
-      d.className = 'nbh-deco-wrap';
+    // 이미 놓인 것(집 · 이름표 자리 · 우체통 · 다른 장식)과 GAP 이상 — 홍차네 집은 옆 칸까지 넓을 수 있다
+    const TAG_H = 44; // 집 아래 이름표 자리
+    const clear = (x, base, w, h) => layout.every((l) => {
+      const house = l.kind === 'home' || l.kind === 'center';
+      const below = house ? TAG_H : 0;
+      const hw = house ? Math.max(l.w / 2, 75) : l.w / 2; // 이름표는 집보다 넓을 수 있다
+      return x + w / 2 + GAP <= l.x - hw || x - w / 2 - GAP >= l.x + hw
+        || base + GAP <= l.base - l.h || base - h - GAP >= l.base + below;
+    });
+    let placed = 0;
+    const want = 2 + Math.floor(dr() * 3);
+    free.forEach((s, i) => {
+      if (placed >= want) return;
       const isFence = dr() < 0.35;
       const ts = g.scale * (0.85 + dr() * 0.3);
-      d.innerHTML = isFence ? fence(g.scale, 80 + i * 10) : tree(ts, 40 + i * 10);
       const w = isFence ? 46 * g.scale : 32 * ts;
       const h = isFence ? 18 * g.scale : 48 * ts;
       const span = Math.max(0, g.cw - w - GAP * 2);
-      const x = g.left + s.c * g.cw + GAP + w / 2 + dr() * span;
-      const base = (s.r + 0.82) * g.rowH + (dr() * 2 - 1) * g.rowH * 0.06;
+      let x = 0;
+      let base = 0;
+      let ok = false;
+      for (let t = 0; t < 6 && !ok; t++) { // 겹치면 칸 안 다른 자리로 — 끝내 안 되면 이 칸은 비운다
+        x = g.left + s.c * g.cw + GAP + w / 2 + dr() * span;
+        base = (s.r + 0.82) * g.rowH + (dr() * 2 - 1) * g.rowH * 0.06;
+        ok = clear(x, base, w, h);
+      }
+      if (!ok) return;
+      placed += 1;
+      const d = document.createElement('div');
+      d.className = 'nbh-deco-wrap';
+      d.innerHTML = isFence ? fence(g.scale, 80 + i * 10) : tree(ts, 40 + i * 10);
       d.style.left = `${f(x - w / 2)}px`;
       d.style.top = `${f(base - h)}px`;
       town.append(d);
