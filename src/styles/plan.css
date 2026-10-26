@@ -4,13 +4,13 @@
    ========================================================= */
 
 .hsh-plan {
-  --hsh-plan-paper: #fcfbf8; /* 로딩 화면과 같은 아이보리 — 사이트 바탕(body)과 같다 */
+  --hsh-plan-paper: var(--hsh-paper); /* 로딩 화면과 같은 아이보리(base.css) */
   --hsh-plan-ink: #262628;
   --hsh-plan-soft: #9a9ea2;
-  --hsh-plan-wall: #8f9497; /* 집 외곽선(벽) — 로딩 화면 집 테두리(--hsh-line)와 같은 색 */
-  --hsh-plan-line: #8f9497; /* 가구 · 스티커 윤곽도 같은 부드러운 중간 회색 */
-  --hsh-plan-detail: #b4b9bc; /* 세면대 · 책 · 타일 같은 안쪽 묘사 — 더 얇고 연하게 */
-  --hsh-plan-note: #7d8386; /* 하단 안내 — 로딩 방문 단계 글(--hsh-note)과 같은 색 */
+  --hsh-plan-wall: var(--hsh-line); /* 집 외곽선(벽) — 로딩 화면 집 테두리(--hsh-line)와 같은 색 */
+  --hsh-plan-line: var(--hsh-line); /* 가구 · 스티커 윤곽도 같은 부드러운 중간 회색 */
+  --hsh-plan-detail: var(--hsh-detail); /* 세면대 · 책 · 타일 같은 안쪽 묘사 — 더 얇고 연하게 */
+  --hsh-plan-note: var(--hsh-note); /* 하단 안내 — 로딩 방문 단계 글(--hsh-note)과 같은 색 */
   --hsh-plan-stars: var(--hsh-tone-stars); /* 바깥 여백 별 — 로딩 배경 별(--hsh-pattern)과 같은 색 */
   --hsh-plan-gutter: 16px;
 
@@ -180,17 +180,17 @@
 
 @keyframes hsh-nod {
   0%, 100% { translate: 0 0; rotate: 0deg; }
-  25% { translate: 0 -3px; rotate: -3deg; }
+  25% { translate: 0 -1.5px; rotate: -1.5deg; } /* 위글(±2°)과 겹쳐도 작게 — 판 전체가 들썩이지 않게 */
   50% { translate: 0 0; rotate: 0deg; }
-  75% { translate: 0 -1.5px; rotate: 2deg; }
+  75% { translate: 0 -0.8px; rotate: 1deg; }
 }
 
 /* 마우스를 올리면 까딱임을 멈추고 살짝 갸웃 */
 @media (hover: hover) {
   .hsh-plan.is-done .hsh-sticker:hover .hsh-sticker__body {
     animation: none;
-    rotate: -6deg;
-    translate: 0 -2px;
+    rotate: -4deg;
+    translate: 0 -1.5px;
   }
 }
 
@@ -209,7 +209,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  font-family: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--hsh-mono);
   font-size: 14px; /* 로딩 방문 단계 글처럼 작고 옅게 */
   letter-spacing: 0;
   color: var(--hsh-plan-note);
@@ -270,7 +270,7 @@
   color: var(--hsh-plan-ink);
   white-space: nowrap;
   padding: 0 6px;
-  background: #fff; /* 평면도 위에서도 잘 읽히게 글자 높이만큼 흰 바탕 */
+  background: var(--hsh-plan-paper); /* 평면도 위에서도 잘 읽히게 글자 높이만큼 바탕색(흰 네모가 드러나지 않게) */
   border-radius: 3px;
   visibility: hidden;
   opacity: 0;
@@ -335,7 +335,8 @@
 }
 
 .hsh-clock__num { font-size: 22px; }
-.hsh-clock__word { font-size: 30px; letter-spacing: -0.1em; } /* 12 · 3 · 6 자리 단어 — 촘촘하게, 장평은 clock.js 가 줄인다 */
+/* 12 · 3 · 6 자리 단어 — 로딩 집 안 home sweet home 과 같은 손글씨 글꼴(--hsh-hand). 장평은 clock.js 가 줄인다 */
+.hsh-clock__face .hsh-clock__word { font-family: var(--hsh-hand); font-size: 27px; font-weight: 400; letter-spacing: -0.06em; stroke-width: 0.3; }
 .hsh-clock__tick { stroke: #a9cbee; stroke-width: 1.6; stroke-linecap: round; }
 .hsh-clock__word.is-sweet { font-style: italic; }
 .hsh-clock__underline { fill: none; stroke-width: 1.5; stroke-linecap: round; }

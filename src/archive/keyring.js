@@ -1,6 +1,7 @@
 // archive 열쇠꾸러미 — three.js 장면(고리 하나에 열쇠 · 키링이 따로따로 매달린다).
-//   · 모양: shapes.js 의 2D 윤곽에 손그림 떨림을 입혀 얇게 뽑고(두께), 앞 · 뒷면에 굵기가 고르지 않은 짙은 회색 선을 따로 그린다.
-//     선은 조금씩 다른 3장을 190ms 마다 번갈아(로딩 화면 · 평면도 위글과 같은 박자). 색은 툰 3단 — 실사 금속 · 크롬 반짝임 없이.
+//   · 모양: shapes.js 의 2D 윤곽에 손그림 떨림을 입혀 얇게 뽑고(두께), 앞 · 뒷면에 굵기가 고르지 않은 회색 선을 따로 그린다.
+//     선은 로딩 집 · 평면도 벽과 같은 부드러운 회색, 휴대폰에서 1.5px 남짓(평면도 선과 비슷한 무게).
+//     선은 조금씩 다른 3장을 190ms 마다 번갈아(로딩 화면 · 평면도 위글과 같은 박자) — 흔들림은 작게. 색은 툰 3단(앞 · 옆면 차이 작게) — 실사 금속 · 크롬 반짝임 없이.
 //   · 움직임: 꾸러미(고리)는 끌어서 돌린다(좌우 무한, 위아래 조금). 놓으면 관성으로 돌다 멈춘다.
 //     열쇠 · 키링은 고리의 한 점에 매달린 진자 — 꾸러미가 돌거나 기울면 늦게 따라오며 흔들리고, 각도는 늘 한도 안이라 떨어져 나가지 않는다.
 //   · 고르기: 누르면(끌지 않았을 때만) 그 열쇠가 고리를 타고 맨 앞으로 미끄러져 나오고 살짝 커진다. 같은 열쇠를 또 누르면 onActivate.
@@ -27,16 +28,19 @@ export function canUseWebGL() {
 
 // ---------- 색 · 선 ----------
 
-const INK = '#55595d'; // 짙은 회색 윤곽 — 평면도 선(#8f9497)보다 한 단 짙게
+const INK = '#8c9195'; // 윤곽 — 로딩 집 · 평면도 선(--hsh-line #8f9497)과 같은 회색(색 면 위라 아주 조금만 짙게)
+const DOT = '#6f7478'; // 새 눈 · 열쇠 구멍 같은 작은 점 — 선보다 조금 짙게(묻히지 않게)
+const PAPER = '#fcfbf8'; // 바탕(base.css --hsh-paper) — 고르지 않은 조각은 이 색 쪽으로 바랜다
 const TONES = {
-  silver: { face: '#e4e7ea', side: '#a7aeb4' },
-  butter: { face: '#fbefae', side: '#d8c377' },
-  sky: { face: '#cfe0fb', side: '#8fb0de' },
-  lilac: { face: '#dfd2f6', side: '#a690d6' },
-  cloth: { face: '#fffaf0', side: '#d9cfbb' },
-  pink: { face: '#f9cadb', side: '#de95b0' },
+  // face 는 홈 라벨 파스텔(base.css --hsh-*), side 는 같은 색을 한 단만 — 얇은 옆면이 진한 띠로 보이지 않게
+  silver: { face: '#e4e7ea', side: '#d0d5d9' },
+  butter: { face: '#fbefae', side: '#ecdd97' },
+  sky: { face: '#cfe0fb', side: '#b7ceef' },
+  lilac: { face: '#e4d4fb', side: '#cebeef' },
+  cloth: { face: '#fffaf0', side: '#ede5d4' },
+  pink: { face: '#fbd5e3', side: '#eebccf' },
 };
-const PEN = 0.02; // 기본 펜 굵기(열쇠 길이 2.1 기준) — 화면에서 2~3px
+const PEN = 0.013; // 기본 펜 굵기(열쇠 길이 2.1 기준) — 휴대폰에서 1.5px 남짓, PC 에서 2px 남짓
 const BOIL_MS = 190;
 const BOIL_FRAMES = 3;
 
@@ -173,8 +177,8 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   back.position.set(2, 1, -4);
   scene.add(back);
 
-  // 툰 3단 — 그림처럼 면 밝기가 몇 칸으로만 바뀐다
-  const ramp = new T.DataTexture(new Uint8Array([120, 190, 255]), 3, 1, T.RedFormat);
+  // 툰 3단 — 그림처럼 면 밝기가 몇 칸으로만 바뀐다. 그늘은 옅게(강한 그림자 없이)
+  const ramp = new T.DataTexture(new Uint8Array([200, 230, 255]), 3, 1, T.RedFormat);
   ramp.minFilter = ramp.magFilter = T.NearestFilter;
   ramp.needsUpdate = true;
 
@@ -188,20 +192,20 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   scene.add(bundle);
   const ringParts = []; // 고리(조각보다 먼저, 맨 뒤에 그린다)
 
-  // ---------- 고리(두 바퀴 감긴 납작 고리) — 바깥에 짙은 회색 테(안팎 뒤집은 껍질, 굵기를 조금씩 흔들어) ----------
+  // ---------- 고리(두 바퀴 감긴 납작 고리) — 바깥에 회색 테(안팎 뒤집은 껍질, 굵기를 조금씩 흔들어) ----------
   const ringMat = toon(TONES.silver.face);
   const hullMat = keep(new T.MeshBasicMaterial({ color: INK, side: T.BackSide }));
   const addTorus = (r, tube, arc, rotZ, x) => {
     const g = keep(new T.TorusGeometry(r, tube, 10, 120, arc));
     const m = new T.Mesh(g, ringMat);
-    const hg = keep(new T.TorusGeometry(r, tube + 0.011, 8, 120, arc));
+    const hg = keep(new T.TorusGeometry(r, tube + 0.0075, 8, 120, arc));
     const pos = hg.attributes.position;
     const nor = hg.attributes.normal;
     const rr = rng(Math.round(r * 1000));
     const ph = rr() * 6;
     for (let i = 0; i < pos.count; i++) {
       const u = Math.atan2(pos.getY(i), pos.getX(i));
-      const d = 0.004 * Math.sin(u * 7 + ph) + 0.003 * Math.sin(u * 17 + ph * 2);
+      const d = 0.003 * Math.sin(u * 7 + ph) + 0.002 * Math.sin(u * 17 + ph * 2);
       pos.setXYZ(i, pos.getX(i) + nor.getX(i) * d, pos.getY(i) + nor.getY(i) * d, pos.getZ(i) + nor.getZ(i) * d);
     }
     const h = new T.Mesh(hg, hullMat);
@@ -237,8 +241,8 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     const zf = depth / 2 + 0.0015;
     for (const f of def.fills) {
       const g = keep(new T.ShapeGeometry(new T.Shape(wobble(subdivide(f.pts, 0.03, true), 0.004, seed + 3, true).map(([x, y]) => new T.Vector2(x, y)))));
-      const mat = f.color === 'ink' ? ink : fillMat(f.color);
-      if (f.color !== 'ink') fills.push(mat);
+      const mat = f.color === 'ink' ? fillMat(DOT) : fillMat(f.color);
+      if (f.color !== 'ink') fills.push(mat); // 점(ink)은 바래지 않는다
       for (const z of [zf, -zf]) {
         const m = new T.Mesh(g, mat);
         m.position.z = z;
@@ -252,9 +256,9 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
     for (let k = 0; k < BOIL_FRAMES; k++) {
       const acc = { pos: [], idx: [] };
       const s = seed * 31 + k * 101;
-      ribbon(wobble(subdivide(def.outline, 0.012, true), 0.008, s + 1, true), true, pen, s + 2, acc);
-      def.holes.forEach((h, i) => ribbon(wobble(subdivide(h, 0.01, true), 0.005, s + 10 + i, true), true, pen * 0.8, s + 11 + i, acc));
-      def.lines.forEach((ln, i) => ribbon(wobble(subdivide(ln.pts, 0.012, Boolean(ln.closed)), 0.0065, s + 20 + i, Boolean(ln.closed)), Boolean(ln.closed), pen * (ln.w ?? 1), s + 21 + i, acc));
+      ribbon(wobble(subdivide(def.outline, 0.012, true), 0.0055, s + 1, true), true, pen, s + 2, acc);
+      def.holes.forEach((h, i) => ribbon(wobble(subdivide(h, 0.01, true), 0.004, s + 10 + i, true), true, pen * 0.8, s + 11 + i, acc));
+      def.lines.forEach((ln, i) => ribbon(wobble(subdivide(ln.pts, 0.012, Boolean(ln.closed)), 0.0045, s + 20 + i, Boolean(ln.closed)), Boolean(ln.closed), pen * (ln.w ?? 1), s + 21 + i, acc));
       const g = keep(new T.BufferGeometry());
       g.setAttribute('position', new T.Float32BufferAttribute(acc.pos, 3));
       g.setIndex(acc.idx);
@@ -276,7 +280,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
   const jumpRing = () => {
     const g = new T.Group();
     const geo = keep(new T.TorusGeometry(0.075, 0.016, 8, 40));
-    const hull = keep(new T.TorusGeometry(0.075, 0.016 + 0.009, 6, 40));
+    const hull = keep(new T.TorusGeometry(0.075, 0.016 + 0.0065, 6, 40));
     g.add(new T.Mesh(geo, ringMat), new T.Mesh(hull, hullMat));
     g.rotation.y = Math.PI / 2;
     return g;
@@ -629,7 +633,7 @@ export async function createKeyring(canvas, sites, { reduced = false, onSelect =
       mats.fills.forEach((mm, j) => mm.color.copy(base.fills[j]).lerp(WHITE, fade));
     }
   };
-  const WHITE = new T.Color(0xffffff);
+  const WHITE = new T.Color(PAPER);
 
   // 위글 — 3장 중 하나만
   let boil = 0;

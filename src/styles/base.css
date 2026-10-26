@@ -20,11 +20,40 @@
 :root[data-hsh-tone="yellow"] { --hsh-tone-house: #fdf8e2; --hsh-tone-door: #f1e8c9; --hsh-tone-stars: #ded5b4; }
 :root[data-hsh-tone="pink"] { --hsh-tone-house: #fcf0f4; --hsh-tone-door: #f1dde5; --hsh-tone-stars: #dfc6cf; }
 
+/* 세 화면(로딩 · 홈 평면도 · archive)이 같이 쓰는 바탕 · 선 · 글자 · 파스텔 · 글꼴.
+   기준은 로딩 화면 — 따뜻한 아이보리 바탕에 얇은 회색 선. 파스텔은 홈 평면도 색종이 라벨(tools/floorplan.mjs tag) 색 */
+:root {
+  --hsh-paper: #fcfbf8; /* 순백이 아닌 아주 연한 아이보리 */
+  --hsh-line: #8f9497; /* 로딩 집 윤곽 · 평면도 벽 · 가구 */
+  --hsh-detail: #b4b9bc; /* 안쪽 묘사 — 더 연하게 */
+  --hsh-text: #3a3b3e;
+  --hsh-note: #7d8386; /* 로딩 방문 단계 글 · click the · archive 안내 */
+
+  --hsh-link: #5f6468; /* 누르는 회색 글자(← home) — --hsh-note 보다 한 단 짙게(대비 4.5 이상) */
+
+  /* 파스텔 — 홈 라벨 바탕색 그대로. archive 열쇠 · 키링 · 라벨도 이 색 */
+  --hsh-sky: #cfe0fb;
+  --hsh-mint: #cdeed6;
+  --hsh-butter: #fbefae;
+  --hsh-pink: #fbd5e3;
+  --hsh-lilac: #e4d4fb;
+  --hsh-silver: #e4e7ea;
+  --hsh-lilac-ink: #6444bd; /* 홈 Archive 라벨 글씨(#8a62dc)를 한 단 짙게 — 연보라 위에서 읽히게(대비 약 5) */
+
+  /* 글꼴 역할 — 새 글꼴 없이 프로젝트에 있는 것만.
+     손글씨(로딩 home sweet home · 시계 단어)와 타자기(제목 · 짧은 영문 · 링크 이름 · 한글 안내)는 같은 Nanum Gothic Coding */
+  --hsh-hand: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --hsh-mono: "Nanum Gothic Coding", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* 손그림 위글 박자 — loader/wobble.js · plan/index.js · archive/keyring.js 가 같은 190ms */
+  --hsh-wobble: 190ms;
+}
+
 html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #fcfbf8; /* 로딩 · 평면도와 같은 아이보리 */
+  background: var(--hsh-paper); /* 로딩 · 평면도 · archive 같은 아이보리 */
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
 }
@@ -38,3 +67,14 @@ body {
   src: url("../fonts/nanum-gothic-coding-status.woff2") format("woff2");
   unicode-range: U+AC00-D7A3;
 }
+
+/* 공통 별(src/shared/star.js) — 테두리 없이 별 색만. 로딩은 화면 가득, 홈 · archive 는 여백에 성글게 */
+.hsh-star {
+  position: absolute;
+  translate: -50% -50%;
+  overflow: visible;
+  fill: var(--hsh-tone-stars);
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+.hsh-star.is-away { opacity: 0; }
