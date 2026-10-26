@@ -8,7 +8,7 @@
 //   주인의 '+ add banner'(직접 걸기 · mode 'add')와 이웃집 고치기(mode 'house')도 같은 패널.
 //     이웃집 고치기는 탭 둘: 집 고치기(모양 · 색 · 기본 모양으로 · 내리기) · 내용 고치기(이름 · 주소 · 배너 이미지).
 
-import { MY_BANNER, bannerCode, httpUrl, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
+import { MY_BANNER, bannerCode, httpUrl, siteLabel, submitRequest, listRequests, reviewRequest, uploadImage, removeImage, addBanner, setHouse, updateBanner, deleteBanner, siteTitle } from './data.js';
 import { mountCustomizer } from './customizer.js';
 import { houseSvg, normalizeHouse, defaultHouse, randomHouse } from './house-art.js';
 
@@ -213,17 +213,22 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
 
   // 우리 집 꾸미기 — 신청 · 간판 걸기 · 집 고치기
   const imageOf = (form) => () => httpUrl(withScheme(form.image.value)) || '';
-  const diyApply = mountCustomizer(root.querySelector('[data-diy="apply"]'), { imageUrl: imageOf(apply) });
-  const diyAdd = mountCustomizer(root.querySelector('[data-diy="add"]'), { imageUrl: () => httpUrl(withScheme(add.image.value)) || uploaded?.url || '' });
+  // 미리보기 이름표 — 적은 이름, 비었으면 주소(마을과 같이)
+  const nameOf = (form) => () => form.elements.name.value.trim() || (httpUrl(withScheme(form.url.value)) ? siteLabel({ url: httpUrl(withScheme(form.url.value)) }) : '');
+  const diyApply = mountCustomizer(root.querySelector('[data-diy="apply"]'), { imageUrl: imageOf(apply), nameOf: nameOf(apply) });
+  const diyAdd = mountCustomizer(root.querySelector('[data-diy="add"]'), { imageUrl: () => httpUrl(withScheme(add.image.value)) || uploaded?.url || '', nameOf: nameOf(add) });
   const houseBox = root.querySelector('[data-mode="house"]');
   const houseMsg = houseBox.querySelector('.nbh-house__msg');
-  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => httpUrl(withScheme(info.image.value)) || infoUploaded?.url || editing?.image || '' });
+  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => httpUrl(withScheme(info.image.value)) || infoUploaded?.url || editing?.image || '', nameOf: () => (editing ? nameOf(root.querySelector('[data-form="info"]'))() || editing.label : '') });
   const info = root.querySelector('[data-form="info"]');
   const infoMsg = info.querySelector('.nbh-form__msg');
   const infoPreview = previewer(info.querySelector('.nbh-form__preview'));
   let infoUploaded = null; // { path, url } — 내용 고치기에서 새로 올린 파일
   apply.image.addEventListener('input', () => diyApply.bannerChanged());
   add.image.addEventListener('input', () => diyAdd.bannerChanged());
+  for (const [form, diy] of [[apply, diyApply], [add, diyAdd]]) {
+    for (const n of ['name', 'url']) form.elements[n].addEventListener('input', () => diy.renamed());
+  }
 
   // ---------- 복사 ----------
 
@@ -598,6 +603,7 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     infoPreview.set(`${infoUploaded.url}?t=${Date.now()}`);
     diyHouse.bannerChanged();
   });
+  for (const n of ['name', 'url']) info.elements[n].addEventListener('input', () => diyHouse.renamed());
   info.image.addEventListener('input', () => {
     const a = httpUrl(withScheme(info.image.value));
     infoPreview.set(a === '' ? (infoUploaded ? `${infoUploaded.url}?t=1` : '') : a || '');

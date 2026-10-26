@@ -328,7 +328,7 @@
   display: grid;
   place-items: end center;
   min-height: 150px;
-  padding: 10px 0 6px;
+  padding: 10px 0 44px; /* 집 아래 이름표 자리 */
   border-radius: 8px;
   background: var(--hsh-paper);
 }
@@ -336,9 +336,10 @@
 .nbh-diy__row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 8px; }
 .nbh-diy__k { font-size: 12px; color: var(--hsh-note); }
 .nbh-diy__k em { display: block; font-style: normal; font-size: 10.5px; opacity: 0.8; }
-.nbh-diy__opts { display: flex; flex-wrap: wrap; gap: 4px; }
+.nbh-diy__opts { display: flex; flex-wrap: nowrap; gap: 3px; min-width: 0; } /* 한 줄 — 좁으면 아이콘이 같이 줄어든다 */
 .nbh-diy__opts > button {
-  min-width: 40px;
+  flex: 0 1 auto;
+  min-width: 36px;
   min-height: 40px;
   display: grid;
   place-items: center;
@@ -350,17 +351,24 @@
 }
 .nbh-diy__opts > button[aria-checked="true"] { border-color: var(--nbh-ink); background: var(--hsh-paper); }
 .nbh-diy__opts > button:focus-visible { outline: 1.5px solid var(--nbh-ink); outline-offset: 1px; }
-.nbh-diy__icon { display: block; max-height: 34px; width: auto; }
+.nbh-diy__icon { display: block; max-width: 100%; max-height: 34px; width: auto; height: auto; }
 .nbh-diy__icon .nbh-ink path { stroke-width: 0.95; }
 .nbh-diy__icon .nbh-ink path.d { stroke-width: 0.7; }
 .nbh-diy__cap { font-size: 10.5px; line-height: 1.2; color: var(--hsh-note); white-space: nowrap; }
 .nbh-diy__swatch { display: block; width: 26px; height: 26px; }
 .nbh-diy__swatch rect { stroke: var(--hsh-line); stroke-width: 1; }
-.nbh-diy__opts.is-colors > button { min-width: 30px; min-height: 30px; padding: 0; border-radius: 50%; }
+/* 미리보기 이름표 — 마을과 같은 .nbh-label, 집 바로 아래 */
+.nbh-diy__stage { position: relative; display: block; }
+.nbh-diy__stage > svg { display: block; }
+.nbh-diy__name { --tag-max: 220px; }
+.nbh-diy__name.is-empty { color: var(--hsh-note); }
+/* 색 칩 — 한 줄에 다 들어가게(좁으면 칩이 같이 줄어든다, 줄을 넘기지 않는다) */
+.nbh-diy__opts.is-colors { flex-wrap: nowrap; gap: 2px; }
+.nbh-diy__opts.is-colors > button { flex: 0 1 30px; min-width: 0; min-height: 0; aspect-ratio: 1; padding: 0; border-radius: 50%; }
 .nbh-diy__opts.is-colors > button::before {
   content: "";
-  width: 20px;
-  height: 20px;
+  width: min(20px, 72%);
+  aspect-ratio: 1;
   border: 1px solid rgba(84, 88, 92, 0.35);
   border-radius: 50%;
   background: var(--chip);

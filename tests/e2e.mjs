@@ -72,8 +72,8 @@ function houseOk(h) {
   const hex = (c) => /^#[0-9a-f]{6}$/i.test(c || '');
   const deco = typeof h.deco === 'string' ? ['chimney', 'dormer', 'pot', 'none'].includes(h.deco)
     : Array.isArray(h.deco) && h.deco.length <= 5 && new Set(h.deco).size === h.deco.length && h.deco.every((d) => ['chimney', 'pot', 'dog', 'mailbox', 'tree'].includes(d));
-  return Object.keys(h).every((k) => keys.includes(k)) && ['cozy', 'tall', 'wide', 'two', 'tiny'].includes(h.body) && ['tri', 'round', 'trap', 'barn'].includes(h.roof)
-    && (h.roofPattern === undefined || ['solid', 'dot', 'halftone', 'stripe', 'gingham'].includes(h.roofPattern))
+  return Object.keys(h).every((k) => keys.includes(k)) && ['cozy', 'tall', 'wide', 'two', 'tiny'].includes(h.body) && ['tri', 'round', 'trap', 'gable', 'twin', 'barn'].includes(h.roof)
+    && (h.roofPattern === undefined || ['solid', 'halftone', 'hstripe', 'vstripe', 'gingham', 'dot', 'stripe'].includes(h.roofPattern))
     && ['arch', 'square', 'side'].includes(h.door) && ['one', 'two', 'round', 'cross', 'band'].includes(h.window) && deco
     && hex(h.wall) && hex(h.roofColor) && hex(h.doorColor);
 }
@@ -1353,6 +1353,10 @@ async function neighborApply() {
   check('꾸미기 — 굴뚝도 지붕 무늬를 따른다', await page.$eval(`${D} .nbh-diy__preview svg .nbh-v0`, (g) => g.querySelectorAll('path[fill^="url(#"]').length === 2), await chosen());
   check('꾸미기 — 색은 칩만(직접 고르기 없음)', !(await page.$(`${D} input[type="color"]`)) && !(await page.$(`${D} .nbh-diy__custom`)));
   check('꾸미기 — 마을과 같은 렌더러(.nbh-art · 위글 변형 4장)', await page.$eval(`${D} .nbh-diy__preview svg`, (s) => s.classList.contains('nbh-art') && s.querySelectorAll('.nbh-v').length === 4));
+  const opts = (key) => page.$$eval(`${D} [data-key="${key}"] [data-v]`, (b) => b.map((x) => x.dataset.v).join('|'));
+  check('꾸미기 — 지붕(처마 · 쌍둥이 박공, 헛간 없음) · 무늬 순서(단색-망점-가로-세로-깅엄)', (await opts('roof')) === 'tri|round|trap|gable|twin' && (await opts('roofPattern')) === 'solid|halftone|hstripe|vstripe|gingham', `${await opts('roof')} / ${await opts('roofPattern')}`);
+  const previewName = () => page.$eval(`${D} .nbh-diy__name`, (t) => t.textContent);
+  check('꾸미기 — 미리보기 집 아래 이름표(비면 안내)', (await previewName()) === '사이트 이름');
   const r1 = await chosen();
   await page.click(`${D} [data-diy="random"]`);
   const r2 = await chosen();
@@ -1365,6 +1369,7 @@ async function neighborApply() {
   await page.click(`${F} [type="submit"]`);
   check('신청 — 빈 칸이면 칸마다 안내 · 보내지 않음(이름은 선택)', (await err('name')) === '' && (await err('url')).length > 0 && (await err('image')).length > 0 && db.requestCalls === 0);
   await page.fill(`${F} [name="name"]`, '새 이웃');
+  check('꾸미기 — 이름을 적으면 미리보기 이름표도 바로', (await previewName()) === '새 이웃', await previewName());
   await page.fill(`${F} [name="url"]`, 'javascript:alert(1)');
   await page.fill(`${F} [name="image"]`, `${PLAIN_ORIGIN}/share-card-default.png`); // 다른 출처 · 읽기 허용 없음
   await page.click(`${F} [type="submit"]`);

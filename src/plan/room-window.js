@@ -349,6 +349,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     note.hidden = noteTabs.hidden = !isNotice;
     // about __VE 면 아스키 집 · 글(about-note.js), /pair 면 Vibe · Echo 카드(about.js)
     abBox.hidden = !isAbout || isPair;
+    win.classList.toggle('is-about', isAbout && !isPair); // about 글은 둥근 상자 없이 창에 바로
     veBox.hidden = !isPair;
     if (isPair) about.reset();
     // 카테고리 버튼이면 글 · 갤러리 · 메모(그리기는 content.show 가 상태를 받아서)

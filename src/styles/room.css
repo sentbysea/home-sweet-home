@@ -417,6 +417,9 @@
   color: var(--hsh-text);
 }
 .hsh-ab[hidden] { display: none; }
+/* about 글은 둥근 상자(.hsh-win__page 테두리) 없이 창 몸통에 바로 */
+.hsh-win.is-about .hsh-win__page { border: 0; border-radius: 0; }
+.hsh-win.is-about .hsh-ab { padding: 14px 4px 26px; }
 .hsh-ab__house {
   margin: 0;
   font-family: var(--hsh-mono);

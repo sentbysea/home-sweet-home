@@ -135,7 +135,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     const cx = g.left + (center.c + 0.5) * g.cw - g.cw * (g.cols === 3 ? 0.12 : 0.08);
     // 이름표 폭 — 이름 길이만큼, 단 화면(동네) 밖으로 나가지 않게
     const tagMax = (x) => `${f(Math.max(60, Math.min(170, 2 * Math.min(x - 4, g.W - x - 4))))}px`;
-    home.style.setProperty('--tag-bg', tagTone(HOME_HOUSE, 'home'));
+    home.style.setProperty('--tag-bg', tagTone(HOME_HOUSE));
     home.style.setProperty('--tag-max', tagMax(cx));
     home.style.setProperty('--tilt', '-2deg');
     home.style.left = `${f(cx - hs.w / 2)}px`;
@@ -158,7 +158,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       b.dataset.i = String(i);
       b.dataset.house = houseKey(spec);
       b.setAttribute('aria-label', `${it.label} — ${editing ? '집 고치기' : '배너 보기'}`);
-      const tone = tagTone(spec, it.id ?? it.href);
+      const tone = tagTone(spec);
       b.style.setProperty('--tag-bg', tone);
       b.style.setProperty('--hl', tone);
       b.style.setProperty('--tag-max', tagMax(x));
