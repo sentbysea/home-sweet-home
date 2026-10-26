@@ -1,0 +1,283 @@
+/* =========================================================
+   home sweet home — archive 열쇠꾸러미(src/archive/)
+   흰 바탕 한가운데 3D 꾸러미, 위에 ← home · 제목, 아래에 사이트 버튼 줄과 '사이트 이름 ↗'.
+   글꼴 · 선 회색은 방 창(room.css)과 같다. 꾸러미 윤곽만 한 단 짙은 회색(--hsh-arc-ink).
+   ========================================================= */
+
+.hsh-arc {
+  --hsh-arc-line: #8f9497; /* 방 창 · 로딩 집 윤곽과 같은 회색 */
+  --hsh-arc-ink: #55595d; /* 꾸러미 윤곽(keyring.js INK) */
+  --hsh-arc-text: #3a3b3e;
+  --hsh-arc-note: #7d8386;
+  --hsh-arc-mono: "Nanum Gothic Coding", "Pretendard Variable", Pretendard, ui-monospace, Menlo, Consolas, monospace;
+  --hsh-arc-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+
+  position: fixed;
+  inset: 0 0 auto;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: #fff;
+  color: var(--hsh-arc-text);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hsh-arc[hidden] { display: none; }
+.hsh-arc:focus { outline: none; }
+.hsh-arc.is-open { opacity: 1; }
+.hsh-arc.is-closing { opacity: 0; pointer-events: none; }
+.hsh-arc-on, .hsh-arc-on body { overflow: hidden; }
+
+/* ---------- 뒤 별 · 동그라미 ---------- */
+
+.hsh-arc__sparks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.hsh-arc__spark {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  translate: -50% -50%;
+  overflow: visible;
+  animation: hsh-arc-twinkle 2.6s ease-in-out infinite alternate;
+}
+.hsh-arc__spark path,
+.hsh-arc__spark circle { stroke: var(--hsh-arc-ink); stroke-width: 1.1; stroke-linejoin: round; }
+.hsh-arc__spark.is-dot { width: 14px; height: 14px; animation-duration: 3.4s; }
+.hsh-arc__spark:nth-child(2n) { animation-delay: -1.3s; }
+.hsh-arc__spark:nth-child(3n) { animation-delay: -0.6s; }
+
+@keyframes hsh-arc-twinkle {
+  from { scale: 0.92; }
+  to { scale: 1.08; }
+}
+
+/* ---------- 위 — ← home · 제목 ---------- */
+
+.hsh-arc__top {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding:
+    max(14px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    0
+    max(16px, env(safe-area-inset-left));
+}
+
+.hsh-arc__home {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--hsh-arc-line);
+  border-radius: 999px;
+  background: #fff;
+  font-family: var(--hsh-arc-mono);
+  font-size: 13px;
+  color: var(--hsh-arc-text);
+  cursor: pointer;
+}
+.hsh-arc__home:hover { background: #f7f8f9; }
+.hsh-arc__home:focus-visible,
+.hsh-arc__chip:focus-visible,
+.hsh-arc__link:focus-visible,
+.hsh-arc__row:focus-visible { outline: 1.5px solid var(--hsh-arc-ink); outline-offset: 2px; }
+
+.hsh-arc__title {
+  margin: 0;
+  font-family: var(--hsh-arc-mono);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-decoration: underline 3px #fbe7a1;
+  text-underline-offset: 4px;
+}
+
+/* ---------- 가운데 — 꾸러미 ---------- */
+
+.hsh-arc__stage { position: relative; min-height: 0; }
+
+.hsh-arc__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none; /* 끌어 돌리기 — 화면이 같이 스크롤되지 않게 */
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 260ms ease-out;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hsh-arc.is-ready .hsh-arc__canvas { opacity: 1; }
+.hsh-arc__canvas.is-dragging { cursor: grabbing; }
+
+/* 고른 열쇠 옆 이름표 — 손으로 쓴 꼬리표 */
+.hsh-arc__tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 5px 11px 6px;
+  border: 1.5px solid var(--hsh-arc-ink);
+  border-radius: 9px 9px 9px 3px;
+  background: #fff;
+  box-shadow: 2px 2px 0 #cfe0fb;
+  font-family: var(--hsh-arc-mono);
+  font-size: 15px;
+  white-space: nowrap;
+  rotate: -3deg;
+  pointer-events: none;
+  will-change: translate;
+}
+.hsh-arc__tag[hidden] { display: none; }
+
+/* ---------- 아래 — 사이트 버튼 줄 · 이동 링크 ---------- */
+
+.hsh-arc__foot {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding:
+    6px
+    max(16px, env(safe-area-inset-right))
+    max(18px, calc(env(safe-area-inset-bottom) + 10px))
+    max(16px, env(safe-area-inset-left));
+}
+.hsh-arc__foot[hidden] { display: none; }
+
+.hsh-arc__chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 560px;
+}
+
+.hsh-arc__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px 0 7px;
+  border: 1px solid var(--hsh-arc-line);
+  border-radius: 999px;
+  background: #fff;
+  font-family: var(--hsh-arc-mono);
+  font-size: 13px;
+  color: var(--hsh-arc-text);
+  cursor: pointer;
+  transition: background-color 160ms, border-color 160ms, translate 160ms, box-shadow 160ms;
+}
+.hsh-arc__chip[aria-pressed="true"] {
+  background: var(--c);
+  border-color: var(--hsh-arc-ink);
+  translate: 0 -2px;
+  box-shadow: 0 2px 0 var(--hsh-arc-ink);
+}
+
+.hsh-arc__icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--c);
+  fill: none;
+  stroke: var(--hsh-arc-ink);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hsh-arc__icon .dot { fill: var(--hsh-arc-ink); stroke: none; }
+.hsh-arc__icon .fill { fill: #f6b9cb; }
+.hsh-arc__chip[aria-pressed="true"] .hsh-arc__icon { background: #fff; }
+
+.hsh-arc__go {
+  min-height: 34px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hsh-arc__hint {
+  font-family: var(--hsh-arc-font);
+  font-size: 12.5px;
+  color: var(--hsh-arc-note);
+}
+
+.hsh-arc__link {
+  font-family: var(--hsh-arc-mono);
+  font-size: 19px;
+  color: var(--hsh-arc-text);
+  text-decoration: underline 3px #cfe0fb;
+  text-underline-offset: 5px;
+  cursor: pointer;
+}
+.hsh-arc__link.is-off { color: #9a9ea2; text-decoration-color: #eceef0; cursor: default; }
+
+.hsh-arc__soon {
+  padding: 2px 8px;
+  border: 1px dashed var(--hsh-arc-line);
+  border-radius: 999px;
+  font-family: var(--hsh-arc-font);
+  font-size: 11.5px;
+  color: var(--hsh-arc-note);
+}
+
+/* ---------- 3D 를 쓸 수 없을 때 — 같은 데이터로 목록 ---------- */
+
+.hsh-arc__list {
+  position: relative;
+  list-style: none;
+  margin: 0 auto;
+  padding: 24px 20px;
+  max-width: 360px;
+  display: grid;
+  gap: 10px;
+  align-content: center;
+  height: 100%;
+}
+.hsh-arc__list[hidden] { display: none; }
+
+.hsh-arc__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 16px 0 10px;
+  border: 1px solid var(--hsh-arc-line);
+  border-radius: 14px;
+  background: #fff;
+  font-family: var(--hsh-arc-mono);
+  font-size: 15px;
+  color: var(--hsh-arc-text);
+  text-decoration: none;
+}
+.hsh-arc__row > span:nth-of-type(1) { flex: 1; }
+.hsh-arc__row.is-off { color: #9a9ea2; }
+.hsh-arc__arrow { color: var(--hsh-arc-note); }
+
+/* ---------- 휴대폰 — 버튼 · 이름표를 조금 크게 ---------- */
+
+@media (max-width: 560px) {
+  .hsh-arc__chip { min-height: 44px; font-size: 14px; }
+  .hsh-arc__tag { font-size: 16px; }
+  .hsh-arc__link { font-size: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hsh-arc,
+  .hsh-arc__canvas,
+  .hsh-arc__chip { transition: none; }
+  .hsh-arc__spark { animation: none; }
+}
+.hsh-arc.is-reduced .hsh-arc__spark { animation: none; } /* ?reduced=1 흉내 */

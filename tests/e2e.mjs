@@ -1,6 +1,6 @@
 // 바이브.me E2E — 실제 파일(이 저장소 + 이웃 web 저장소) · 흉내 Supabase(임시 데이터, 운영 DB 에 닿지 않는다)
 //
-//   node tests/e2e.mjs [--only=visitor|owner|admin|routing|mobile] [--browser=webkit]   (WEB_DIR=../web 이 기본)
+//   node tests/e2e.mjs [--only=visitor|owner|admin|routing|mobile|layout|archive] [--browser=webkit]   (WEB_DIR=../web 이 기본)
 //
 //   · web 저장소의 tests/lib/harness.mjs(Playwright 찾기 · 정적 서버) · mock-supabase.mjs(RLS 흉내 메모리 DB)를 쓴다.
 //   · "hongjiwon.love" = web 작업 트리를 띄운 정적 서버(127.0.0.1:8789). 그쪽 함수 두 개는 실제 코드를 그대로 돌린다:
@@ -811,6 +811,177 @@ async function mobile() {
   await context.close();
 }
 
+// ---------- archive — 열쇠꾸러미 ----------
+//   흰 화면 가운데 3D 꾸러미(three.js 는 jsDelivr 에서 — 이 시험은 인터넷이 필요하다).
+//   돌리기 · 열쇠 고르기 · 풀기 · 링크(주소 있는 사이트는 새 탭, 빈 주소는 막힘) · ← home · 주소 · 새로고침 · 목록 대체 · 정리.
+
+const TEST_URL = 'https://example.com/hsh-archive-test';
+const keyPoint = (page, i) => page.$eval('.hsh-arc__canvas', (c, i) => c.hshKeyPoint?.(i), i);
+const pressed = (page) => page.$$eval('.hsh-arc__chip', (b) => b.findIndex((x) => x.getAttribute('aria-pressed') === 'true'));
+const arcOpen = (page) => page.$eval('.hsh-arc', (a) => !a.hidden && a.classList.contains('is-open')).catch(() => false);
+
+async function archiveCase(device, name) {
+  const d = await open(null, device ? undefined : { width: 1280, height: 860 }, device || {});
+  const { page, context } = d;
+  await context.addInitScript(() => {
+    window.__loaderSeen = false;
+    const look = () => {
+      const l = document.querySelector('.hsh-loader');
+      if (l && getComputedStyle(l).display !== 'none' && l.getBoundingClientRect().width > 0) window.__loaderSeen = true;
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  });
+  // 첫 사이트(twitter)에만 시험 주소를 넣는다 — 나머지는 빈 주소 그대로
+  await context.route('**/src/archive/links.js', async (route) => {
+    const res = await route.fetch();
+    const body = (await res.text()).replace("{ id: 'twitter', name: 'twitter', url: ''", `{ id: 'twitter', name: 'twitter', url: '${TEST_URL}'`);
+    await route.fulfill({ response: res, body });
+  });
+  await context.route('https://example.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>ok</title>ok' }));
+  const popups = [];
+  context.on('page', (p) => popups.push(p));
+  const at = () => new URL(page.url()).pathname;
+  // 휴대폰은 손가락 탭(touch → click), PC 는 마우스
+  const tap = (q) => (device ? page.touchscreen.tap(q.x, q.y) : page.mouse.click(q.x, q.y));
+
+  // 직접 들어오기 — 로딩 화면 없이 꾸러미
+  await page.goto(`${VIBE_ORIGIN}/archive?${Q}`);
+  await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
+  await page.waitForTimeout(900);
+  check(`${name} — /archive 직접 → 로딩 없이 열쇠꾸러미`, at() === '/archive' && !(await page.evaluate(() => window.__loaderSeen)) && (await arcOpen(page)));
+  check(`${name} — 브라우저 창 꼴 팝업은 열리지 않는다`, await page.$eval('.hsh-win', (w) => w.hidden));
+  const canvas = await page.$eval('.hsh-arc__canvas', (c) => { const r = c.getBoundingClientRect(); return { w: r.width, h: r.height }; });
+  check(`${name} — 꾸러미가 화면 가운데를 크게 차지`, canvas.w >= 300 && canvas.h >= 380, JSON.stringify(canvas));
+  await page.screenshot({ path: path.join(OUT, `archive-${name}-1.png`) });
+
+  // 열쇠 누르기 → 고름(앞으로 · 이름표 · 아래 링크)
+  let p = await keyPoint(page, 0);
+  await tap(p);
+  await page.waitForTimeout(700);
+  check(`${name} — 열쇠 한 번 → 고름(이름 · 링크)`, (await pressed(page)) === 0 && (await page.textContent('.hsh-arc__go')).includes('twitter') && (await page.$eval('.hsh-arc__tag', (t) => !t.hidden && t.textContent === 'twitter')));
+  check(`${name} — 한 번 눌렀을 때는 새 탭 없음`, popups.length === 0);
+  check(`${name} — 링크는 진짜 a 요소(새 탭 · noopener)`, await page.$eval('.hsh-arc__link', (a) => a.href === 'https://example.com/hsh-archive-test' && a.target === '_blank' && /noopener/.test(a.rel)));
+
+  // 끌기는 누름이 아니다 — 고른 열쇠 위에서 시작해 돌려도 새 탭 · 선택 바뀜 없음
+  p = await keyPoint(page, 0);
+  await page.mouse.move(p.x, p.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) { await page.mouse.move(p.x + i * 22, p.y + i * 3); await page.waitForTimeout(16); }
+  await page.mouse.up();
+  await page.waitForTimeout(1200);
+  check(`${name} — 끌어 돌리기는 새 탭을 열지 않고 선택도 그대로`, popups.length === 0 && (await pressed(page)) === 0);
+  await page.screenshot({ path: path.join(OUT, `archive-${name}-2.png`) });
+
+  // 다른 열쇠(버튼 줄로) → 선택이 바뀜, 빈 주소면 링크가 막혀 있다
+  await page.click('.hsh-arc__chip[data-i="2"]');
+  await page.waitForTimeout(1300);
+  check(`${name} — 다른 사이트 고르면 선택이 바뀐다`, (await pressed(page)) === 2 && (await page.textContent('.hsh-arc__tag')) === 'luvlog');
+  check(`${name} — 빈 주소는 링크가 비활성(href 없음)`, await page.$eval('.hsh-arc__link', (a) => a.getAttribute('aria-disabled') === 'true' && !a.hasAttribute('href')));
+  p = await keyPoint(page, 2);
+  await tap(p); // 고른 열쇠를 또 누름 — 빈 주소라 그대로
+  await page.waitForTimeout(400);
+  check(`${name} — 빈 주소 열쇠를 다시 눌러도 밖으로 나가지 않는다`, popups.length === 0 && (await pressed(page)) === 2);
+  await page.click('.hsh-arc__link', { force: true }); // aria-disabled — 눌러도 그대로인지
+  await page.waitForTimeout(300);
+  check(`${name} — 빈 주소 링크를 눌러도 그대로`, popups.length === 0 && at() === '/archive');
+
+  // 빈 곳 → 풀림
+  const box = await page.$eval('.hsh-arc__canvas', (c) => { const r = c.getBoundingClientRect(); return { x: r.left + 12, y: r.top + 12 }; });
+  await tap(box);
+  await page.waitForTimeout(500);
+  check(`${name} — 빈 곳 누르면 선택 해제`, (await pressed(page)) === -1 && (await page.$eval('.hsh-arc__tag', (t) => t.hidden)));
+
+  // 고른 열쇠를 다시 누르면 새 탭(주소 있는 사이트)
+  await page.click('.hsh-arc__chip[data-i="0"]');
+  await page.waitForTimeout(1300);
+  p = await keyPoint(page, 0);
+  await tap(p);
+  await page.waitForTimeout(800);
+  check(`${name} — 고른 열쇠를 또 누르면 그 사이트가 새 탭으로`, popups.length === 1 && popups[0].url().startsWith(TEST_URL) && at() === '/archive', popups.map((x) => x.url()).join(','));
+  await page.click('.hsh-arc__link');
+  await page.waitForTimeout(800);
+  check(`${name} — '사이트 이름 ↗' 링크도 새 탭`, popups.length === 2 && popups[1].url().startsWith(TEST_URL));
+  for (const x of popups) await x.close();
+
+  // ← home → 홈(/) · 로딩 없음 · 그리기 멈춤과 정리
+  await page.$eval('.hsh-arc__canvas', (c) => { window.__arcCanvas = c; });
+  await page.click('.hsh-arc__home');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(600);
+  check(`${name} — ← home → 홈(/) · 로딩 화면 없음`, at() === '/' && !(await arcOpen(page)) && !(await page.evaluate(() => window.__loaderSeen)) && (await page.$eval('.hsh-plan', (pl) => !pl.hidden && !pl.inert)));
+  check(`${name} — archive 를 벗어나면 3D 자원 정리(캔버스 교체 · 그리기 멈춤)`, await page.evaluate(() => Boolean(window.__arcCanvas) && !document.contains(window.__arcCanvas) && !window.__arcCanvas.hshKeyPoint));
+  await page.goForward();
+  await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 }).catch(() => {});
+  check(`${name} — 앞으로 가기 → 꾸러미 다시(새 캔버스로 다시 그림)`, at() === '/archive' && (await arcOpen(page)) && Boolean(await keyPoint(page, 0)));
+
+  // 새로고침 → 로딩 없이 그대로, 그 뒤 ← home 도 로딩 없이(브라우저가 홈 칸 문서를 새로 불러온다)
+  await page.reload();
+  await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
+  check(`${name} — 새로고침 → 로딩 없이 꾸러미`, at() === '/archive' && !(await page.evaluate(() => window.__loaderSeen)));
+  await page.click('.hsh-arc__home');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForSelector('.hsh-plan.is-done', { timeout: 20000 }).catch(() => {});
+  check(`${name} — 새로고침 뒤 ← home → 홈 · 로딩 화면 없음`, at() === '/' && !(await arcOpen(page)) && !(await page.evaluate(() => window.__loaderSeen)));
+  await page.goForward();
+  await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 }).catch(() => {});
+  check(`${name} — 다시 앞으로 → 꾸러미`, at() === '/archive' && (await arcOpen(page)));
+  await page.goBack();
+  await page.waitForSelector('.hsh-plan.is-done', { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  check(`${name} — 뒤로 가기 → 홈`, at() === '/' && !(await arcOpen(page)) && !(await page.evaluate(() => window.__loaderSeen)), JSON.stringify({ at: at(), open: await arcOpen(page), seen: await page.evaluate(() => window.__loaderSeen), entry: await page.evaluate(() => document.documentElement.dataset.hshEntry), st: await page.evaluate(() => history.state) }));
+
+  // 홈의 archive 버튼 → /archive, Esc → 홈
+  await page.locator('.hsh-sticker[data-label="archive"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
+  check(`${name} — 홈 archive 버튼 → /archive`, at() === '/archive');
+  // 키보드 — 버튼 줄로 고르고 링크로 이동
+  await page.focus('.hsh-arc__chip[data-i="3"]');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(600);
+  check(`${name} — 키보드 Enter 로 고르기`, (await pressed(page)) === 3);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  check(`${name} — Esc → 먼저 선택 해제`, (await pressed(page)) === -1 && (await arcOpen(page)));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  check(`${name} — Esc 한 번 더 → 홈`, at() === '/' && !(await arcOpen(page)));
+  check(`콘솔 오류 없음(archive ${name})`, d.errors.length === 0, d.errors.join(' | '));
+  await context.close();
+}
+
+async function archive() {
+  console.log('\n[archive — 열쇠꾸러미]');
+  await archiveCase(null, 'PC');
+  await archiveCase(playwright.devices['iPhone 13'], '휴대폰');
+
+  // 모션 줄이기 — 그대로 고르기 · 이동이 된다
+  const rm = await open(null, { width: 1000, height: 800 }, { reducedMotion: 'reduce' });
+  await rm.page.goto(`${VIBE_ORIGIN}/archive?${Q}`);
+  await rm.page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
+  await rm.page.click('.hsh-arc__chip[data-i="1"]');
+  await rm.page.waitForTimeout(300);
+  check('모션 줄이기 — 고르기 · 별 움직임 없음', (await pressed(rm.page)) === 1 && (await rm.page.$eval('.hsh-arc__spark', (s) => getComputedStyle(s).animationName)) === 'none');
+  check('콘솔 오류 없음(archive 모션 줄이기)', rm.errors.length === 0, rm.errors.join(' | '));
+  await rm.context.close();
+
+  // 3D 를 쓸 수 없는 환경 — 같은 데이터로 목록(빈 주소는 막힘)
+  const nw = await open(null, { width: 1000, height: 800 });
+  await nw.context.addInitScript(() => {
+    const get = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...rest) { return /webgl/.test(type) ? null : get.call(this, type, ...rest); };
+  });
+  await nw.page.goto(`${VIBE_ORIGIN}/archive?${Q}`);
+  await nw.page.waitForSelector('.hsh-arc__list:not([hidden])', { timeout: 15000 });
+  const rowsText = await nw.page.$$eval('.hsh-arc__row', (r) => r.map((x) => x.textContent.trim()));
+  check('WebGL 없음 → 간단한 목록', rowsText.length === 4 && rowsText[0].startsWith('twitter') && rowsText[3].startsWith('다른 갠홈'), rowsText.join(' / '));
+  check('목록 — 빈 주소는 링크 아님', (await nw.page.$$('.hsh-arc__list a')).length === 0);
+  check('목록 — 설정 · 코드 안내 문구 없음', !/(links\.js|url:|TODO|설정)/.test(await nw.page.textContent('.hsh-arc')));
+  check('콘솔 오류 없음(archive 목록)', nw.errors.length === 0, nw.errors.join(' | '));
+  await nw.context.close();
+}
+
 // ---------- 창 모양(글 · 발췌 · 폴더) · 주인 링크 ----------
 
 /** 창 몸통 안에서 스스로 스크롤하는 칸(몸통 자신 빼고) */
@@ -931,6 +1102,7 @@ try {
   if (!ONLY || ONLY === 'routing') await routing();
   if (!ONLY || ONLY === 'mobile') await mobile();
   if (!ONLY || ONLY === 'layout') await layout();
+  if (!ONLY || ONLY === 'archive') await archive();
 } catch (e) {
   console.error(e);
   check('예외 없이 끝남', false, e.message);
