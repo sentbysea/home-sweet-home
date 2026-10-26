@@ -404,7 +404,33 @@
   padding: 0 2px;
 }
 
-/* ---------- about __VE — Vibe · Echo 카드(about.js) ----------
+/* ---------- about __VE — 아스키 집 · 짧은 글(about-note.js) ----------
+   집은 고정폭 글꼴로 가운데, 화면이 좁으면 글자 크기가 따라 줄어 한 줄이 넘치지 않는다(40칸).
+   글쓴이는 가운데 · 본문보다 살짝 연한 검정. */
+
+.hsh-ab {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  padding: 26px 18px 30px;
+  font-family: var(--hsh-win-font);
+  color: var(--hsh-text);
+}
+.hsh-ab[hidden] { display: none; }
+.hsh-ab__house {
+  margin: 0;
+  font-family: var(--hsh-mono);
+  font-size: clamp(8.5px, 2.9vw, 13px);
+  line-height: 1.25;
+  color: var(--hsh-text);
+  white-space: pre;
+}
+.hsh-ab__text { max-width: 34em; font-size: 14px; line-height: 1.95; word-break: keep-all; overflow-wrap: anywhere; }
+.hsh-ab__text p { margin: 0 0 1.1em; }
+.hsh-ab__text p:last-child { margin-bottom: 0; }
+.hsh-ab__credit { margin: 0; text-align: center; font-size: 12px; color: #6f7275; }
+
+/* ---------- /pair — Vibe · Echo 카드(about.js) ----------
    S-CLASS 카드를 흰 바탕으로: 사진 아래쪽이 흰색으로 흐려지고 그 위에 [ 꼬리표 ] · 큰 이름 · 소개글.
    글자 크기는 카드 너비 기준(cqi)이라 좁은 화면에서도 비율이 그대로.
    몇 초마다 카드 위로 비스듬한 빛이 한 줄 지나간다(두 장이 조금 엇갈려서). */

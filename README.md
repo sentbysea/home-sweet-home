@@ -72,10 +72,11 @@ ready.resolve();
 | 주소 | 화면 |
 | --- | --- |
 | `/` | 홈(창 없음) |
-| `/about` `/teatime` `/notice` | 방 버튼 창(about __VE · teatime? · notice) |
+| `/about` `/teatime` `/notice` | 방 버튼 창(about __VE — 아스키 집 · 짧은 글 · teatime? · notice) |
 | `/neighbor` | 이웃 마을(창 대신 아이보리 화면 — 아래 "neighbor") |
 | `/archive` | 열쇠꾸러미(창 대신 아이보리 화면 — 아래 "archive") |
 | `/neighbor/banner` | neighbor 우체통의 배너 교환 패널(내 배너 · 교환 신청) |
+| `/pair` | about __VE 방 창에 Vibe · Echo 카드 두 장(예전 about 내용) |
 | `/category/:id` · `/category/:id/folder/:fid` · `/category/:id?page=N` | 글 · 갤러리 · 메모 목록 · 폴더 · 갤러리 쪽(`:id` 는 id 또는 slug) |
 | `/category/:id/read` · `/category/:id/folder/:fid/read` | 이어서 읽기 — 그 칸의 글을 목록 순서대로 한 화면에 |
 | `/post/:id` · `/post/:id/quote` | 글 · Quote(주인) — hongjiwon.love 와 같은 글 주소 모양 |

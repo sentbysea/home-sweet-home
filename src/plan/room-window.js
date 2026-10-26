@@ -5,7 +5,7 @@
 //   선은 모두 로딩 화면 집 윤곽과 같은 얇은 회색.
 //   뒤의 홈 화면은 반투명 덮개로 살짝 가린다. 닫기: ×, 덮개 누르기, Esc.
 //   주소창: 지금 사이트 주소 / 방 이름. 하트: 누르면 채워지고 이 브라우저에 기억한다(방마다).
-//   about __VE 방은 Vibe · Echo 카드 두 장(about.js).
+//   about __VE 방은 아스키 집 · 짧은 글(about-note.js), Vibe · Echo 카드 두 장(about.js)은 /pair.
 //   버튼에 data-category(hongjiwon.love 카테고리 id 또는 slug)가 있으면 그 카테고리의 글 · 갤러리 · 메모 창
 //   (content/viewer.js). 목록 → 폴더 → 글로 갈 때마다 창 기록을 한 칸씩 쌓는다 — < > · 휴대폰 뒤로 가기가 그대로 오간다.
 //   화면마다 주소가 있다(routes.js) — 직접 들어오거나 새로고침해도 그 창이 열리고, 닫으면(×) 홈(/)으로 돌아간다.
@@ -13,6 +13,7 @@
 //   주소 · 뒤로/앞으로 · 닫기는 같은 길. neighbor 의 우체통 패널은 기록 한 칸(/neighbor/banner).
 
 import { mountAbout } from './about.js';
+import { aboutNoteMarkup } from './about-note.js';
 import { mountContent } from '../content/viewer.js';
 import { fetchPost } from '../content/data.js';
 import { getClient, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
@@ -265,6 +266,7 @@ function build() {
           <div class="hsh-win__scroll">
             <p class="hsh-win__empty"></p>
             <div class="hsh-win__note hsh-note" hidden></div>
+            <div class="hsh-ab" hidden></div>
             <div class="hsh-ve" hidden></div>
             <div class="hsh-ct-box" hidden></div>
           </div>
@@ -277,6 +279,7 @@ function build() {
   const { tabs, secs } = noticeMarkup();
   root.querySelector('.hsh-note__tabs').innerHTML = tabs;
   root.querySelector('.hsh-win__note').innerHTML = secs;
+  root.querySelector('.hsh-ab').innerHTML = aboutNoteMarkup();
   return root;
 }
 
@@ -296,6 +299,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const like = win.querySelector('.hsh-win__like');
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
+  const abBox = win.querySelector('.hsh-ab');
   const veBox = win.querySelector('.hsh-ve');
   const about = mountAbout(veBox, () => syncRail());
   const ctBox = win.querySelector('.hsh-ct-box');
@@ -333,17 +337,20 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
 
   const setPill = (name) => { pill.textContent = name; };
 
-  const show = (label, text) => {
-    title.textContent = label;
-    url.textContent = `${siteHost()} / ${label}`;
+  const show = (label, text, page = 'room') => {
+    // about __VE 의 /pair — 같은 방 창에 Vibe · Echo 카드, 제목 · 주소창은 pair
+    const isAbout = label === 'about __VE';
+    const isPair = isAbout && page === 'pair';
+    title.textContent = isPair ? 'pair' : label;
+    url.textContent = `${siteHost()} / ${isPair ? 'pair' : label}`;
     empty.textContent = text;
     // 공지면 탭 + 내용(ABOUT 부터), 아니면 '곧 채워질' 안내
     const isNotice = label === 'notice';
     note.hidden = noteTabs.hidden = !isNotice;
-    // about __VE 면 Vibe · Echo 카드(about.js)
-    const isAbout = label === 'about __VE';
-    veBox.hidden = !isAbout;
-    if (isAbout) about.reset();
+    // about __VE 면 아스키 집 · 글(about-note.js), /pair 면 Vibe · Echo 카드(about.js)
+    abBox.hidden = !isAbout || isPair;
+    veBox.hidden = !isPair;
+    if (isPair) about.reset();
     // 카테고리 버튼이면 글 · 갤러리 · 메모(그리기는 content.show 가 상태를 받아서)
     const isContent = Boolean(win.dataset.category);
     ctBox.hidden = !isContent;
@@ -369,7 +376,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   // 스크롤바 — 창 무늬에 맞춘 막대를 직접 그린다(모바일에서도 늘 보이게). 넘칠 때만 나온다
   const syncRail = () => {
     const { scrollHeight: h, clientHeight: c, scrollTop: t } = scroller;
-    rail.hidden = h - c < 2 || !veBox.hidden; // about __VE 는 막대 없이 손으로 내려 읽기만
+    rail.hidden = h - c < 2 || !veBox.hidden; // /pair 카드는 막대 없이 손으로 내려 읽기만
     if (rail.hidden) return;
     // 몸통이 스크롤하면 막대는 창(frame) 기준 — 몸통 오른쪽 끝, 위아래는 몸통 안쪽
     rail.style.top = scroller === winBody ? `${winBody.offsetTop + 12}px` : '';
@@ -428,7 +435,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
 
   const showStep = (view) => {
     if (win.hidden || win.classList.contains('is-closing') || SCREENS.includes(view.detail.label)) openWindow(view.detail, back, view.page);
-    else show(view.detail.label, '곧 채워질 방이에요.');
+    else show(view.detail.label, '곧 채워질 방이에요.', view.page);
     if (view.page === 'content') {
       scroller.scrollTop = 0;
       const shown = view;
@@ -542,7 +549,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     else delete win.dataset.auto;
     win.style.setProperty('--hsh-win-tint', bg);
     win.style.setProperty('--hsh-win-ink', fg);
-    show(label, '곧 채워질 방이에요.');
+    show(label, '곧 채워질 방이에요.', page);
     if (!already) scatter(frame);
     setPill(PILLS[label] ?? name);
     thumb.style.backgroundImage = label === 'notice' ? `url("${NOTICE_THUMB}")` : '';
