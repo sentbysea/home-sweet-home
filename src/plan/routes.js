@@ -1,7 +1,8 @@
 // 주소 ↔ 방 창 화면. 창을 열거나 창 안에서 다른 화면으로 갈 때 주소만 바뀐다(pushState — 페이지는 다시 불러오지 않는다).
 //   /                              홈(창 없음)
 //   /about /teatime /notice /neighbor /archive   방 버튼(data-label → ROOM_PATHS)
-//   /neighbor/banner               neighbor 의 '배너교환은 여기에서'(내 배너)
+//   /neighbor/banner               neighbor 우체통의 배너 교환 패널
+//   /pair                          about __VE 방의 Vibe · Echo 카드(about 은 아스키 집 · 짧은 글)
 //   /category/:id                  글 · 갤러리 · 메모 목록(:id 는 카테고리 id 또는 slug — 버튼의 data-category 그대로)
 //   /category/:id/folder/:fid      폴더
 //   /category/:id?page=N           갤러리 N 쪽
@@ -38,6 +39,7 @@ const enc = encodeURIComponent;
 export function pathOf(view) {
   if (!view) return '/';
   if (view.page === 'banner') return '/neighbor/banner';
+  if (view.page === 'pair') return '/pair';
   if (view.page === 'content') {
     const s = view.state || {};
     if (s.view === 'quote' && s.post) return `/post/${enc(s.post)}/quote`;
@@ -54,7 +56,7 @@ export function pathOf(view) {
 
 /**
  * 주소 → 무엇을 열지(없으면 null = 홈)
- * @returns {null | { room: string, page: 'room' | 'banner' } | { category: string, folder?: string, page?: number, read?: boolean } | { post: string, quote?: boolean }}
+ * @returns {null | { room: string, page: 'room' | 'banner' | 'pair' } | { category: string, folder?: string, page?: number, read?: boolean } | { post: string, quote?: boolean }}
  */
 export function parsePath(pathname, search = '') {
   const parts = pathname.split('/').filter(Boolean).map(decodeURIComponent);
@@ -63,6 +65,7 @@ export function parsePath(pathname, search = '') {
   const room = Object.entries(ROOM_PATHS).find(([, slug]) => slug === head)?.[0];
   if (room && parts.length === 1) return { room, page: 'room' };
   if (room === 'neighbor' && a === 'banner' && parts.length === 2) return { room, page: 'banner' };
+  if (head === 'pair' && parts.length === 1) return { room: 'about __VE', page: 'pair' };
   if (head === 'category' && a) {
     const rest = parts.slice(2);
     const read = rest[rest.length - 1] === 'read';
