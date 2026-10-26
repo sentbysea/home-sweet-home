@@ -218,15 +218,15 @@
   bottom: calc(100% + 2px);
   translate: -50% 0;
   pointer-events: none;
-  animation: nbh-boing 1.7s ease-in-out infinite;
+  animation: nbh-boing 4.2s ease-in-out infinite; /* 한 번 느긋하게 튀고 오래 쉰다 */
 }
 .nbh-mailbox__arrow-art { display: block; overflow: visible; }
 @keyframes nbh-boing {
-  0%, 55%, 100% { transform: translateY(0) scaleY(1); }
-  12% { transform: translateY(-8px) scaleY(1.08); }
-  24% { transform: translateY(1px) scaleY(0.9); }
-  34% { transform: translateY(-3px) scaleY(1.02); }
-  44% { transform: translateY(0) scaleY(0.98); }
+  0%, 40%, 100% { transform: translateY(0) scaleY(1); }
+  10% { transform: translateY(-7px) scaleY(1.06); }
+  20% { transform: translateY(1px) scaleY(0.92); }
+  28% { transform: translateY(-2px) scaleY(1.02); }
+  35% { transform: translateY(0) scaleY(0.99); }
 }
 .nbh-mailbox__pennant { transform-box: fill-box; transform-origin: 0 50%; animation: nbh-flutter 0.55s ease-in-out infinite alternate; }
 @keyframes nbh-flutter {
@@ -296,11 +296,11 @@
   display: grid;
   place-items: center;
   width: 100%;
-  aspect-ratio: 5 / 1; /* 원본 5:1 — 이미지 전체를 보인다 */
+  aspect-ratio: 5 / 1; /* 5:1 — 비율이 다른 배너는 가운데를 잘라 채운다 */
   background: #fff;
   transition: rotate 160ms ease-out;
 }
-.nbh-pop__banner img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.nbh-pop__banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .nbh-pop__alt { display: none; font-family: var(--nbh-font); font-size: 13px; color: var(--hsh-link); }
 .nbh-pop.is-broken .nbh-pop__banner img { display: none; }
 .nbh-pop.is-broken .nbh-pop__alt { display: block; }
@@ -364,33 +364,6 @@
   border-radius: 50%;
   background: var(--chip);
 }
-/* 색 직접 고르기 — 무지개 칩(+), 고른 색이면 그 색으로 */
-.nbh-diy__custom {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  cursor: pointer;
-}
-.nbh-diy__custom input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
-.nbh-diy__custom span {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid rgba(84, 88, 92, 0.35);
-  border-radius: 50%;
-  background: conic-gradient(#e88a8a, #e8b56a, #fbefae, #8cc3a0, #7fa7d9, #b39ddb, #f2a7c3, #e88a8a);
-  pointer-events: none;
-}
-.nbh-diy__custom span::after { content: "+"; font-size: 13px; line-height: 1; color: #fff; text-shadow: 0 0 2px rgba(84, 88, 92, 0.6); }
-.nbh-diy__custom.is-on { border-color: var(--nbh-ink); background: var(--hsh-paper); }
-.nbh-diy__custom.is-on span { background: var(--chip); }
-.nbh-diy__custom.is-on span::after { content: none; }
-.nbh-diy__custom:focus-within { outline: 1.5px solid var(--nbh-ink); outline-offset: 1px; }
 .nbh-diy__actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .nbh-diy__msg { margin: 0; font-size: 12.5px; color: var(--hsh-note); }
 .nbh-diy__msg:empty { display: none; }
@@ -580,7 +553,7 @@
 
 .nbh-form__preview { border: 1px dashed var(--nbh-ink-soft); background: #fff; }
 .nbh-form__preview[hidden] { display: none; }
-.nbh-form__preview img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 1; object-fit: contain; }
+.nbh-form__preview img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 1; object-fit: cover; }
 
 .nbh-form__msg { margin: 0; font-size: 13px; color: var(--hsh-note); }
 .nbh-form__msg:empty { display: none; }
@@ -613,7 +586,7 @@
 .nbh-review__list:empty { display: none; }
 .nbh-req { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 1px dashed #d6d9db; }
 .nbh-req__img { border: 1px solid var(--nbh-ink-soft); background: #fff; }
-.nbh-req__img img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 1; object-fit: contain; }
+.nbh-req__img img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 1; object-fit: cover; }
 .nbh-req__name { margin: 0; font-size: 13.5px; overflow-wrap: anywhere; }
 .nbh-req__name a { margin-left: 4px; font-family: var(--hsh-mono); font-size: 12px; color: var(--hsh-link); }
 .nbh-req__msg { margin: 0; padding: 7px 9px; border-radius: 4px; background: #f5f4f0; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }

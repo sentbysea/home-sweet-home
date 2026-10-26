@@ -227,11 +227,11 @@ function plan(h) {
     add({ kind: 'poly', pts: [[tx, -1], [tx, -13]], closed: false });
     add({ kind: 'ellipse', e: [tx, -21, 8, 10], fill: '#a9d6a0' });
   }
-  // 굴뚝(지붕 뒤)
+  // 굴뚝(지붕 뒤) — 지붕과 같은 색 · 무늬
   if (has('chimney')) {
     const cx = x0 + w * 0.26;
     const at = roofAt(cx);
-    add({ kind: 'poly', pts: [[cx - 5, at + 3], [cx - 5, Math.min(at, roofTop + 6) - 9], [cx + 5, Math.min(at, roofTop + 6) - 9], [cx + 5, at + 3]], fill: h.roofColor, r: 1.5 });
+    add({ kind: 'poly', pts: [[cx - 5, at + 3], [cx - 5, Math.min(at, roofTop + 6) - 9], [cx + 5, Math.min(at, roofTop + 6) - 9], [cx + 5, at + 3]], roof: true, r: 1.5 });
   }
   add({ kind: 'poly', pts: roofPts, roof: true, r: h.roof === 'round' ? 1 : 2.5 });
   // 몸체

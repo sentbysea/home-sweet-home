@@ -116,8 +116,31 @@ export async function reviewRequest(id, approve) {
 
 const storagePath = (userId, path) => `${userId}/category-banners/${path}/image`;
 
-/** 파일 올리기 — 같은 폼에서 다시 고르면 같은 자리에 덮어쓴다. @returns {{ path, url }} */
-export async function uploadImage(userId, file, path = crypto.randomUUID()) {
+/**
+ * 배너 파일을 5:1 로 — 비율이 다르면 가운데를 잘라 낸다(이미 5:1 이면 · 움직이는 GIF 는 그대로 — 화면이 5:1 로 잘라 보인다).
+ * 너무 크면 3000px 폭까지 줄인다. 못 읽으면 원본 그대로.
+ */
+export async function cropBanner(file) {
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return file;
+  let bmp;
+  try { bmp = await createImageBitmap(file); } catch { return file; }
+  const { width: w, height: h } = bmp;
+  if (!w || !h || Math.abs(w / h - 5) < 0.05) { bmp.close(); return file; }
+  const sw = Math.min(w, h * 5);
+  const sh = sw / 5;
+  const out = Math.min(3000, Math.round(sw));
+  const c = document.createElement('canvas');
+  c.width = out;
+  c.height = Math.round(out / 5);
+  c.getContext('2d').drawImage(bmp, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, c.width, c.height);
+  bmp.close();
+  const blob = await new Promise((resolve) => c.toBlob(resolve, file.type, 0.92));
+  return blob ? new File([blob], file.name, { type: file.type }) : file;
+}
+
+/** 파일 올리기(5:1 로 잘라서) — 같은 폼에서 다시 고르면 같은 자리에 덮어쓴다. @returns {{ path, url }} */
+export async function uploadImage(userId, input, path = crypto.randomUUID()) {
+  const file = await cropBanner(input);
   const client = await getClient();
   const full = storagePath(userId, path);
   const { error } = await client.storage.from(BUCKET).upload(full, file, { upsert: true, contentType: file.type, cacheControl: '60' });
