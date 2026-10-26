@@ -329,7 +329,9 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     }
     setSending(false);
     if (String(result).startsWith('invalid:')) {
-      const field = { site_name: 'name', site_url: 'url', image_url: 'image', message: 'message' }[result.slice(8)] || 'url';
+      const field = { site_name: 'name', site_url: 'url', image_url: 'image', message: 'message' }[result.slice(8)];
+      // 집 모양 · 모르는 칸 — 적은 칸 탓이 아니니 칸에 빨간 안내를 달지 않는다
+      if (!field) { say(applyMsg, '우리 집 모양을 저장하지 못했어요. 잠시 뒤 다시 보내 주세요. 적은 내용 · 꾸민 집은 그대로 있어요.', 'error'); return; }
       fieldErr(apply, field, '형식을 다시 확인해 주세요.');
       say(applyMsg, '빨간 안내를 확인해 주세요.', 'error');
       apply.elements[field].focus();
