@@ -214,7 +214,7 @@ function plan(h) {
     rh = h.roof === 'gable' ? w * 0.56 : w * 0.34;
     roofPts = h.roof === 'gable'
       ? [[x0 - over, top + 3], [0, top - rh], [-x0 + over, top + 3]]
-      : [[x0 - 2, top + 1], [x0 - 2, top - rh], [-x0 + 2, top - rh], [-x0 + 2, top + 1]];
+      : [[x0, top + 1], [x0, top - rh], [-x0, top - rh], [-x0, top + 1]]; // 쌍둥이 박공 — 지붕 폭 = 몸체 폭(네모나게)
   } else if (h.roof === 'barn') {
     // 헛간 지붕 — 아래는 가파르고 위는 완만하게 꺾인다
     rh = w * 0.5;
@@ -246,7 +246,6 @@ function plan(h) {
     const at = roofAt(cx);
     add({ kind: 'poly', pts: [[cx - 5, at + 3], [cx - 5, Math.min(at, roofTop + 6) - 9], [cx + 5, Math.min(at, roofTop + 6) - 9], [cx + 5, at + 3]], roof: true, r: 1.5 });
   }
-  let gableY = null; // 처마 지붕 세모 벽의 창 높이
   if (h.roof === 'gable') {
     // 처마 지붕(사진 2) — 벽이 세모까지 한 덩어리로 올라가고(몸체 네모 대신 오각형) 그 위를 두꺼운 ㅅ 자 지붕띠가 덮는다
     const band = 7;
@@ -258,7 +257,6 @@ function plan(h) {
     const atX = (x) => peak + (Math.abs(x) / ix) * (R[1] - peak); // 안쪽 선 높이
     add({ kind: 'poly', pts: [[x0, 0], [x0, Math.min(top, atX(x0))], [0, peak], [-x0, Math.min(top, atX(x0))], [-x0, 0]], fill: h.wall });
     add({ kind: 'poly', pts: [L, A, R, [ix, R[1]], [0, A[1] + inner], [-ix, L[1]]], roof: true, r: 1.5 });
-    gableY = (peak + top) / 2 + 1;
   } else if (h.roof === 'twin') {
     // 쌍둥이 박공(사진 3) — 무늬 지붕 위로 벽 세모 둘이 솟는다
     add({ kind: 'poly', pts: roofPts, roof: true, r: 1.5 });
@@ -293,7 +291,6 @@ function plan(h) {
     }
   };
   const ws = h.window === 'two' ? 8 : 10;
-  if (gableY != null) win(0, gableY, 7); // 세모 벽 작은 창
   const groundY = -dh * 0.62;
   // 문 옆 빈 곳 [a, b] 에 창
   const fill = (a, b) => {
