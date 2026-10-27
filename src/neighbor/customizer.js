@@ -1,11 +1,10 @@
 // 우리 집 꾸미기 — 신청 폼 · 주인 간판 걸기 · 주인 집 고치기가 같이 쓴다. 미리보기는 마을과 같은 렌더러(house-art.js).
 //   몸체 · 지붕 · 문 · 창문은 작은 집 아이콘(하나만), 장식은 여러 개 켜고 끄기, 지붕 무늬는 무늬 칩.
-//   벽 · 지붕 · 문 색은 파스텔 색 칩만(마을 톤을 지키려고 직접 고르기는 없다 — 배너에서 뽑은 색은 칩 하나 더). 바꾸면 미리보기가 바로 바뀐다.
+//   벽 · 지붕 · 문 색은 파스텔 색 칩만(마을 톤을 지키려고 직접 고르기는 없다 — 칩에 없는 예전 색은 칩 하나 더). 바꾸면 미리보기가 바로 바뀐다.
 //   미리보기 집 아래에 마을과 같은 이름표(nameOf — 적은 사이트 이름, 비었으면 안내 글).
-//   '랜덤으로 만들기' · '배너 색으로 만들기'(누를 때마다 같은 배너 색으로 다른 조합). 만든 뒤에도 그대로 고칠 수 있다.
-//   배너 색을 못 읽으면(이미지를 못 받거나 그 사이트가 읽기를 막음) 쉬운 말로 알리고, 칩 고르기 · 랜덤은 그대로.
+//   미리보기 오른쪽 아래 주사위('랜덤으로 생성') — 누를 때마다 다른 집. 만든 뒤에도 그대로 고칠 수 있다.
 
-import { houseSvg, houseKey, tagTone, roofPaint, randomHouse, houseFromColors, bannerColors, normalizeHouse, LABELS, BODIES, ROOFS, PATTERNS, DOORS, WINDOWS, DECOS, WALLS, ROOF_COLORS, DOOR_COLORS } from './house-art.js';
+import { houseSvg, houseKey, tagTone, roofPaint, randomHouse, normalizeHouse, LABELS, BODIES, ROOFS, PATTERNS, DOORS, WINDOWS, DECOS, WALLS, ROOF_COLORS, DOOR_COLORS } from './house-art.js';
 
 const SHAPES = [
   ['body', '몸체', BODIES],
@@ -22,6 +21,11 @@ const COLORS = [
 
 let uid = 0;
 
+// 주사위 — 손그림처럼 살짝 기운 둥근 네모, 눈 다섯
+const DICE = '<svg class="nbh-diy__dice-art" viewBox="0 0 28 28" aria-hidden="true" focusable="false">' +
+  '<rect x="4.5" y="4.5" width="19" height="19" rx="5" transform="rotate(-8 14 14)"/>' +
+  '<g transform="rotate(-8 14 14)"><circle cx="9.6" cy="9.6" r="1.6"/><circle cx="18.4" cy="9.6" r="1.6"/><circle cx="14" cy="14" r="1.6"/><circle cx="9.6" cy="18.4" r="1.6"/><circle cx="18.4" cy="18.4" r="1.6"/></g></svg>';
+
 /** 무늬 칩 — 지금 지붕 색으로 */
 const swatch = (kind, color) => {
   const { defs, fill } = roofPaint(kind, color);
@@ -30,30 +34,24 @@ const swatch = (kind, color) => {
 
 /**
  * @param {HTMLElement} root
- * @param {{ initial?: object | null, imageUrl?: () => string, nameOf?: () => string, onChange?: (house: object) => void }} opts
+ * @param {{ initial?: object | null, nameOf?: () => string, onChange?: (house: object) => void }} opts
  */
-export function mountCustomizer(root, { initial = null, imageUrl = () => '', nameOf = () => '', onChange = () => {} } = {}) {
+export function mountCustomizer(root, { initial = null, nameOf = () => '', onChange = () => {} } = {}) {
   const id = `nbh-diy-${++uid}`;
   let house = normalizeHouse(initial) || randomHouse();
-  let colors = null; // 배너에서 뽑은 색(주소별)
-  let colorsFrom = '';
 
   root.classList.add('nbh-diy');
   root.innerHTML = `
-    <div class="nbh-diy__preview" aria-hidden="true"></div>
+    <div class="nbh-diy__view">
+      <div class="nbh-diy__preview" aria-hidden="true"></div>
+      <button class="nbh-diy__dice" type="button" data-diy="random">${DICE}<span>랜덤으로 생성</span></button>
+    </div>
     <div class="nbh-diy__rows">
       ${SHAPES.map(([key, label]) => `<div class="nbh-diy__row"><span class="nbh-diy__k" id="${id}-${key}">${label}</span><div class="nbh-diy__opts" role="radiogroup" aria-labelledby="${id}-${key}" data-key="${key}"></div></div>`).join('')}
       <div class="nbh-diy__row"><span class="nbh-diy__k" id="${id}-deco">장식 <em>여럿</em></span><div class="nbh-diy__opts" role="group" aria-labelledby="${id}-deco" data-key="deco"></div></div>
       ${COLORS.map(([key, label]) => `<div class="nbh-diy__row"><span class="nbh-diy__k" id="${id}-${key}">${label} 색</span><div class="nbh-diy__opts is-colors" role="radiogroup" aria-labelledby="${id}-${key}" data-key="${key}"></div></div>`).join('')}
-    </div>
-    <div class="nbh-diy__actions">
-      <button class="nbh-btn is-ghost is-small" type="button" data-diy="random">랜덤으로 만들기</button>
-      <button class="nbh-btn is-ghost is-small" type="button" data-diy="banner">배너 색으로 만들기</button>
-    </div>
-    <p class="nbh-diy__msg" role="status" aria-live="polite"></p>`;
+    </div>`;
   const preview = root.querySelector('.nbh-diy__preview');
-  const msg = root.querySelector('.nbh-diy__msg');
-  const bannerBtn = root.querySelector('[data-diy="banner"]');
 
   const paintName = () => {
     const tag = preview.querySelector('.nbh-diy__name');
@@ -84,10 +82,10 @@ export function mountCustomizer(root, { initial = null, imageUrl = () => '', nam
     }).join('');
     for (const [key, label, list] of COLORS) {
       const box = root.querySelector(`[data-key="${key}"]`);
-      const all = list.includes(house[key]) ? list : [...list, house[key]]; // 배너에서 뽑은 색은 칩을 하나 더
+      const all = list.includes(house[key]) ? list : [...list, house[key]]; // 칩에 없는 색(예전에 저장된 집)은 칩을 하나 더
       box.innerHTML = all.map((c, i) => {
         const on = house[key] === c;
-        return `<button type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-v="${c}" style="--chip:${c}" aria-label="${label} 색 ${i + 1}${list.includes(c) ? '' : '(배너 색)'}"></button>`;
+        return `<button type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-v="${c}" style="--chip:${c}" aria-label="${label} 색 ${i + 1}"></button>`;
       }).join('');
     }
   };
@@ -98,7 +96,7 @@ export function mountCustomizer(root, { initial = null, imageUrl = () => '', nam
     if (!silent) onChange(house);
   };
 
-  root.addEventListener('click', async (e) => {
+  root.addEventListener('click', (e) => {
     const opt = e.target.closest('.nbh-diy__opts [data-v]');
     if (opt) {
       const key = opt.closest('[data-key]').dataset.key;
@@ -108,31 +106,13 @@ export function mountCustomizer(root, { initial = null, imageUrl = () => '', nam
       root.querySelector(`[data-key="${key}"] [data-v="${v}"]`)?.focus();
       return;
     }
-    const act = e.target.closest('[data-diy]')?.dataset.diy;
-    if (act === 'random') { msg.textContent = ''; set(randomHouse()); }
-    if (act === 'banner') {
-      const url = imageUrl();
-      if (!url) { msg.textContent = '먼저 배너 이미지 주소를 적어 주세요.'; return; }
-      if (colorsFrom !== url) {
-        msg.textContent = '배너 색을 살펴보는 중…';
-        bannerBtn.disabled = true;
-        try {
-          colors = await bannerColors(url);
-          colorsFrom = url;
-        } catch {
-          colors = null;
-          colorsFrom = '';
-          msg.textContent = '이 배너에서는 색을 가져오지 못했어요. 색을 직접 고르거나 랜덤으로 만들어 보세요.';
-          bannerBtn.disabled = false;
-          return;
-        } finally {
-          bannerBtn.disabled = false;
-        }
-      }
-      set(houseFromColors(colors));
-      msg.textContent = '배너 색으로 지었어요. 한 번 더 누르면 다른 조합이에요.';
-      bannerBtn.textContent = '배너 색으로 다시 뽑기';
-    }
+    const dice = e.target.closest('[data-diy="random"]');
+    if (!dice) return;
+    set(randomHouse());
+    // 주사위가 한 바퀴 — 연달아 눌러도 처음부터
+    dice.classList.remove('is-rolling');
+    void dice.offsetWidth;
+    dice.classList.add('is-rolling');
   });
   // 하나만 고르는 줄 안에서 ← → 로 고르기(라디오처럼)
   root.addEventListener('keydown', (e) => {
@@ -151,12 +131,5 @@ export function mountCustomizer(root, { initial = null, imageUrl = () => '', nam
     set: (next) => set(next, { silent: true }),
     /** 사이트 이름 칸이 바뀌면 — 미리보기 이름표만 */
     renamed: paintName,
-    /** 배너 주소가 바뀌면 — 뽑아 둔 색을 버리고 버튼 글을 처음대로 */
-    bannerChanged() {
-      colors = null;
-      colorsFrom = '';
-      bannerBtn.textContent = '배너 색으로 만들기';
-      msg.textContent = '';
-    },
   };
 }
