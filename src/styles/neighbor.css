@@ -5,8 +5,6 @@
    ========================================================= */
 
 .nbh {
-  /* 위 줄(← home · 제목 · 보기 스위치) 구역 — 화면 가운데 1/3(좁으면 400px, 그보다 좁은 화면은 양끝까지) */
-  --nbh-band: max(16.67vw, 200px);
   --nbh-ink: #54585c; /* 버튼 테두리 · 포커스 — 집 선은 홈 평면도와 같은 --hsh-line */
   --nbh-ink-soft: #8f9497;
   --nbh-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
@@ -39,14 +37,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: max(14px, env(safe-area-inset-top)) 0 0;
+  padding: var(--hsh-top) 0 0; /* 위 줄 자리 — archive 와 같다(base.css) */
 }
 
 /* ← home — 위 줄 구역 왼쪽 끝에 늘(긴 집을 내려가도) */
 .nbh__home {
   position: fixed;
-  top: max(10px, env(safe-area-inset-top));
-  left: max(8px, env(safe-area-inset-left), calc(50vw - var(--nbh-band)));
+  top: var(--hsh-top);
+  left: max(8px, env(safe-area-inset-left), calc(50vw - var(--hsh-band)));
   z-index: 3;
   display: inline-flex;
   align-items: center;
@@ -77,8 +75,8 @@
   --sw-w: 84px;
   --sw-knob: 24px;
   position: fixed;
-  top: max(16px, calc(env(safe-area-inset-top) + 6px)); /* ← home 과 같은 높이(가운데 줄 맞춤) */
-  right: max(12px, env(safe-area-inset-right), calc(50vw - var(--nbh-band))); /* 위 줄 구역 오른쪽 끝 */
+  top: calc(var(--hsh-top) + 6px); /* 위 줄(44px) 가운데 — ← home · 제목과 같은 높이 */
+  right: max(12px, env(safe-area-inset-right), calc(50vw - var(--hsh-band))); /* 위 줄 구역 오른쪽 끝 */
   z-index: 3;
   width: var(--sw-w);
   height: 32px;
@@ -220,15 +218,16 @@
 .nbh-bl__a:focus-visible { outline: 1.5px dashed var(--nbh-ink); outline-offset: 3px; }
 .nbh-bl__note { margin: 40px 0; font-family: var(--nbh-font); font-size: 13px; color: var(--hsh-note); text-align: center; }
 
-/* 제목 — 영단어(첫 글자 대문자) + 노란 밑줄(archive 와 같다). ← home · 보기 스위치와 한 줄 */
+/* 제목 — 영단어(첫 글자 대문자) + 밑줄은 홈 neighbor 버튼 색종이 색(민트). ← home · 보기 스위치와 한 줄 */
 .nbh__title {
-  margin: 2px 0 6px;
+  margin: 0 0 6px;
   font-family: var(--hsh-mono);
   font-size: 26px;
+  line-height: 44px; /* 위 줄 높이 — archive 제목과 같은 자리 */
   font-weight: 400;
   letter-spacing: 0.02em;
   color: var(--hsh-text);
-  text-decoration: underline 5px var(--hsh-butter);
+  text-decoration: underline 5px var(--hsh-mint);
   text-underline-offset: 6px;
   text-decoration-skip-ink: none;
 }

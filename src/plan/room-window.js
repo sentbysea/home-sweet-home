@@ -3,7 +3,7 @@
 //   색 · 크기 · 기울기가 무작위. 창 둘레를 개수만큼 나눠 칸마다 하나씩 놓아 몰리지 않게(탭 · × 쪽은 비운다).
 //   창 머리(탭 · 주소창 줄)는 누른 버튼의 바탕색, 제목 밑줄은 버튼 글자색을 따른다.
 //   선은 모두 로딩 화면 집 윤곽과 같은 얇은 회색.
-//   뒤의 홈 화면은 반투명 덮개로 살짝 가린다. 닫기: ×, 덮개 누르기, Esc.
+//   뒤의 홈 화면은 반투명 덮개로 살짝 가리고, 창이 떠 있는 동안 홈 화면 움직임은 멈춘다(.hsh-plan.is-paused). 닫기: ×, 덮개 누르기, Esc.
 //   주소창: 지금 사이트 주소 / 방 이름. 하트: 누르면 채워지고 이 브라우저에 기억한다(방마다).
 //   about __VE 방은 아스키 집 · 짧은 글(about-note.js), Vibe · Echo 카드 두 장(about.js)은 /pair.
 //   버튼에 data-category(hongjiwon.love 카테고리 id 또는 slug)가 있으면 그 카테고리의 글 · 갤러리 · 메모 창
@@ -708,6 +708,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     if (SCREENS.includes(label)) {
       if (!win.hidden) {
         content.close();
+        trigger.classList.remove('is-paused');
         win.hidden = true;
         win.classList.remove('is-open', 'is-closing');
       }
@@ -744,6 +745,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     if (already) return;
     win.hidden = false;
     win.classList.remove('is-closing');
+    trigger.classList.add('is-paused'); // 덮개가 뜨는 순간 홈 화면 움직임을 멈춘다(plan/index.js · clock.js · plan.css)
     void win.offsetWidth; // 다시 열 때도 등장 전환이 처음부터
     win.classList.add('is-open');
     win.querySelector('.hsh-win__x').focus({ preventScroll: true });
@@ -755,6 +757,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     if (win.hidden || win.classList.contains('is-closing')) return;
     closeEditor();
     content.close();
+    trigger.classList.remove('is-paused');
     win.classList.remove('is-open');
     win.classList.add('is-closing');
     closing = setTimeout(() => {

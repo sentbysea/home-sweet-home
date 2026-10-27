@@ -38,7 +38,7 @@
 .hsh-win__veil {
   position: absolute;
   inset: 0;
-  background: rgb(252 251 248 / 0.62);
+  background: rgb(252 251 248 / 0.72); /* 뒤 홈 화면이 조금 덜 비치게 */
   -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
   opacity: 0;

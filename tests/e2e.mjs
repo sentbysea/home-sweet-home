@@ -983,6 +983,16 @@ async function archiveCase(device, name) {
   await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
   await page.waitForTimeout(900);
   check(`${name} — /archive 직접 → 로딩 없이 열쇠꾸러미`, at() === '/archive' && !(await page.evaluate(() => window.__loaderSeen)) && (await arcOpen(page)));
+  const top = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const h = document.querySelector('.hsh-arc__home').getBoundingClientRect();
+    const t = getComputedStyle(document.querySelector('.hsh-arc__title'));
+    const tr = document.querySelector('.hsh-arc__title').getBoundingClientRect();
+    return { vw, left: h.left, want: Math.max(10, vw / 2 - Math.max(vw / 6, 200)), deco: t.textDecorationColor, homeY: h.top + h.height / 2, titleY: tr.top + tr.height / 2 };
+  });
+  check(`${name} — ← home 은 가운데 1/3 구역 왼쪽 끝(좁으면 가장자리) · 밑줄은 홈 archive 색종이(하늘)`, Math.abs(top.left - top.want) < 3 && top.deco === 'rgb(207, 224, 251)', JSON.stringify(top));
+  // 위 줄 자리 — neighbor 와 같은 높이(위에서 28px, 높이 44px 줄의 가운데 = 50px)
+  check(`${name} — 위 줄: ← home · 제목이 같은 높이(neighbor 와 같은 자리)`, Math.abs(top.homeY - 50) < 2 && Math.abs(top.titleY - 50) < 2, JSON.stringify(top));
   check(`${name} — 브라우저 창 꼴 팝업은 열리지 않는다`, await page.$eval('.hsh-win', (w) => w.hidden));
   const canvas = await page.$eval('.hsh-arc__canvas', (c) => { const r = c.getBoundingClientRect(); return { w: r.width, h: r.height }; });
   check(`${name} — 꾸러미가 화면 가운데를 크게 차지`, canvas.w >= 300 && canvas.h >= 380, JSON.stringify(canvas));
@@ -1205,7 +1215,7 @@ async function neighborVillage(device, name) {
       line: [getComputedStyle(outer).stroke, parseFloat(getComputedStyle(outer).strokeWidth), parseFloat(getComputedStyle(inner).strokeWidth)],
     };
   });
-  check(`${name} — 제목은 영단어 + 노란 밑줄(색종이 없이)`, look.title.join('|') === 'rgba(0, 0, 0, 0)|underline|rgb(251, 239, 174)|Neighbor', look.title.join('|'));
+  check(`${name} — 제목은 영단어 + 홈 버튼 색종이 색(민트) 밑줄`, look.title.join('|') === 'rgba(0, 0, 0, 0)|underline|rgb(205, 238, 214)|Neighbor', look.title.join('|'));
   check(`${name} — 여백 별(누르기를 막지 않음)`, look.stars >= 8 && look.starsPass === 'none', JSON.stringify(look));
   check(`${name} — 이름표: 화면 안 · 잘리지 않음 · 밑줄 없음`, look.labelsIn, JSON.stringify(look));
   check(`${name} — 선은 홈처럼 부드러운 회색 · 안쪽 선이 더 얇다`, look.line[0] === 'rgb(143, 148, 151)' && look.line[1] < 1.6 && look.line[2] < look.line[1], JSON.stringify(look.line));
@@ -1591,8 +1601,8 @@ async function neighborView(device, name) {
     const mid = (q) => { const r = document.querySelector(q).getBoundingClientRect(); return { y: r.top + r.height / 2, l: r.left, r: r.right, w: r.width }; };
     return { home: mid('.nbh__home'), title: mid('.nbh__title'), sw: mid('.nbh-view') };
   });
-  check(`${name} — ← home · 제목 · 스위치가 한 줄(겹치지 않게) · 스위치는 짧게`, Math.abs(row.home.y - row.sw.y) < 3 && Math.abs(row.title.y - row.sw.y) < 8 && row.home.r < row.title.l && row.title.r < row.sw.l && row.sw.w <= 90, JSON.stringify(row));
-  check(`${name} — 오른쪽 위 보기 스위치(처음은 마을)`, sw.role === 'switch' && sw.checked === 'false' && sw.right < Math.max(24, vw / 2 - Math.max(vw / 6, 200) + 3) && sw.top < 30 && (await page.isVisible('.nbh__village')) && !(await page.isVisible('.nbh__banners')), JSON.stringify(sw));
+  check(`${name} — ← home · 제목 · 스위치가 한 줄(겹치지 않게, archive 와 같은 높이) · 스위치는 짧게`, Math.abs(row.home.y - 50) < 2 && Math.abs(row.sw.y - 50) < 2 && Math.abs(row.title.y - 50) < 2 && row.home.r < row.title.l && row.title.r < row.sw.l && row.sw.w <= 90, JSON.stringify(row));
+  check(`${name} — 오른쪽 위 보기 스위치(처음은 마을)`, sw.role === 'switch' && sw.checked === 'false' && sw.right < Math.max(24, vw / 2 - Math.max(vw / 6, 200) + 3) && Math.abs(sw.top - 34) < 2 && (await page.isVisible('.nbh__village')) && !(await page.isVisible('.nbh__banners')), JSON.stringify(sw));
   await page.click('.nbh-view');
   await page.waitForTimeout(700);
   const bl = await page.evaluate(() => {
@@ -1954,6 +1964,27 @@ async function heads() {
     await page.waitForTimeout(1500);
     const h = await headLook(page);
     check(`${name} — edit 안 보임 · 기본 머리(notice · 이름표 · 공지 사진)`, !h.edit && h.head && h.title === 'notice' && h.pill === '@3tatichearts · 수아' && h.thumb.includes('notice-thumb'), JSON.stringify(h));
+    if (!user) {
+      // 창이 떠 있는 동안 홈 화면 움직임은 그 자리에 — 위글 프레임 · 까딱임 · 시계 초침
+      const still = await page.evaluate(async () => {
+        const plan = document.querySelector('.hsh-plan');
+        const sec = () => document.querySelector('.hsh-clock svg [transform^="rotate"]')?.getAttribute('transform');
+        const before = { frame: plan.dataset.wallFrame, sec: sec() };
+        await new Promise((r) => setTimeout(r, 1300));
+        const veil = getComputedStyle(document.querySelector('.hsh-win__veil')).backgroundColor;
+        return { paused: plan.classList.contains('is-paused'), play: getComputedStyle(document.querySelector('.hsh-sticker__body')).animationPlayState, same: plan.dataset.wallFrame === before.frame && sec() === before.sec, veil };
+      });
+      check(`${name} — 창이 뜨면 홈 화면 움직임 멈춤(위글 · 까딱임 · 시계) · 덮개 조금 더 진하게`, still.paused && still.play === 'paused' && still.same && still.veil.includes('0.72'), JSON.stringify(still));
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(600);
+      const moving = await page.evaluate(async () => {
+        const plan = document.querySelector('.hsh-plan');
+        const f0 = plan.dataset.wallFrame;
+        await new Promise((r) => setTimeout(r, 500));
+        return { paused: plan.classList.contains('is-paused'), moved: plan.dataset.wallFrame !== f0 };
+      });
+      check(`${name} — 창을 닫으면 다시 움직임`, !moving.paused && moving.moved, JSON.stringify(moving));
+    }
     check(`콘솔 오류 없음(머리 ${name})`, errors.length === 0, errors.join(' | '));
     await context.close();
   }

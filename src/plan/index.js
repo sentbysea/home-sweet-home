@@ -84,6 +84,7 @@ function startWobble(el, hint) {
   const bodies = [...el.querySelectorAll('.hsh-sticker__body')];
   let k = 0;
   setInterval(() => {
+    if (el.classList.contains('is-paused')) return; // 방 창이 떠 있는 동안 — 그 자리에 멈춘다(room-window.js)
     const on = el.classList.contains('is-done');
     k = on ? (k + 1) % FRAMES : 0;
     el.dataset.wallFrame = k;
@@ -363,7 +364,7 @@ function showHintIcon(hint) {
 
 function cycleHintIcon(el, hint) {
   setInterval(() => {
-    if (!el.classList.contains('is-done')) return;
+    if (!el.classList.contains('is-done') || el.classList.contains('is-paused')) return;
     hint.i++;
     showHintIcon(hint); // 튀는 동작 없이 바로 바뀐다
   }, ICON_MS);
