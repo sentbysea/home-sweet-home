@@ -2046,13 +2046,22 @@ async function heads() {
   await o.page.waitForTimeout(300);
   check('주인 — Esc 는 고치기 창만 닫는다', (await o.page.$eval('.hsh-win__editor', (f) => f.hidden)) && !(await o.page.$eval('.hsh-win', (w) => w.hidden)));
 
-  // 방문자에게도 고친 머리가
+  // 방문자에게도 고친 머리가 — 머리 설정이 늦게 와도(1.2초) 숨긴 머리가 잠깐도 보이지 않게
   const v = await open(null);
+  await v.page.route(/site_settings?.*vibe_room_heads/, async (route) => { await new Promise((r) => setTimeout(r, 1200)); await route.fallback(); });
+  const headShown = () => v.page.$eval('.hsh-win__head', (el) => { const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden'; });
   await home(v.page);
   await openNotice(v.page);
+  await v.page.waitForTimeout(300);
+  const firstWait = await headShown();
   await v.page.waitForTimeout(1500);
   h = await headLook(v.page);
   check('방문자 — 주인이 숨긴 머리는 안 보임 · edit 없음 · 스티커 0개', !h.head && !h.edit && (await v.page.$$eval('.hsh-win__deco', (d) => d.length)) === 0, JSON.stringify(h));
+  await home(v.page); // 새로고침 — 이번엔 이 브라우저에 적어 둔 값으로 처음부터
+  await openNotice(v.page);
+  await v.page.waitForTimeout(300);
+  const againWait = await headShown();
+  check('방문자 — 머리 설정을 받아 오는 동안에도 숨긴 머리는 안 보임(처음 · 새로고침)', !firstWait && !againWait, JSON.stringify({ firstWait, againWait }));
   await v.context.close();
 
   // 되돌리기 — 사진 지우기 · 칸 비우기 · 숨기기 끄기 → 기본값, 예전 사진은 지운다
