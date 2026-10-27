@@ -537,7 +537,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     leaveAbout();
     if (!abBox.hidden) {
       loadAboutFont();
-      aboutNote = openAboutNote(abBox, { reduced, scroller: inner });
+      aboutNote = openAboutNote(abBox, { reduced, scroller: inner, onLayout: () => syncRail() });
     }
     win.classList.toggle('is-about', isAbout && !isPair); // about 글은 둥근 상자 없이 창에 바로
     veBox.hidden = !isPair;
