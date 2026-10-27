@@ -47,17 +47,10 @@ export function aboutNoteMarkup() {
 
 // ---------- 형상 — 단위 좌표에서 안에 드나(가로 x0~x1, 세로 y0~y1) ----------
 
-// 집 — 삼각 지붕 · 굴뚝 · 벽, 둥근 문과 창 둘은 비운다
+// 집 — 외곽선 하나(벽 · 처마 나온 삼각 지붕 · 굴뚝). 왼쪽 아래에서 시작해 시계 방향으로 — 글자가 이 선을 따라 같은 간격으로 놓인다
 const house = {
-  x0: -38, x1: 38, y0: 18, y1: 96,
-  inside(u, v) {
-    const door = Math.abs(u) <= 6 && v >= 73 && (v >= 79 || (u / 6) ** 2 + ((v - 79) / 6) ** 2 <= 1);
-    const window = v >= 64 && v <= 80 && Math.abs(u) >= 11 && Math.abs(u) <= 22;
-    if (door || window) return false;
-    if (Math.abs(u) <= 28 && v >= 52 && v <= 96) return true; // 벽
-    if (v >= 18 && v <= 54 && Math.abs(u) <= ((v - 18) * 38) / 36) return true; // 지붕
-    return (u >= 14 && u <= 22 && v >= 30 && v <= 46) || (u >= 12.8 && u <= 23.2 && v >= 27 && v <= 31); // 굴뚝
-  },
+  x0: -34, x1: 34, y0: 18, y1: 96,
+  outline: [[-26, 96], [-26, 52], [-34, 52], [0, 18], [14, 32], [14, 24], [21, 24], [21, 39], [34, 52], [26, 52], [26, 96]],
 };
 
 // 두 사람 — 밝기 지도에서 배경(0)이 아닌 곳
@@ -78,6 +71,27 @@ const SHAPES = { always: house, together: pair };
 
 const STEP = 2.5; // 윤곽을 찾는 격자(px)
 
+/** 닫힌 외곽선(px 점들)을 첫 꼭짓점부터 한 바퀴 돌며 글자 n 개를 같은 간격으로(글 차례 = 선을 따라가는 차례) */
+function alongOutline(pts, n) {
+  const segs = pts.map((a, i) => {
+    const b = pts[(i + 1) % pts.length];
+    return { a, b, len: Math.hypot(b.x - a.x, b.y - a.y) };
+  });
+  const total = segs.reduce((s, g) => s + g.len, 0);
+  const gap = total / n;
+  const cells = [];
+  let seg = 0;
+  let from = 0; // 지금 선분이 시작하는 거리
+  for (let i = 0; i < n; i++) {
+    const d = i * gap;
+    while (seg < segs.length - 1 && d > from + segs[seg].len) { from += segs[seg].len; seg++; }
+    const { a, b, len } = segs[seg];
+    const t = len ? (d - from) / len : 0;
+    cells.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  }
+  return { cells, gap };
+}
+
 /**
  * 형상을 box 안에 맞춰 놓고, 그 윤곽(바깥 테두리 · 문 · 창 같은 구멍의 테두리)을 따라 글자 n 개를 고른 간격으로 놓는다 —
  *   글자 수가 적어서 속을 채우면 뭉개지지만, 선으로 그리면 또렷하다.
@@ -89,6 +103,7 @@ function cellsFor(shape, box, n) {
   const H = (shape.y1 - shape.y0) * k;
   const left = box.x + (box.w - W) / 2;
   const top = box.y + (box.h - H) / 2;
+  if (shape.outline) return alongOutline(shape.outline.map(([u, v]) => ({ x: left + (u - shape.x0) * k, y: top + (v - shape.y0) * k })), n);
   // 윤곽 — 안쪽 점 가운데 위아래 · 양옆 중 하나라도 바깥인 점(위 → 아래, 왼 → 오른 차례)
   const cols = Math.ceil(W / STEP) + 2;
   const rows = Math.ceil(H / STEP) + 2;
@@ -200,7 +215,10 @@ export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
   // 모양 자리로 — 글 차례대로 칸을 채운다
   const target = () => {
     const box = area();
-    const { cells, gap } = cellsFor(SHAPES[shape], box, flies.length);
+    const sh = SHAPES[shape];
+    // 외곽선(집)은 글 칸 너비에 맞추고 높이는 그만큼 — 글 칸보다 길면 아래로 넘친다(스크롤로 본다). 글자가 커지게
+    if (sh.outline) box.h = Math.max(box.h, ((box.w * 0.94) / (sh.x1 - sh.x0)) * (sh.y1 - sh.y0) / 0.94);
+    const { cells, gap } = cellsFor(sh, box, flies.length);
     flies.forEach((f, i) => {
       const c = cells[i] || cells[cells.length - 1];
       const dx = c.x - (f.home.x + f.home.w / 2);
