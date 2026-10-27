@@ -20,7 +20,7 @@ const OWNER_FOLDER = 'cfe0dc66-7fa2-450e-8817-44073a4a5aab';
 export const MY_BANNER_PATH = 'vibe-banner';
 export const MY_BANNER = {
   name: 'homesweethome',
-  site: 'https://xn--9g3b29an0p.me', // 한글 주소를 못 받는 곳도 있어서 퓨니코드로
+  site: 'https://ho.xn--9g3b29an0p.me', // 정식 주소 ho.바이브.me — 한글 주소를 못 받는 곳도 있어서 퓨니코드로
   image: `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${OWNER_FOLDER}/${MY_BANNER_PATH}`,
 };
 

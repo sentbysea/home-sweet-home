@@ -1347,8 +1347,8 @@ async function neighborVillage(device, name) {
     copies: [...document.querySelectorAll('.nbh-mine__rows [data-copy]')].map((b) => b.dataset.copy),
   }));
   check(`${name} — 내 배너: 방문자에게는 바꾸기 없음 · 아직 없으면 안내`, (await page.$eval('.nbh-mine__owner', (x) => x.hidden)) && (await page.$eval('.nbh-mine__preview', (x) => x.classList.contains('is-empty'))));
-  check(`${name} — 내 배너: 바이브.me 전용 이미지 · 이름(homesweethome) · 주소 · 이미지 주소 · 삽입 코드`, mine.img === MY_IMAGE && mine.vals.join('|') === `homesweethome|https://xn--9g3b29an0p.me|${MY_IMAGE}`
-    && mine.code === `<a href="https://xn--9g3b29an0p.me" target="_blank" rel="noopener"><img src="${MY_IMAGE}" alt="homesweethome" width="200" height="40"></a>` && mine.copies.length === 4, JSON.stringify(mine));
+  check(`${name} — 내 배너: 바이브.me 전용 이미지 · 이름(homesweethome) · 주소 · 이미지 주소 · 삽입 코드`, mine.img === MY_IMAGE && mine.vals.join('|') === `homesweethome|https://ho.xn--9g3b29an0p.me|${MY_IMAGE}`
+    && mine.code === `<a href="https://ho.xn--9g3b29an0p.me" target="_blank" rel="noopener"><img src="${MY_IMAGE}" alt="homesweethome" width="200" height="40"></a>` && mine.copies.length === 4, JSON.stringify(mine));
   if (!device && BROWSER === 'chromium') {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: VIBE_ORIGIN });
     const got = [];
@@ -1621,7 +1621,7 @@ async function neighborView(device, name) {
       w: r.width,
     };
   });
-  check(`${name} — 스위치 → 배너 보기: 맨 위 내 배너 + 받은 배너만 한 줄에 하나씩(5:1 · 이름 없음 · 새 탭)`, bl.checked === 'true' && !bl.village && bl.n === 4 && bl.first === 'https://xn--9g3b29an0p.me' && bl.links && bl.cols === 1 && Math.abs(bl.ratio - 5) < 0.1 && bl.names === 0 && !bl.visibleText, JSON.stringify(bl));
+  check(`${name} — 스위치 → 배너 보기: 맨 위 내 배너 + 받은 배너만 한 줄에 하나씩(5:1 · 이름 없음 · 새 탭)`, bl.checked === 'true' && !bl.village && bl.n === 4 && bl.first === 'https://ho.xn--9g3b29an0p.me' && bl.links && bl.cols === 1 && Math.abs(bl.ratio - 5) < 0.1 && bl.names === 0 && !bl.visibleText, JSON.stringify(bl));
   if (device) check(`${name} — 배너 폭은 화면의 70%`, Math.abs(bl.w - vw * 0.7) < 2, JSON.stringify({ w: bl.w, vw }));
   else {
     const band = Math.max(vw / 6, 200); // 가운데 1/3 의 반(좁으면 200)

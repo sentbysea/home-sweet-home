@@ -53,7 +53,7 @@ export async function ownerSession(client) {
 }
 
 /**
- * Google 로그인에서 돌아오는 주소 — 늘 사이트 루트(Supabase 허용 목록에 `https://xn--9g3b29an0p.me/` 한 줄).
+ * Google 로그인에서 돌아오는 주소 — 늘 사이트 루트(Supabase 허용 목록에 `https://ho.xn--9g3b29an0p.me/` 한 줄).
  * 관리자는 그쪽 admin-session.js 가 `${origin}/admin/` 으로 정한다(허용 목록의 다른 한 줄).
  */
 export const HOME_REDIRECT = `${location.origin}/`;
