@@ -2085,10 +2085,10 @@ async function heads() {
   const back = JSON.parse(db.site_settings.find((r) => r.key === 'vibe_room_heads')?.value || '{}');
   check('주인 — 다 비우면 기본 머리로 · 예전 사진 지움', h.head && h.title === 'notice' && h.pill === '@3tatichearts · 수아' && h.thumb.includes('notice-thumb') && !back.notice && !db.storage.has(photoKey), JSON.stringify({ h, back }));
 
-  // about — 스크롤바는 길 없이 창 오른쪽 끝 · 글만(글자 아트 · 강조 단어 없음)
+  // about — 스크롤바는 길 없이 창 오른쪽 끝 · 글 · 집 말풍선 · 모양 바꾸기
   await o.page.keyboard.press('Escape');
   await o.page.waitForTimeout(500);
-  await o.page.setViewportSize({ width: 390, height: 700 }); // 글이 넘쳐 스크롤바가 나오게
+  await o.page.setViewportSize({ width: 390, height: 520 }); // 글이 넘쳐 스크롤바가 나오게
   await o.page.evaluate(() => document.querySelector('.hsh-plan').dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room: 'v', label: 'about __VE', name: '지원 · 우연 소개', bg: '#fbefae', fg: '#e8893a' } })));
   await o.page.waitForTimeout(1200);
   const ab = await o.page.evaluate(() => {
@@ -2097,20 +2097,56 @@ async function heads() {
     return {
       railShown: !rail.hidden && (() => { const k = document.querySelector('.hsh-win__knob').getBoundingClientRect(); return document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2) === document.querySelector('.hsh-win__knob'); })(),
       railBg: getComputedStyle(rail).backgroundImage, railGap: body.right - rail.getBoundingClientRect().right,
-      textOnly: !document.querySelector('.hsh-ab canvas, .hsh-ab [role="button"]') && document.querySelector('.hsh-ab__text').textContent.includes('프리지아가 활짝'),
+      text: document.querySelector('.hsh-ab__text').textContent,
+      sel: document.querySelector('.hsh-ab__sel')?.textContent,
+      caret: getComputedStyle(document.querySelector('.hsh-ab__caret')).animationName,
       font: getComputedStyle(document.querySelector('.hsh-ab__text')).fontFamily,
       lh: parseFloat(getComputedStyle(document.querySelector('.hsh-ab__text')).lineHeight) / 14,
     };
   });
   check('about — 스크롤바: 가운데 선 없이 창 오른쪽 끝(테두리 안쪽)에 딱', ab.railShown && ab.railBg === 'none' && ab.railGap >= 0 && ab.railGap <= 1.5, JSON.stringify(ab));
-  check('about — 글만(캔버스 · 단추 없음)', ab.textOnly, JSON.stringify(ab));
+  check('about — 글은 홍지원은~부터 · 고른 글자는 집 · 마지막 점 뒤 커서만 깜빡', ab.text.startsWith('홍지원은 이제 새로운 집을') && !ab.text.includes('선생님도') && ab.text.endsWith('이별하여…….') && ab.sel === '집' && ab.caret === 'hsh-ab-blink', JSON.stringify(ab));
   await o.page.waitForTimeout(800); // 한글 글꼴(Google Fonts)이 오도록
   await o.page.screenshot({ path: path.join(OUT, 'heads-about.png') });
   check('about — 글은 로딩 글꼴(Nanum Gothic Coding) · 줄간격 1.8', ab.font.includes('HSH Hand KR') && ab.font.includes('Nanum Gothic Coding') && Math.abs(ab.lh - 1.8) < 0.01, JSON.stringify(ab));
-  // 마지막 문장 — 화면에 들어오면 한 글자씩 다 써지고 커서는 사라진다
-  await o.page.evaluate(() => document.querySelector('.hsh-ab__type').scrollIntoView({ block: 'center' }));
-  const typed = await o.page.waitForFunction(() => document.querySelector('.hsh-ab__caret').hidden && [...document.querySelectorAll('.hsh-ab__ch')].every((c) => c.classList.contains('is-on')), null, { timeout: 20000 }).then(() => true, () => false);
-  check('about — 마지막 문장이 다 써지고 커서가 사라짐', typed);
+  // 집 → 말풍선(always | together) → always: 글자가 집 모양으로 → together: 두 사람으로 → 되돌리기: 원래 글로
+  await o.page.evaluate(() => document.querySelector('.hsh-ab__sel').scrollIntoView({ block: 'center' }));
+  await o.page.waitForTimeout(250); // 스크롤이 가라앉고 나서(스크롤하면 말풍선이 닫힌다)
+  await o.page.click('.hsh-ab__sel');
+  const mn = await o.page.evaluate(() => {
+    const m = document.querySelector('.hsh-ab__menu');
+    const r = m.getBoundingClientRect();
+    const s = document.querySelector('.hsh-ab__sel').getBoundingClientRect();
+    return { shown: !m.hidden, items: [...m.querySelectorAll('[data-shape]')].map((b) => b.textContent).join('|'), above: r.bottom <= s.top, expanded: document.querySelector('.hsh-ab__sel').getAttribute('aria-expanded') };
+  });
+  await o.page.screenshot({ path: path.join(OUT, 'heads-about-menu.png') });
+  check('about — 집을 누르면 위에 말풍선 always | together', mn.shown && mn.items === 'always|together' && mn.above && mn.expanded === 'true', JSON.stringify(mn));
+  const shapeLook = () => o.page.evaluate(() => {
+    const root = document.querySelector('.hsh-ab');
+    const flies = [...root.querySelectorAll('.hsh-ab__f')];
+    return {
+      shaped: root.classList.contains('is-shaped'), shape: root.dataset.shape || null,
+      flies: flies.length, glyphs: root.querySelectorAll('.hsh-ab__g').length,
+      moved: flies.filter((f) => f.style.transform).length,
+      textHidden: getComputedStyle(root.querySelector('.hsh-ab__text')).visibility === 'hidden',
+      back: !root.querySelector('.hsh-ab__back').hidden, menu: !root.querySelector('.hsh-ab__menu').hidden,
+    };
+  });
+  await o.page.click('.hsh-ab__menu [data-shape="always"]');
+  await o.page.waitForTimeout(1700);
+  let sh = await shapeLook();
+  await o.page.screenshot({ path: path.join(OUT, 'heads-about-always.png') });
+  check('about — always: 글자가 모두 집 모양 자리로 · 원래 글은 숨김 · 되돌리기 단추', sh.shaped && sh.shape === 'always' && sh.flies === sh.glyphs && sh.moved === sh.flies && sh.textHidden && sh.back && !sh.menu, JSON.stringify(sh));
+  await o.page.click('.hsh-ab__f.is-sel');
+  await o.page.click('.hsh-ab__menu [data-shape="together"]');
+  await o.page.waitForTimeout(1700);
+  sh = await shapeLook();
+  await o.page.screenshot({ path: path.join(OUT, 'heads-about-together.png') });
+  check('about — 모양 속 집 → together: 두 사람으로', sh.shape === 'together' && sh.flies === sh.glyphs && sh.back, JSON.stringify(sh));
+  await o.page.click('.hsh-ab__back');
+  await o.page.waitForTimeout(1800);
+  sh = await shapeLook();
+  check('about — 되돌리기: 글자들이 제자리로 · 원래 글이 다시 보임', !sh.shaped && !sh.shape && sh.flies === 0 && !sh.textHidden && !sh.back, JSON.stringify(sh));
   check('콘솔 오류 없음(머리 주인)', o.errors.length === 0, o.errors.join(' | '));
   await o.context.close();
 }

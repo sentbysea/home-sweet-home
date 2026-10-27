@@ -323,7 +323,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
   const abBox = win.querySelector('.hsh-ab');
-  let aboutNote = null; // about 이 열려 있는 동안 — 마지막 문장(떠나면 close)
+  let aboutNote = null; // about 이 열려 있는 동안 — 집 말풍선 · 모양 바꾸기(떠나면 close)
   const leaveAbout = () => { aboutNote?.close(); aboutNote = null; };
   const veBox = win.querySelector('.hsh-ve');
   const about = mountAbout(veBox, () => syncRail());
