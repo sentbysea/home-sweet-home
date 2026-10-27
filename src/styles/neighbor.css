@@ -516,6 +516,33 @@
   border-radius: 8px;
   background: var(--hsh-paper);
 }
+/* 미리보기 오른쪽 아래 — 주사위 + 랜덤으로 생성(누르면 한 바퀴 구른다) */
+.nbh-diy__view { position: relative; }
+.nbh-diy__dice {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px 3px 3px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--nbh-ink);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nbh-diy__dice:hover { background: rgb(0 0 0 / 0.04); }
+.nbh-diy__dice:focus-visible { outline: 1.5px solid var(--nbh-ink); outline-offset: 1px; }
+.nbh-diy__dice-art { display: block; width: 26px; height: 26px; }
+.nbh-diy__dice-art rect { fill: #fff; stroke: currentColor; stroke-width: 1.4; }
+.nbh-diy__dice-art circle { fill: currentColor; }
+.nbh-diy__dice.is-rolling .nbh-diy__dice-art { animation: nbh-dice-roll 420ms cubic-bezier(0.3, 0.7, 0.4, 1); }
+@keyframes nbh-dice-roll { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .nbh-diy__dice.is-rolling .nbh-diy__dice-art { animation: none; } }
 .nbh-diy__rows { display: grid; gap: 6px; }
 .nbh-diy__row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 8px; }
 .nbh-diy__k { font-size: 12px; color: var(--hsh-note); }
@@ -557,9 +584,6 @@
   border-radius: 50%;
   background: var(--chip);
 }
-.nbh-diy__actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.nbh-diy__msg { margin: 0; font-size: 12.5px; color: var(--hsh-note); }
-.nbh-diy__msg:empty { display: none; }
 .nbh-form.is-sent .nbh-diy { pointer-events: none; opacity: 0.6; }
 .nbh-btn.is-small { min-height: 34px; padding: 0 12px; font-size: 13px; }
 

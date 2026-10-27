@@ -83,7 +83,7 @@ function markup() {
           <form class="nbh-form" data-form="apply" data-step="house" novalidate>
             <div class="nbh-step" data-step-pane="house">
               <p class="nbh-step__bar"><b>1 우리 집 꾸미기</b><span aria-hidden="true">›</span>2 사이트 정보</p>
-              <div class="nbh-field"><span class="nbh-field__k">우리 집 꾸미기 <em>승인되면 마을에 이 모습으로 지어져요</em></span><div data-diy="apply"></div></div>
+              <div class="nbh-field"><span class="nbh-field__k">우리 집 꾸미기</span><div data-diy="apply"></div></div>
               <div class="nbh-form__actions">
                 <button class="nbh-btn" type="button" data-step-go="info">다음으로</button>
               </div>
@@ -232,20 +232,17 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
   let editing = null; // 고치는 이웃집(mode 'house')
 
   // 우리 집 꾸미기 — 신청 · 간판 걸기 · 집 고치기
-  const imageOf = (form) => () => httpUrl(withScheme(form.image.value)) || '';
   // 미리보기 이름표 — 적은 이름, 비었으면 주소(마을과 같이)
   const nameOf = (form) => () => form.elements.name.value.trim() || (httpUrl(withScheme(form.url.value)) ? siteLabel({ url: httpUrl(withScheme(form.url.value)) }) : '');
-  const diyApply = mountCustomizer(root.querySelector('[data-diy="apply"]'), { imageUrl: imageOf(apply), nameOf: nameOf(apply), onChange: () => saveDraft() });
-  const diyAdd = mountCustomizer(root.querySelector('[data-diy="add"]'), { imageUrl: () => httpUrl(withScheme(add.image.value)) || uploaded?.url || '', nameOf: nameOf(add) });
+  const diyApply = mountCustomizer(root.querySelector('[data-diy="apply"]'), { nameOf: nameOf(apply), onChange: () => saveDraft() });
+  const diyAdd = mountCustomizer(root.querySelector('[data-diy="add"]'), { nameOf: nameOf(add) });
   const houseBox = root.querySelector('[data-mode="house"]');
   const houseMsg = houseBox.querySelector('.nbh-house__msg');
-  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { imageUrl: () => (editing?.home ? MY_BANNER.image : editing?.resident ? '' : httpUrl(withScheme(info.image.value)) || infoUploaded?.url || editing?.image || ''), nameOf: () => (editing ? (editing.home ? editing.label : nameOf(root.querySelector('[data-form="info"]'))() || editing.label) : '') });
+  const diyHouse = mountCustomizer(houseBox.querySelector('[data-diy="house"]'), { nameOf: () => (editing ? (editing.home ? editing.label : nameOf(root.querySelector('[data-form="info"]'))() || editing.label) : '') });
   const info = root.querySelector('[data-form="info"]');
   const infoMsg = info.querySelector('.nbh-form__msg');
   const infoPreview = previewer(info.querySelector('.nbh-form__preview'));
   let infoUploaded = null; // { path, url } — 내용 고치기에서 새로 올린 파일
-  apply.image.addEventListener('input', () => diyApply.bannerChanged());
-  add.image.addEventListener('input', () => diyAdd.bannerChanged());
   for (const [form, diy] of [[apply, diyApply], [add, diyAdd]]) {
     for (const n of ['name', 'url']) form.elements[n].addEventListener('input', () => diy.renamed());
   }
@@ -503,7 +500,6 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     say(applyMsg, '');
     applyPreview.set('');
     diyApply.set(randomHouse());
-    diyApply.bannerChanged();
     paintNosite();
     clearDraft();
     applyStep('house');
@@ -759,13 +755,11 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
     info.image.value = ''; // 마지막에 고른 쪽이 저장된다
     say(infoMsg, '업로드 완료 ♡', 'done');
     infoPreview.set(`${infoUploaded.url}?t=${Date.now()}`);
-    diyHouse.bannerChanged();
   });
   for (const n of ['name', 'url']) info.elements[n].addEventListener('input', () => diyHouse.renamed());
   info.image.addEventListener('input', () => {
     const a = httpUrl(withScheme(info.image.value));
     infoPreview.set(a === '' ? (infoUploaded ? `${infoUploaded.url}?t=1` : '') : a || '');
-    diyHouse.bannerChanged();
   });
 
   info.addEventListener('submit', async (e) => {
@@ -882,7 +876,6 @@ export function mountPanel(root, { reduced = false, session, banners, onClose, o
         houseBox.querySelector('[role="tablist"]').hidden = Boolean(editing.home);
         houseBox.querySelector('[data-house="delete"]').hidden = Boolean(editing.home);
         diyHouse.set(normalizeHouse(editing.house) || (editing.home ? HOME_HOUSE : defaultHouse(editing.id)));
-        diyHouse.bannerChanged();
         houseBox.querySelector('.nbh-house__who').textContent = editing.label;
         say(houseMsg, '');
         houseBusy(false);

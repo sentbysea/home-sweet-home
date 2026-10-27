@@ -4,7 +4,6 @@
 //   · 선: 살짝 휘고 끝 · 모서리가 둥근 손그림. 선 변형 4장(.nbh-v0~3)을 그려 두고 화면이 190ms 마다 하나씩 보인다(로딩 · 평면도 위글과 같은 박자).
 //     꼭짓점은 그대로라 선이 벌어지지 않는다. 굵기는 집 크기와 상관없이 같다(vector-effect).
 //   · 기존 이웃은 house 가 비어 있으면 배너 id 로 정한 기본 모양 — 새로고침해도 같다.
-//   · 배너 색으로 만들기: 배너 이미지에서 대표 색을 뽑아(투명 픽셀 빼고) 벽은 밝게 · 지붕은 또렷하게 · 문은 벽과 대비 나게.
 //   · 장식(deco)은 여러 개 — 배열(비면 장식 없음). 지붕 무늬(roofPattern)는 사이트 스티커 무늬(plan/room-window.js)와 같은 결.
 //   · 옛 꼴(v1 — deco 가 글자 하나, roofPattern 없음)도 읽는다: 다락창 · 없음은 장식 없음으로, 무늬는 민무늬로.
 //   · 고르는 칸에서 뺀 지붕(헛간) · 무늬(도트 · 사선 줄무늬)도 이미 저장된 집은 그대로 그린다(OLD_ROOFS · OLD_PATTERNS).
@@ -403,7 +402,7 @@ export function roofPaint(kind, color) {
   return { defs: `<defs>${body}</pattern></defs>`, fill: `url(#${id})` };
 }
 
-// ---------- 배너 색으로 ----------
+// ---------- 색 계산 ----------
 
 function toHsl(hex) {
   const n = parseInt(hex.slice(1), 16);
@@ -446,60 +445,4 @@ export function tagTone(house) {
   if (!usable.length) return TAG_FALLBACK;
   const [h, s, l] = toHsl(usable[hash(`tag:${houseKey(house)}`) % usable.length]);
   return l >= 80 ? toHex(h, s, l) : toHex(h, Math.min(s, 70), 80);
-}
-
-/**
- * 배너 이미지의 대표 색(많은 순, 서로 다른 것만) — 못 읽으면 throw(외부 이미지 정책 등)
- * @returns {Promise<string[]>}
- */
-export async function bannerColors(url) {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.decoding = 'async';
-  await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = () => reject(new Error('load'));
-    img.src = url;
-  });
-  const c = document.createElement('canvas');
-  c.width = 80;
-  c.height = 16;
-  const ctx = c.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(img, 0, 0, c.width, c.height);
-  const { data } = ctx.getImageData(0, 0, c.width, c.height); // 다른 출처 이미지를 읽을 수 없으면 여기서 throw
-  const bins = new Map();
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] < 200) continue; // 투명 픽셀 빼고
-    const key = ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4);
-    const b = bins.get(key) || { n: 0, r: 0, g: 0, b: 0 };
-    b.n += 1; b.r += data[i]; b.g += data[i + 1]; b.b += data[i + 2];
-    bins.set(key, b);
-  }
-  const sorted = [...bins.values()].sort((a, b) => b.n - a.n).map((b) => [b.r / b.n, b.g / b.n, b.b / b.n]);
-  const out = [];
-  for (const [r, g, b] of sorted) {
-    if (out.every(([r2, g2, b2]) => Math.hypot(r - r2, g - g2, b - b2) > 48)) out.push([r, g, b]);
-    if (out.length >= 5) break;
-  }
-  if (!out.length) throw new Error('empty');
-  return out.map((rgb) => `#${rgb.map((x) => Math.round(x).toString(16).padStart(2, '0')).join('')}`);
-}
-
-/**
- * 배너 색으로 집 — r 로 색 자리 · 모양을 바꿔 '다시 뽑기'. 벽은 밝게(선이 보이게), 지붕은 또렷하게, 문은 벽과 대비 나게.
- */
-export function houseFromColors(colors, r = Math.random) {
-  const pool = colors.map(toHsl);
-  const order = pool.map((c, i) => [c, i, r()]).sort((a, b) => a[2] - b[2]).map(([c]) => c);
-  const at = (i) => order[i % order.length];
-  const [wh, ws] = at(0);
-  const [rh, rs] = at(1);
-  const [dh, ds] = at(2);
-  const wall = toHex(wh, clamp(ws * 0.6, 8, 60), 86 + r() * 6);
-  const roofColor = toHex(rh, clamp(rs, 25, 70), 58 + r() * 12);
-  let dl = 48 + r() * 14;
-  if (Math.abs(dl - 89) < 25) dl = 50; // 벽과 대비
-  const doorColor = toHex(dh, clamp(ds, 15, 55), dl);
-  const shape = randomHouse(r);
-  return { ...shape, wall, roofColor, doorColor };
 }

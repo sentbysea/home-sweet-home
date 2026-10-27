@@ -303,7 +303,7 @@ const webServer = await startStaticServer(WEB_PORT, {
   },
 });
 const vibeServer = await startStaticServer(VIBE_PORT, { root: ROOT });
-// 다른 출처 · 읽기 허용 헤더 없는 이미지(배너 색을 못 읽는 경우)
+// 다른 출처 · 읽기 허용 헤더 없는 이미지(브라우저가 픽셀을 읽을 수 없는 경우)
 const PLAIN_ORIGIN = `http://127.0.0.1:${VIBE_PORT + 1}`;
 const plainServer = await startStaticServer(VIBE_PORT + 1, { root: path.join(WEB, 'images') });
 
@@ -1132,7 +1132,7 @@ async function archive() {
 // ---------- neighbor — 손그림 마을 ----------
 //   가운데 홍차네 집 + 이웃집(배너 카테고리, 정렬 순서) · 집 모양(저장된 것 / id 로 정한 기본) · 겹치지 않는 배치 · 새로고침해도 같은 배치 ·
 //   둥실거림 · 위글 · 집을 고르면 배너 하나(PC 올리기 · 포커스 · 누르면 새 탭 / 휴대폰 한 번 누르면 배너, 그 배너를 누르면 이동) · 잘리지 않는 자리 ·
-//   우체통 → 배너 교환(내 배너 복사 · 신청 + 우리 집 꾸미기 · 배너 색 · 다시 시도) · 주인(승인하면 그 모양 · 집 고치기 · 내리기 · 걸기) ·
+//   우체통 → 배너 교환(내 배너 복사 · 신청 + 우리 집 꾸미기 · 주사위 · 다시 시도) · 주인(승인하면 그 모양 · 집 고치기 · 내리기 · 걸기) ·
 //   3 · 12 · 30 집 · 모션 줄이기. 모두 흉내 DB — 운영에 쓰지 않는다.
 
 const MY_IMAGE = `https://iokdgqzfprtggsnrusez.supabase.co/storage/v1/object/public/user-banners/${OWNER_ID}/vibe-banner`; // 바이브.me 전용(hongjiwon.love 는 /banner)
@@ -1401,7 +1401,6 @@ async function neighborApply() {
   const D = `${F} [data-diy="apply"]`;
   const err = (n) => page.$eval(`${F} [name="${n}"]`, (i) => i.closest('.nbh-field').querySelector('.nbh-field__err').textContent);
   const msg = () => page.textContent(`${F} .nbh-form__msg`);
-  const diyMsg = () => page.textContent(`${D} .nbh-diy__msg`);
   const chosen = () => page.$eval(D, (d) => d.dataset.spec);
   db.banner_requests.length = 0;
   db.requestCalls = 0;
@@ -1436,8 +1435,12 @@ async function neighborApply() {
   const r2 = await chosen();
   await page.click(`${D} [data-key="door"] [data-v="side"]`);
   check('꾸미기 — 랜덤으로 만들기 · 그 뒤 직접 고치기', r1 !== r2 && (await chosen()).split('/')[3] === 'side', `${r1} → ${r2}`);
-  await page.click(`${D} [data-diy="banner"]`);
-  check('꾸미기 — 배너 이미지 없으면 안내', (await diyMsg()).includes('배너 이미지 주소'));
+  const dice = await page.$eval(D, (d) => {
+    const v = d.querySelector('.nbh-diy__preview').getBoundingClientRect();
+    const b = d.querySelector('[data-diy="random"]').getBoundingClientRect();
+    return { text: d.querySelector('[data-diy="random"]').textContent.trim(), svg: Boolean(d.querySelector('[data-diy="random"] svg')), right: v.right - b.right, bottom: v.bottom - b.bottom, banner: Boolean(d.querySelector('[data-diy="banner"]')) || d.textContent.includes('배너 색') };
+  });
+  check('꾸미기 — 랜덤은 미리보기 오른쪽 아래 주사위(랜덤으로 생성) · 배너 색으로 만들기는 없음', dice.text === '랜덤으로 생성' && dice.svg && dice.right >= 0 && dice.right < 16 && dice.bottom >= 0 && dice.bottom < 16 && !dice.banner, JSON.stringify(dice));
 
   // 두 단계 — 첫 화면은 집 꾸미기만, 다음으로 → 사이트 정보
   const stepNow = () => page.$eval(F, (f) => ({ step: f.dataset.step, house: !f.querySelector('[data-step-pane="house"]').hidden, info: !f.querySelector('[data-step-pane="info"]').hidden }));
@@ -1460,29 +1463,11 @@ async function neighborApply() {
   await page.focus(`${F} [name="message"]`);
   check('신청 — 주소만 적으면 https:// 를 붙여 준다', (await page.inputValue(`${F} [name="url"]`)) === 'https://new-neighbor.example/home');
 
-  // 배너 색 — 읽을 수 없는 배너는 쉬운 말로 안내, 직접 고르기 · 랜덤은 그대로(꾸미기는 첫 단계로 돌아가서)
-  await page.click(`${F} [data-step-go="house"]`);
-  await page.click(`${D} [data-diy="banner"]`);
-  await page.waitForFunction((D) => document.querySelector(`${D} .nbh-diy__msg`).textContent.includes('못했어요'), D, { timeout: 8000 }).catch(() => {});
-  const noColor = await diyMsg();
-  check('배너 색 — 못 읽으면 쉬운 안내(기술 용어 없음)', noColor.includes('가져오지 못했어요') && !/cors|origin|canvas|taint|security/i.test(noColor), noColor);
-  await page.click(`${D} [data-diy="random"]`);
-  check('배너 색 — 못 읽어도 랜덤 · 직접 고르기는 된다', (await chosen()).split('/').length === 9);
-  await page.click(`${F} [data-step-go="info"]`);
+  // 배너 이미지 주소 — 미리보기는 원본 그대로, 꾸미기는 첫 단계로 돌아가서
   await page.fill(`${F} [name="image"]`, 'https://img.test/new.png');
+  check('신청 — 배너 미리보기는 원본 이미지 그대로', (await page.$eval(`${F} .nbh-form__preview img`, (i) => i.getAttribute('src'))) === 'https://img.test/new.png');
   await page.click(`${F} [data-step-go="house"]`);
-  await page.click(`${D} [data-diy="banner"]`);
-  await page.waitForFunction((D) => document.querySelector(`${D} .nbh-diy__msg`).textContent.includes('지었어요'), D, { timeout: 8000 }).catch(() => {});
-  const c1 = await chosen();
-  const walls = await page.$$eval(`${D} [data-key="wall"] [data-v]`, (b) => b.map((x) => x.dataset.v));
-  const l = (hex) => { const n = parseInt(hex.slice(1), 16); return (Math.max(n >> 16, (n >> 8) & 255, n & 255) + Math.min(n >> 16, (n >> 8) & 255, n & 255)) / 5.1; };
-  const [, , , , , , wall, , door] = c1.split('/');
-  check('배너 색 — 배너에서 뽑은 색으로(벽은 밝게 · 문은 벽과 대비)', (await diyMsg()).includes('배너 색으로 지었어요') && walls.length === 9 && l(wall) >= 80 && Math.abs(l(wall) - l(door)) >= 20, JSON.stringify({ c1, walls }));
-  await page.click(`${D} [data-diy="banner"]`);
-  await page.waitForTimeout(150);
-  check('배너 색 — 다시 뽑기 → 같은 색으로 다른 조합', (await chosen()) !== c1 && (await page.textContent(`${D} [data-diy="banner"]`)).includes('다시 뽑기'), `${c1} → ${await chosen()}`);
-  check('배너 색 — 원본 배너 이미지는 그대로', (await page.$eval(`${F} .nbh-form__preview img`, (i) => i.getAttribute('src'))) === 'https://img.test/new.png');
-  const picked = await page.$eval(D, () => null).then(() => chosen());
+  const picked = await chosen();
 
   // 브라우저에 저장 — 새로고침해도 단계 · 칸 · 꾸민 집 그대로
   await page.click(`${F} [data-step-go="info"]`);
