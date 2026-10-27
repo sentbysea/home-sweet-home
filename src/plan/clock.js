@@ -112,8 +112,9 @@ export function mountClock(host) {
   };
 
   // 초가 바뀌는 순간에 맞춰 1초마다 다시 그린다(밀리지 않게 매번 다음 초 경계까지 남은 시간을 잰다)
+  // 방 창이 떠 있는 동안(.hsh-plan.is-paused)은 바늘도 그 자리에 — 닫으면 다음 초에 지금 시각으로
   const tick = () => {
-    paint();
+    if (!host.closest('.is-paused')) paint();
     setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
   };
   tick();

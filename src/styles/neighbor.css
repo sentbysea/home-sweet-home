@@ -37,13 +37,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: max(14px, env(safe-area-inset-top)) 0 0;
+  padding: var(--hsh-top) 0 0; /* 위 줄 자리 — archive 와 같다(base.css) */
 }
 
 /* ← home — 위 줄 구역 왼쪽 끝에 늘(긴 집을 내려가도) */
 .nbh__home {
   position: fixed;
-  top: max(10px, env(safe-area-inset-top));
+  top: var(--hsh-top);
   left: max(8px, env(safe-area-inset-left), calc(50vw - var(--hsh-band)));
   z-index: 3;
   display: inline-flex;
@@ -75,7 +75,7 @@
   --sw-w: 84px;
   --sw-knob: 24px;
   position: fixed;
-  top: max(16px, calc(env(safe-area-inset-top) + 6px)); /* ← home 과 같은 높이(가운데 줄 맞춤) */
+  top: calc(var(--hsh-top) + 6px); /* 위 줄(44px) 가운데 — ← home · 제목과 같은 높이 */
   right: max(12px, env(safe-area-inset-right), calc(50vw - var(--hsh-band))); /* 위 줄 구역 오른쪽 끝 */
   z-index: 3;
   width: var(--sw-w);
@@ -220,9 +220,10 @@
 
 /* 제목 — 영단어(첫 글자 대문자) + 밑줄은 홈 neighbor 버튼 색종이 색(민트). ← home · 보기 스위치와 한 줄 */
 .nbh__title {
-  margin: 2px 0 6px;
+  margin: 0 0 6px;
   font-family: var(--hsh-mono);
   font-size: 26px;
+  line-height: 44px; /* 위 줄 높이 — archive 제목과 같은 자리 */
   font-weight: 400;
   letter-spacing: 0.02em;
   color: var(--hsh-text);

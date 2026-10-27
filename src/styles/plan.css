@@ -198,6 +198,10 @@
   .hsh-plan.is-done .hsh-sticker__body { animation: none; }
 }
 
+/* 방 창이 떠 있는 동안 — 홈 화면 움직임(까딱임 · 커서 깜빡임 …)은 그 자리에 멈춘다(room-window.js 가 붙인다) */
+.hsh-plan.is-paused,
+.hsh-plan.is-paused * { animation-play-state: paused !important; }
+
 /* ---------- 하단 안내 — click the ( ) ---------- */
 
 .hsh-plan__hint {

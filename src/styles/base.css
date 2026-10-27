@@ -63,6 +63,8 @@
      구역 반폭 = 화면의 1/6, 좁아도 200px(구역 400px) — 그보다 좁은 화면(휴대폰)은 양끝까지.
      쓰는 법: left / right: max(가장자리 여백, env(safe-area-inset-*), calc(50vw - var(--hsh-band))) */
   --hsh-band: max(16.67vw, 200px);
+  /* 그 위 줄의 자리 — 화면 위에서 --hsh-top 만큼 내려, 높이 44px 한 줄(← home · 제목 · 오른쪽 버튼 모두 이 줄 가운데에) */
+  --hsh-top: max(28px, calc(env(safe-area-inset-top) + 16px));
 
   /* 손그림 위글 박자 — loader/wobble.js · plan/index.js · archive/keyring.js 가 같은 190ms */
   --hsh-wobble: 190ms;
