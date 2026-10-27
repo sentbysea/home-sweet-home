@@ -14,7 +14,7 @@ import { YOUTH_TONE } from './youth-tone.js';
 // {sel:…} 자리가 고른 글자처럼 보이는 단추
 const BODY = '홍지원은 이제 새로운 {sel:집}을 찾았다. 그 집에 같은 나이의 여자애가 살았다. 스물둘이 되어 기어이 알아보았다. 일어나야 하는 일이었다는 듯이. 고로, 바이바이. 하나와 하나로 존재하던 시간과 아주아주 작별한 채, 영원히 둘이 되어서. 외로움과 괴로움과 영원히 이별하여…….';
 
-const CREDIT = '© 담(@ohmyfilmbonita) All Right Reserved';
+const CREDIT = '© 담(@ohmyfilmbonita)';
 
 const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
