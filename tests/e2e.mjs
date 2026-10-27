@@ -983,6 +983,13 @@ async function archiveCase(device, name) {
   await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
   await page.waitForTimeout(900);
   check(`${name} — /archive 직접 → 로딩 없이 열쇠꾸러미`, at() === '/archive' && !(await page.evaluate(() => window.__loaderSeen)) && (await arcOpen(page)));
+  const top = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const h = document.querySelector('.hsh-arc__home').getBoundingClientRect();
+    const t = getComputedStyle(document.querySelector('.hsh-arc__title'));
+    return { vw, left: h.left, want: Math.max(10, vw / 2 - Math.max(vw / 6, 200)), deco: t.textDecorationColor };
+  });
+  check(`${name} — ← home 은 가운데 1/3 구역 왼쪽 끝(좁으면 가장자리) · 밑줄은 홈 archive 색종이(하늘)`, Math.abs(top.left - top.want) < 3 && top.deco === 'rgb(207, 224, 251)', JSON.stringify(top));
   check(`${name} — 브라우저 창 꼴 팝업은 열리지 않는다`, await page.$eval('.hsh-win', (w) => w.hidden));
   const canvas = await page.$eval('.hsh-arc__canvas', (c) => { const r = c.getBoundingClientRect(); return { w: r.width, h: r.height }; });
   check(`${name} — 꾸러미가 화면 가운데를 크게 차지`, canvas.w >= 300 && canvas.h >= 380, JSON.stringify(canvas));
@@ -1205,7 +1212,7 @@ async function neighborVillage(device, name) {
       line: [getComputedStyle(outer).stroke, parseFloat(getComputedStyle(outer).strokeWidth), parseFloat(getComputedStyle(inner).strokeWidth)],
     };
   });
-  check(`${name} — 제목은 영단어 + 노란 밑줄(색종이 없이)`, look.title.join('|') === 'rgba(0, 0, 0, 0)|underline|rgb(251, 239, 174)|Neighbor', look.title.join('|'));
+  check(`${name} — 제목은 영단어 + 홈 버튼 색종이 색(민트) 밑줄`, look.title.join('|') === 'rgba(0, 0, 0, 0)|underline|rgb(205, 238, 214)|Neighbor', look.title.join('|'));
   check(`${name} — 여백 별(누르기를 막지 않음)`, look.stars >= 8 && look.starsPass === 'none', JSON.stringify(look));
   check(`${name} — 이름표: 화면 안 · 잘리지 않음 · 밑줄 없음`, look.labelsIn, JSON.stringify(look));
   check(`${name} — 선은 홈처럼 부드러운 회색 · 안쪽 선이 더 얇다`, look.line[0] === 'rgb(143, 148, 151)' && look.line[1] < 1.6 && look.line[2] < look.line[1], JSON.stringify(look.line));

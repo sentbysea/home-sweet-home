@@ -59,6 +59,11 @@
   /* 이름표 — 영문은 타자기, 한글은 Pretendard */
   --hsh-label-font: "HSH Type Latin", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
 
+  /* 흰 화면(archive · neighbor · 앞으로 만드는 같은 꼴 화면) 위 줄 — ← home · 제목 · 오른쪽 버튼은 화면 가운데 1/3 구역 양끝에.
+     구역 반폭 = 화면의 1/6, 좁아도 200px(구역 400px) — 그보다 좁은 화면(휴대폰)은 양끝까지.
+     쓰는 법: left / right: max(가장자리 여백, env(safe-area-inset-*), calc(50vw - var(--hsh-band))) */
+  --hsh-band: max(16.67vw, 200px);
+
   /* 손그림 위글 박자 — loader/wobble.js · plan/index.js · archive/keyring.js 가 같은 190ms */
   --hsh-wobble: 190ms;
 }
