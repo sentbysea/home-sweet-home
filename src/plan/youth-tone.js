@@ -1,5 +1,5 @@
-// 자동 생성 — node tools/tone-art.mjs youth (참고 그림 youth-ref.png, 로컬에만). 직접 고치지 않는다.
-//   167×244 칸(그림 5px 마다 한 칸), 4비트(앞 칸이 윗자리): 0 = 배경, classes 의 구간 = 그 부위의 진하기(구간 안 위치).
+// about 의 together — 두 사람 전신(참고 그림 youth-ref.png, 로컬에만)의 밝기 지도. 글자들이 0 이 아닌 칸으로 모인다.
+//   167×244 칸(그림 5px 마다 한 칸), 4비트(앞 칸이 윗자리): 0 = 배경, classes 의 구간 = 진하기. 예전 tools/tone-art.mjs 로 만든 그대로.
 export const YOUTH_TONE = {
   w: 167,
   h: 244,

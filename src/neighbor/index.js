@@ -304,6 +304,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
       document.documentElement.classList.add('hsh-nbh-on');
       village = createVillage($('.nbh__village'), {
         reduced,
+        mine: { href: MY_BANNER.site, image: MY_BANNER.image, label: HOME_NAME },
         onMail: () => openExchange(),
         onEdit: (item, from) => panel.open('house', from, { item }),
         onHouse: (from) => openHouse(from),

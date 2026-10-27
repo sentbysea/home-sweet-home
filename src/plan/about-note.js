@@ -1,19 +1,17 @@
-// about __VE 방 — 위에는 글자 아트(about-art/), 아래는 짧은 글, 맨 끝에 글쓴이(가운데 · 본문보다 살짝 연하게).
+// about __VE 방 — 짧은 글, 맨 끝에 글쓴이(가운데 · 본문보다 살짝 연하게). 마지막 점 뒤에서 커서만 깜빡인다.
 //   Vibe · Echo 카드 두 장은 /pair 로 옮겼다(about.js).
-//   본문 속 네 단어(청소년기 · 프리지아 · 작별 · 집)는 처음부터 마우스로 끌어 고른 것처럼 파란 바탕 · 흰 글씨 —
-//   누르면(클릭 · 터치 · Enter/Space) 위 칸의 글자들이 그 단어의 형상으로 옮겨 간다. 같은 단어를 또 누르면 다시 모인다.
-//   같은 낱말이 여러 번 나오므로 BODY 안에 {형상:낱말} 로 표시한 자리만 단추가 된다(조사는 밖에).
-//   마지막 문장 {type:…} 만 화면에 들어오면 한 글자씩 써진다 — 자리는 처음부터 차지하고(글자색만 투명), 방을 다시 열기 전에는 한 번만.
+//   본문의 '집' 은 휴대폰에서 글자를 고른 것처럼(옅은 파랑 · 양끝 손잡이) — 누르면 위에 말풍선(always | together).
+//     always   → 글 · 글쓴이의 글자들이 집 모양으로 모인다
+//     together → 두 사람 전신(youth-tone.js)으로 모인다
+//   모이는 동안 원래 글은 자리를 지킨 채 숨고, 같은 글자를 위에 띄워(.hsh-ab__fly) 옮긴다 — 글 차례대로 형상의 칸을 위 → 아래, 왼 → 오른으로 채운다.
+//   오른쪽 아래 둥근 단추를 누르면 글자들이 제자리로 돌아간다. 모양 속 '집' 을 눌러도 말풍선이 뜬다.
 //   글 · 글쓴이는 로딩 home sweet home 과 같은 글꼴 — 한글은 이 저장소 글꼴 파일에 없어서 처음 열 때 Google Fonts 에서
 //   같은 글꼴을 다른 이름(HSH Hand KR)으로 불러온다(다른 화면의 한글은 그대로). 못 받으면 Pretendard.
 
-import { mountAboutArt } from '../about-art/index.js';
-import { FIRST } from '../about-art/shapes.js';
+import { YOUTH_TONE } from './youth-tone.js';
 
-const BODY = [
-  '선생님도, 부모님도 없는 곳. 지붕이 없는 강당, 책이 없는 학교. 존재하는 것은 오로지 또래뿐이다. 하나와 하나로서만 존재했던 둘의 지루하고 재미없는 {youth:청소년기} 속에 희미하게 남아 있던 동갑내기를. 우연의 품에 그 애의 눈 색을 닮은 {freesia:프리지아}가 활짝 피어나 있는 순간을, 아주 오래도록 바라보았다. 졸업의 의의는 바이바이에 있었고, 우리는 이미 산뜻한 {farewell:작별}을 배운 뒤였다. 학사모 대신 열두 살과 열세 살의 검정 훈련모가 인공 노을 아래서 자리를 지켰다. 이것은 소년기와의 작별. 집으로 돌아가고 싶었던 오랜 밤들과의 영원한 안녕.',
-  '홍지원은 이제 새로운 {home:집}을 찾았다. 그 집에 같은 나이의 여자애가 살았다. 스물둘이 되어 기어이 알아보았다. 일어나야 하는 일이었다는 듯이. 고로, 바이바이. 하나와 하나로 존재하던 시간과 아주아주 작별한 채, 영원히 둘이 되어서. {type:외로움과 괴로움과 영원히 이별하여…….}',
-];
+// {sel:…} 자리가 고른 글자처럼 보이는 단추
+const BODY = '홍지원은 이제 새로운 {sel:집}을 찾았다. 그 집에 같은 나이의 여자애가 살았다. 스물둘이 되어 기어이 알아보았다. 일어나야 하는 일이었다는 듯이. 고로, 바이바이. 하나와 하나로 존재하던 시간과 아주아주 작별한 채, 영원히 둘이 되어서. 외로움과 괴로움과 영원히 이별하여…….';
 const CREDIT = '© 담(@ohmyfilmbonita) All Right Reserved';
 
 const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -23,170 +21,336 @@ const graphemes = (t) => (typeof Intl !== 'undefined' && Intl.Segmenter
   ? [...new Intl.Segmenter('ko', { granularity: 'grapheme' }).segment(t)].map((s) => s.segment)
   : Array.from(t));
 
+// 글자마다 감싼다(빈칸은 그대로 — 모양에 들지 않는다). 감싼 span 은 inline 이라 줄바꿈은 원래 글 그대로
+const letters = (t) => graphemes(t).map((c) => (/\s/.test(c) ? c : `<span class="hsh-ab__g">${esc(c)}</span>`)).join('');
+
 function paragraph(src) {
-  return src.replace(/\{(\w+):([^}]+)\}|[^{]+/g, (m, key, word) => {
-    if (!key) return esc(m);
-    if (key === 'type') return `<span class="hsh-ab__type">${graphemes(word).map((c) => `<span class="hsh-ab__ch">${esc(c)}</span>`).join('')}</span>`;
-    return `<span class="hsh-ab__word" role="button" tabindex="0" data-art="${key}" aria-controls="hsh-ab-art" aria-pressed="false">${esc(word)}</span>`;
+  return src.replace(/\{sel:([^}]+)\}|[^{]+/g, (m, word) => {
+    if (!word) return letters(m);
+    return `<span class="hsh-ab__sel" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" aria-controls="hsh-ab-menu">` +
+      `${letters(word)}<i class="hsh-ab__knob" aria-hidden="true"></i><i class="hsh-ab__knob is-end" aria-hidden="true"></i></span>`;
   });
 }
 
-/** about 방 안쪽 — 아트 칸 · 글 · 글쓴이 */
+const BACK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15M8 9.5h8M8 12.5h8M8 15.5h5"/></svg>';
+
+/** about 방 안쪽 — 글 · 글쓴이 · 말풍선 · 되돌리기 단추 · 옮겨 다니는 글자 칸 */
 export function aboutNoteMarkup() {
-  return `<div class="hsh-ab__art" id="hsh-ab-art" role="img" aria-label=""></div>` +
-    `<div class="hsh-ab__text">${BODY.map((p) => `<p>${paragraph(p)}</p>`).join('')}<span class="hsh-ab__caret" aria-hidden="true" hidden></span></div>` +
-    `<p class="hsh-ab__credit">${esc(CREDIT)}</p>`;
+  return `<div class="hsh-ab__text"><p>${paragraph(BODY)}<span class="hsh-ab__caret" aria-hidden="true"></span></p></div>` +
+    `<p class="hsh-ab__credit">${letters(CREDIT)}</p>` +
+    `<div class="hsh-ab__fly" aria-hidden="true"></div>` +
+    `<div class="hsh-ab__menu" id="hsh-ab-menu" role="menu" hidden>` +
+    `<button type="button" role="menuitem" data-shape="always">always</button>` +
+    `<button type="button" role="menuitem" data-shape="together">together</button></div>` +
+    `<button class="hsh-ab__back" type="button" aria-label="원래 글로 되돌리기" hidden>${BACK_ICON}</button>`;
 }
 
-// 마지막 문장 — 글자 사이(ms). '이별하여' 뒤에 잠깐 멈추고, '…….' 은 점 하나씩(… 한 글자를 세 번에 나눠 드러낸다 — 글자는 원문 그대로)
-//   시작: 문장이 화면 안에 다 들어오고 스크롤이 멈췄을 때(idle). 방을 연 직후에는 아트가 모일 동안(minStart) 기다린다.
-//   치는 중에 문장이 화면 밖으로 나가면 멈췄다가, 다시 들어오고 스크롤이 멈추면 이어서.
-const TYPE = { first: 300, char: 95, space: 60, pause: 560, dot: 230, blink: 380, blinks: 3, idle: 350, minStart: 1600, margin: 2 };
+// ---------- 형상 — 단위 좌표에서 안에 드나(가로 x0~x1, 세로 y0~y1) ----------
+
+// 집 — 삼각 지붕 · 굴뚝 · 벽, 둥근 문과 창 둘은 비운다
+const house = {
+  x0: -38, x1: 38, y0: 18, y1: 96,
+  inside(u, v) {
+    const door = Math.abs(u) <= 6 && v >= 73 && (v >= 79 || (u / 6) ** 2 + ((v - 79) / 6) ** 2 <= 1);
+    const window = v >= 64 && v <= 80 && Math.abs(u) >= 11 && Math.abs(u) <= 22;
+    if (door || window) return false;
+    if (Math.abs(u) <= 28 && v >= 52 && v <= 96) return true; // 벽
+    if (v >= 18 && v <= 54 && Math.abs(u) <= ((v - 18) * 38) / 36) return true; // 지붕
+    return (u >= 14 && u <= 22 && v >= 30 && v <= 46) || (u >= 12.8 && u <= 23.2 && v >= 27 && v <= 31); // 굴뚝
+  },
+};
+
+// 두 사람 — 밝기 지도에서 배경(0)이 아닌 곳
+const toneBytes = Uint8Array.from(atob(YOUTH_TONE.data), (c) => c.charCodeAt(0));
+const pair = {
+  x0: YOUTH_TONE.x0, x1: YOUTH_TONE.x1, y0: YOUTH_TONE.y0, y1: YOUTH_TONE.y1,
+  inside(u, v) {
+    const t = YOUTH_TONE;
+    const x = Math.floor(((u - t.x0) / (t.x1 - t.x0)) * t.w);
+    const y = Math.floor(((v - t.y0) / (t.y1 - t.y0)) * t.h);
+    if (x < 0 || y < 0 || x >= t.w || y >= t.h) return false;
+    const i = y * t.w + x;
+    return (i % 2 ? toneBytes[i >> 1] & 15 : toneBytes[i >> 1] >> 4) > 0;
+  },
+};
+
+const SHAPES = { always: house, together: pair };
+
+const STEP = 2.5; // 윤곽을 찾는 격자(px)
 
 /**
- * about 방이 열려 있는 동안 — 아트 · 단어 단추 · 마지막 문장. 방을 닫으면 close() 로 전부 정리.
+ * 형상을 box 안에 맞춰 놓고, 그 윤곽(바깥 테두리 · 문 · 창 같은 구멍의 테두리)을 따라 글자 n 개를 고른 간격으로 놓는다 —
+ *   글자 수가 적어서 속을 채우면 뭉개지지만, 선으로 그리면 또렷하다.
+ * @returns {{ cells: {x:number, y:number}[], gap: number }}  글자 가운데(px, box 와 같은 좌표계) · 글자 사이
+ */
+function cellsFor(shape, box, n) {
+  const k = Math.min(box.w / (shape.x1 - shape.x0), box.h / (shape.y1 - shape.y0)) * 0.94;
+  const W = (shape.x1 - shape.x0) * k;
+  const H = (shape.y1 - shape.y0) * k;
+  const left = box.x + (box.w - W) / 2;
+  const top = box.y + (box.h - H) / 2;
+  // 윤곽 — 안쪽 점 가운데 위아래 · 양옆 중 하나라도 바깥인 점(위 → 아래, 왼 → 오른 차례)
+  const cols = Math.ceil(W / STEP) + 2;
+  const rows = Math.ceil(H / STEP) + 2;
+  const at = (c, r) => shape.inside(shape.x0 + ((c - 1) * STEP) / k, shape.y0 + ((r - 1) * STEP) / k);
+  const mask = new Uint8Array(cols * rows);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) mask[r * cols + c] = at(c, r) ? 1 : 0;
+  const edge = [];
+  for (let r = 1; r < rows - 1; r++) {
+    for (let c = 1; c < cols - 1; c++) {
+      const i = r * cols + c;
+      if (mask[i] && (!mask[i - 1] || !mask[i + 1] || !mask[i - cols] || !mask[i + cols])) edge.push({ x: left + (c - 1) * STEP, y: top + (r - 1) * STEP });
+    }
+  }
+  // 서로 gap 보다 가까운 점은 버린다 — n 개 이상 남는 가장 넓은 gap
+  const spread = (gap) => {
+    const cell = new Map();
+    const key = (x, y) => `${Math.floor(x / gap)},${Math.floor(y / gap)}`;
+    const out = [];
+    for (const p of edge) {
+      const gx = Math.floor(p.x / gap);
+      const gy = Math.floor(p.y / gap);
+      let near = false;
+      for (let dy = -1; dy <= 1 && !near; dy++) {
+        for (let dx = -1; dx <= 1 && !near; dx++) {
+          for (const q of cell.get(`${gx + dx},${gy + dy}`) || []) if ((q.x - p.x) ** 2 + (q.y - p.y) ** 2 < gap * gap) { near = true; break; }
+        }
+      }
+      if (near) continue;
+      out.push(p);
+      const kk = key(p.x, p.y);
+      (cell.get(kk) || cell.set(kk, []).get(kk)).push(p);
+    }
+    return out;
+  };
+  let lo = STEP;
+  let hi = Math.max(W, H) / 2;
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (spread(mid).length >= n) lo = mid;
+    else hi = mid;
+  }
+  let cells = spread(lo);
+  const extra = cells.length - n;
+  if (extra > 0) cells = cells.filter((_, i) => Math.floor(((i + 1) * extra) / (n + extra)) === Math.floor((i * extra) / (n + extra)));
+  return { cells, gap: lo };
+}
+
+const MOVE = { dur: 950, stagger: 380, jitter: 140 }; // 글자 하나가 옮겨 가는 시간 · 차례가 벌어지는 폭 · 흔들림(ms)
+
+/**
+ * about 방이 열려 있는 동안 — '집' 말풍선 · 모양 바꾸기. 방을 닫으면 close() 로 원래 글로 되돌리고 정리.
  * @param {HTMLElement} root  .hsh-ab
- * @param {{ reduced?: boolean, scroller?: HTMLElement }} opts
+ * @param {{ reduced?: boolean, scroller?: HTMLElement }} opts  scroller — 글이 들어 있는 스크롤 칸(말풍선이 넘치는지 볼 때)
  */
 export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
-  const stage = root.querySelector('.hsh-ab__art');
-  const words = [...root.querySelectorAll('.hsh-ab__word')];
-  const art = mountAboutArt(stage, { reduced });
-  const timers = new Set();
-  const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); };
+  const text = root.querySelector('.hsh-ab__text');
+  const credit = root.querySelector('.hsh-ab__credit');
+  const sel = root.querySelector('.hsh-ab__sel');
+  const fly = root.querySelector('.hsh-ab__fly');
+  const menu = root.querySelector('.hsh-ab__menu');
+  const back = root.querySelector('.hsh-ab__back');
+  const glyphs = [...root.querySelectorAll('.hsh-ab__g')];
+  const selGlyphs = new Set(sel.querySelectorAll('.hsh-ab__g'));
 
-  const press = (name) => words.forEach((w) => w.setAttribute('aria-pressed', String(w.dataset.art === name)));
-  press(FIRST);
-  art.start(FIRST);
+  let shape = null; // 지금 모양(always · together), 원래 글이면 null
+  let flies = []; // 띄운 글자 — glyphs 와 같은 차례
+  let homeTimer = 0;
 
-  // 아래쪽 단어를 눌렀는데 아트가 화면 밖이면 — 아트가 보이는 자리로 부드럽게
-  const reveal = () => {
-    const box = (scroller || document.documentElement).getBoundingClientRect();
-    const r = stage.getBoundingClientRect();
-    const top = scroller ? box.top : 0;
-    const bottom = scroller ? box.bottom : innerHeight;
-    if (r.top >= top - 4 && r.top + r.height * 0.6 <= bottom) return;
-    if (scroller) scroller.scrollBy({ top: r.top - top - 8, behavior: reduced ? 'auto' : 'smooth' });
-    else stage.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' });
+  // ---------- 띄운 글자 ----------
+
+  // 원래 글자 자리(root 기준)
+  const measure = () => {
+    const base = root.getBoundingClientRect();
+    return glyphs.map((g) => {
+      const r = g.getBoundingClientRect();
+      return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
+    });
   };
-  const pick = (w) => {
-    press(w.dataset.art);
-    art.go(w.dataset.art);
-    reveal();
+  // 글 · 글쓴이가 차지한 칸 — 모양은 이 안에
+  const area = () => {
+    const base = root.getBoundingClientRect();
+    const a = text.getBoundingClientRect();
+    const b = credit.getBoundingClientRect();
+    const x0 = Math.min(a.left, b.left) - base.left;
+    const y0 = a.top - base.top;
+    return { x: x0, y: y0, w: Math.max(a.right, b.right) - base.left - x0, h: b.bottom - base.top - y0 };
   };
+
+  const spawn = () => {
+    const homes = measure();
+    flies = glyphs.map((g, i) => {
+      const cs = getComputedStyle(g);
+      const el = document.createElement('span');
+      el.className = `hsh-ab__f${selGlyphs.has(g) ? ' is-sel' : ''}`;
+      el.textContent = g.textContent;
+      Object.assign(el.style, { fontSize: cs.fontSize, color: cs.color, lineHeight: `${homes[i].h}px` });
+      el.style.setProperty('--delay', `${Math.round((i / glyphs.length) * MOVE.stagger + Math.random() * MOVE.jitter)}ms`);
+      fly.append(el);
+      return { el, home: homes[i] };
+    });
+    place(homes);
+    root.classList.add('is-shaped');
+  };
+  // 원래 자리에 놓는다(transform 은 그대로 — 모양 자리는 transform 으로)
+  const place = (homes) => flies.forEach((f, i) => {
+    f.home = homes[i];
+    Object.assign(f.el.style, { left: `${f.home.x}px`, top: `${f.home.y}px`, width: `${f.home.w}px`, height: `${f.home.h}px` });
+  });
+  // 모양 자리로 — 글 차례대로 칸을 채운다
+  const target = () => {
+    const box = area();
+    const { cells, gap } = cellsFor(SHAPES[shape], box, flies.length);
+    flies.forEach((f, i) => {
+      const c = cells[i] || cells[cells.length - 1];
+      const dx = c.x - (f.home.x + f.home.w / 2);
+      const dy = c.y - (f.home.y + f.home.h / 2);
+      const s = Math.min(1, (gap * 1.05) / Math.max(f.home.w, f.home.h * 0.8));
+      f.el.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${s.toFixed(3)})`;
+    });
+    // 되돌리기 단추 — 모양 칸 오른쪽 아래 모서리 안
+    back.style.left = `${box.x + box.w - 40}px`;
+    back.style.top = `${box.y + box.h - 40}px`;
+  };
+  // 띄운 글자를 다 지우고 원래 글로
+  const settle = () => {
+    clearTimeout(homeTimer);
+    homeTimer = 0;
+    fly.replaceChildren();
+    flies = [];
+    root.classList.remove('is-shaped', 'is-moving');
+  };
+  const maxMove = MOVE.dur + MOVE.stagger + MOVE.jitter;
+
+  const become = (name) => {
+    closeMenu();
+    if (name === shape) return;
+    clearTimeout(homeTimer);
+    homeTimer = 0;
+    if (!flies.length) {
+      spawn();
+      fly.getBoundingClientRect(); // 원래 자리를 먼저 그려 두고 옮긴다(transition 이 걸리게)
+    }
+    shape = name;
+    root.dataset.shape = name;
+    root.classList.toggle('is-moving', !reduced);
+    target();
+    back.hidden = false;
+  };
+  const goHome = () => {
+    closeMenu();
+    if (!shape) return;
+    shape = null;
+    delete root.dataset.shape;
+    back.hidden = true;
+    if (reduced) { settle(); return; }
+    root.classList.add('is-moving');
+    flies.forEach((f) => { f.el.style.transform = ''; });
+    homeTimer = setTimeout(settle, maxMove + 60);
+    sel.focus({ preventScroll: true });
+  };
+
+  // 칸 크기가 바뀌면 — 원래 자리를 다시 재고 모양도 새 칸에 맞춰 바로(옮기는 중이 아니면 transition 없이)
+  const ro = new ResizeObserver(() => {
+    if (!flies.length) return;
+    root.classList.remove('is-moving');
+    place(measure());
+    if (shape) target();
+  });
+  ro.observe(root);
+
+  // ---------- 말풍선 ----------
+
+  // 말풍선은 열 때 창 틀(.hsh-win__frame)로 옮겨 붙인다 — 첫 줄의 '집' 위로도(스크롤 칸 밖, 제목 쪽에) 뜨게. 닫으면 제자리로
+  const layer = root.closest('.hsh-win__frame') || root;
+  let anchor = null;
+  const openMenu = (from) => {
+    anchor = from;
+    layer.append(menu);
+    menu.hidden = false;
+    sel.setAttribute('aria-expanded', 'true');
+    const base = layer.getBoundingClientRect();
+    const r = from.getBoundingClientRect();
+    const mid = r.left + r.width / 2 - base.left;
+    const w = menu.offsetWidth;
+    const left = Math.max(6, Math.min(layer.clientWidth - w - 6, mid - w / 2));
+    // 위에 — 창 위로 넘치면 아래에
+    const below = r.top - menu.offsetHeight - 12 < Math.max(0, base.top);
+    menu.classList.toggle('is-below', below);
+    menu.style.left = `${left}px`;
+    menu.style.top = `${below ? r.bottom - base.top + 12 : r.top - base.top - menu.offsetHeight - 12}px`;
+    menu.style.setProperty('--arrow', `${mid - left}px`);
+  };
+  function closeMenu() {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    root.append(menu);
+    sel.setAttribute('aria-expanded', 'false');
+    anchor = null;
+  }
+
   const onClick = (e) => {
-    const w = e.target.closest('.hsh-ab__word');
-    if (w) pick(w);
+    const item = e.target.closest('.hsh-ab__menu [data-shape]');
+    if (item) { become(item.dataset.shape); return; }
+    if (e.target.closest('.hsh-ab__back')) { goHome(); return; }
+    const from = e.target.closest('.hsh-ab__sel, .hsh-ab__f.is-sel');
+    if (from) {
+      if (anchor) closeMenu();
+      else openMenu(from.classList.contains('is-sel') ? from : sel);
+      return;
+    }
+    if (!e.target.closest('.hsh-ab__menu')) closeMenu();
   };
   const onKey = (e) => {
-    const w = e.target.closest('.hsh-ab__word');
-    if (!w || (e.key !== 'Enter' && e.key !== ' ')) return;
-    e.preventDefault(); // Space 로 칸이 스크롤되지 않게
-    if (!e.repeat) pick(w);
+    if (e.key === 'Escape' && !menu.hidden) {
+      e.stopPropagation(); // 창은 닫지 않고 말풍선만
+      closeMenu();
+      sel.focus();
+      return;
+    }
+    if (e.target === sel && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault(); // Space 로 칸이 스크롤되지 않게
+      if (e.repeat) return;
+      if (anchor) closeMenu();
+      else {
+        openMenu(sel);
+        menu.querySelector('[data-shape]').focus();
+      }
+      return;
+    }
+    // 말풍선 안 — 왼쪽 · 오른쪽 화살표로 옮겨 다닌다
+    const item = e.target.closest('.hsh-ab__menu [data-shape]');
+    if (item && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      const items = [...menu.querySelectorAll('[data-shape]')];
+      items[(items.indexOf(item) + (e.key === 'ArrowRight' ? 1 : items.length - 1)) % items.length].focus();
+    }
   };
+  // 바깥을 누르거나 글을 스크롤하면 말풍선만 닫힌다
+  const onOutside = (e) => { if (!root.contains(e.target) && !menu.contains(e.target)) closeMenu(); };
+  const onScroll = () => closeMenu();
   root.addEventListener('click', onClick);
   root.addEventListener('keydown', onKey);
-
-  // ---------- 마지막 문장 타자 ----------
-  const text = root.querySelector('.hsh-ab__text');
-  const chars = [...root.querySelectorAll('.hsh-ab__ch')];
-  const caret = root.querySelector('.hsh-ab__caret');
-  const sentence = root.querySelector('.hsh-ab__type');
-  // 캐럿은 드러난 만큼(frac)의 오른쪽 끝에
-  const putCaret = (ch, frac = 1) => {
-    const t = text.getBoundingClientRect();
-    const r = ch.getBoundingClientRect();
-    caret.style.left = `${r.left + r.width * frac - t.left}px`;
-    caret.style.top = `${r.top - t.top}px`;
-    caret.style.height = `${r.height}px`;
-  };
-  const show = (ch, frac) => {
-    ch.style.setProperty('--reveal', String(frac));
-    ch.classList.add('is-on');
-  };
-  // 한 번에 하나씩 드러낼 것 [글자, 드러낼 비율, 앞에서 기다릴 ms] — '…' 는 점 셋으로 나눈다
-  const steps = [];
-  chars.forEach((ch, i) => {
-    const c = ch.textContent;
-    const prev = chars[i - 1]?.textContent;
-    const dotty = c === '…' || c === '.';
-    const wait = i === 0 ? TYPE.first : dotty ? (prev === '…' || prev === '.' ? TYPE.dot : TYPE.pause) : c === ' ' ? TYPE.space : TYPE.char;
-    if (c === '…') [1 / 3, 2 / 3, 1].forEach((f, k) => steps.push([ch, f, k ? TYPE.dot : wait]));
-    else steps.push([ch, 1, wait]);
-  });
-
-  // 문장이 스크롤 칸(없으면 화면) 안에 다 들어와 있나
-  const inView = () => {
-    const r = sentence.getBoundingClientRect();
-    const b = scroller ? scroller.getBoundingClientRect() : { top: 0, bottom: innerHeight };
-    return r.height > 0 && r.top >= b.top && r.bottom <= b.bottom - TYPE.margin;
-  };
-  const opened = performance.now();
-  let lastScroll = 0;
-  let next = 0; // 다음에 드러낼 steps 번호
-  let paused = true; // 시작 전 · 화면 밖이라 멈춤
-  let done = false;
-  let checkTimer = 0;
-  const finish = () => {
-    done = true;
-    stopWatching();
-    // 다 쓰면 커서가 두세 번 깜빡이고 사라진다(문장은 그대로)
-    for (let b = 0; b < TYPE.blinks * 2; b++) later(() => caret.classList.toggle('is-off'), TYPE.blink * (b + 1));
-    later(() => { caret.hidden = true; }, TYPE.blink * (TYPE.blinks * 2 + 1));
-  };
-  const run = () => {
-    if (next >= steps.length) { finish(); return; }
-    if (!inView()) { paused = true; return; } // 화면 밖으로 내려갔다 — 돌아오면 이어서
-    const [ch, frac] = steps[next++];
-    show(ch, frac);
-    putCaret(ch, frac);
-    later(run, next < steps.length ? steps[next][2] : 0);
-  };
-  // 스크롤이 멈추고 문장이 다 보이면 시작(또는 이어서)
-  const check = () => {
-    clearTimeout(checkTimer);
-    if (done || !paused) return;
-    const now = performance.now();
-    const wait = Math.max(opened + TYPE.minStart - now, lastScroll + TYPE.idle - now);
-    if (wait > 0) { checkTimer = setTimeout(check, wait); return; }
-    if (!inView()) return;
-    paused = false;
-    caret.hidden = false;
-    caret.classList.remove('is-off');
-    if (next === 0) {
-      putCaret(chars[0], 0);
-      later(run, steps[0][2]);
-    } else run();
-  };
-  const onScroll = () => {
-    lastScroll = performance.now();
-    if (paused) { clearTimeout(checkTimer); checkTimer = setTimeout(check, TYPE.idle); }
-  };
-  const scrollTarget = scroller || window;
-  const stopWatching = () => {
-    clearTimeout(checkTimer);
-    scrollTarget.removeEventListener('scroll', onScroll);
-  };
-  if (reduced) {
-    done = true;
-    chars.forEach((c) => show(c, 1));
-  } else {
-    scrollTarget.addEventListener('scroll', onScroll, { passive: true });
-    check();
-  }
+  menu.addEventListener('click', onClick);
+  menu.addEventListener('keydown', onKey);
+  document.addEventListener('pointerdown', onOutside);
+  scroller?.addEventListener('scroll', onScroll, { passive: true });
 
   return {
     close() {
-      art.stop();
-      stopWatching();
-      timers.forEach(clearTimeout);
-      timers.clear();
+      ro.disconnect();
       root.removeEventListener('click', onClick);
       root.removeEventListener('keydown', onKey);
-      // 다시 열면 처음부터 — 문장은 다시 비워 두고 커서는 숨긴다
-      chars.forEach((c) => { c.classList.remove('is-on'); c.style.removeProperty('--reveal'); });
-      caret.hidden = true;
-      press(null);
+      menu.removeEventListener('click', onClick);
+      menu.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onOutside);
+      scroller?.removeEventListener('scroll', onScroll);
+      closeMenu();
+      // 다시 열면 원래 글부터
+      shape = null;
+      delete root.dataset.shape;
+      back.hidden = true;
+      settle();
     },
   };
 }
