@@ -527,7 +527,9 @@
 .hsh-ab[hidden] { display: none; }
 /* about 글은 둥근 상자(.hsh-win__page 테두리) 없이 창 몸통에 바로 */
 .hsh-win.is-about .hsh-win__page { border: 0; border-radius: 0; overflow: visible; } /* 스크롤바가 상자 밖(창 오른쪽 끝)에 */
-.hsh-win.is-about .hsh-ab { padding: 14px 4px 26px; }
+/* 글 덩어리('집' 손잡이 점 위끝 ~ 글쓴이 줄 아래끝)가 창 안에서 위아래 가운데 — 머리를 숨기면 위 기준선이 달라 위 여백만 따로 */
+.hsh-win.is-about .hsh-ab { padding: 24px 4px 16px; }
+.hsh-win.is-about.is-headless .hsh-ab { padding-top: 21px; }
 /* about 스크롤바 — 가운데 회색 길 없이 알약만, 창 오른쪽 끝에 붙여(몸통 안쪽 여백만큼 밖으로) */
 .hsh-win.is-about .hsh-win__rail { right: -18px; background: none; }
 /* 마지막 점 뒤 — 커서만 깜빡인다 */

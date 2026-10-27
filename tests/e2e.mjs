@@ -2103,6 +2103,22 @@ async function heads() {
   await o.page.setViewportSize({ width: 390, height: 520 });
   await o.page.waitForTimeout(400);
   check('about — 글은 홍지원은~부터 · 고른 글자는 집 · 마지막 점 뒤 커서만 깜빡', ab.text.startsWith('홍지원은 이제 새로운 집을') && !ab.text.includes('선생님도') && ab.text.endsWith('이별하여…….') && ab.sel === '집' && ab.caret === 'hsh-ab-blink', JSON.stringify(ab));
+  // 파란 손잡이 점 위끝 ~ 글쓴이 줄 아래끝을 한 덩어리로 — 창 안에서 위아래 가운데(머리 있을 때 · 숨겼을 때 둘 다)
+  const gaps = () => o.page.evaluate(() => {
+    const win = document.querySelector('.hsh-win');
+    const body = document.querySelector('.hsh-win__body').getBoundingClientRect();
+    const head = document.querySelector('.hsh-win__head');
+    const top = win.classList.contains('is-headless') ? body.top : head.getBoundingClientRect().bottom;
+    const knob = document.querySelector('.hsh-ab__knob');
+    const dot = knob.getBoundingClientRect().top + parseFloat(getComputedStyle(knob, '::after').top);
+    const credit = document.querySelector('.hsh-ab__credit').getBoundingClientRect().bottom;
+    return { top: +(dot - top).toFixed(1), bottom: +(body.bottom - credit).toFixed(1) };
+  });
+  const gHead = await gaps();
+  await o.page.evaluate(() => document.querySelector('.hsh-win').classList.add('is-headless'));
+  const gBare = await gaps();
+  await o.page.evaluate(() => document.querySelector('.hsh-win').classList.remove('is-headless'));
+  check('about — 손잡이 점 ~ 글쓴이 줄이 위아래 가운데(머리 있을 때 · 없을 때)', Math.abs(gHead.top - gHead.bottom) <= 2 && Math.abs(gBare.top - gBare.bottom) <= 2, JSON.stringify({ gHead, gBare }));
   check('about — 글쓴이 줄은 보이고 모양에는 들지 않음', ab.credit === '© 담(@ohmyfilmbonita)' && !ab.creditInShape, JSON.stringify(ab));
   await o.page.waitForTimeout(800); // 한글 글꼴(Google Fonts)이 오도록
   await o.page.screenshot({ path: path.join(OUT, 'heads-about.png') });
