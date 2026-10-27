@@ -2081,6 +2081,8 @@ async function heads() {
     return {
       railShown: !rail.hidden,
       text: document.querySelector('.hsh-ab__text').textContent,
+      credit: document.querySelector('.hsh-ab__credit')?.textContent,
+      creditInShape: Boolean(document.querySelector('.hsh-ab__credit .hsh-ab__g')),
       sel: document.querySelector('.hsh-ab__sel')?.textContent,
       caret: getComputedStyle(document.querySelector('.hsh-ab__caret')).animationName,
       font: getComputedStyle(document.querySelector('.hsh-ab__text')).fontFamily,
@@ -2101,6 +2103,7 @@ async function heads() {
   await o.page.setViewportSize({ width: 390, height: 520 });
   await o.page.waitForTimeout(400);
   check('about — 글은 홍지원은~부터 · 고른 글자는 집 · 마지막 점 뒤 커서만 깜빡', ab.text.startsWith('홍지원은 이제 새로운 집을') && !ab.text.includes('선생님도') && ab.text.endsWith('이별하여…….') && ab.sel === '집' && ab.caret === 'hsh-ab-blink', JSON.stringify(ab));
+  check('about — 글쓴이 줄은 보이고 모양에는 들지 않음', ab.credit === '© 담(@ohmyfilmbonita) All Right Reserved' && !ab.creditInShape, JSON.stringify(ab));
   await o.page.waitForTimeout(800); // 한글 글꼴(Google Fonts)이 오도록
   await o.page.screenshot({ path: path.join(OUT, 'heads-about.png') });
   check('about — 글은 로딩 글꼴(Nanum Gothic Coding) · 줄간격 1.8', ab.font.includes('HSH Hand KR') && ab.font.includes('Nanum Gothic Coding') && Math.abs(ab.lh - 1.8) < 0.01, JSON.stringify(ab));
@@ -2139,7 +2142,7 @@ async function heads() {
   await o.page.waitForTimeout(1700);
   sh = await shapeLook();
   await o.page.screenshot({ path: path.join(OUT, 'heads-about-together.png') });
-  check('about — 모양 속 집 → together: 두 사람으로', sh.shape === 'together' && sh.flies === sh.glyphs && sh.back, JSON.stringify(sh));
+  check('about — 모양 속 집 → together: 두 사람으로(창 안에 스크롤 없이)', sh.shape === 'together' && sh.flies === sh.glyphs && sh.back && sh.fits, JSON.stringify(sh));
   await o.page.click('.hsh-ab__back');
   await o.page.waitForTimeout(1800);
   sh = await shapeLook();

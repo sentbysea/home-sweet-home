@@ -1,17 +1,20 @@
-// about __VE 방 — 짧은 글. 마지막 점 뒤에서 커서만 깜빡인다.
+// about __VE 방 — 짧은 글, 맨 끝에 글쓴이(가운데 · 본문보다 살짝 연하게). 마지막 점 뒤에서 커서만 깜빡인다.
+//   글쓴이 줄은 모양에 들지 않는다 — 본문 글자만 모양으로 옮겨 가고, 그동안 글쓴이 줄은 본문과 같이 숨는다.
 //   Vibe · Echo 카드 두 장은 /pair 로 옮겼다(about.js).
 //   본문의 '집' 은 휴대폰에서 글자를 고른 것처럼(옅은 파랑 · 양끝 손잡이) — 누르면 위에 말풍선(always | together).
 //     always   → 글자들이 집 외곽선을 따라 늘어선다(창의 보이는 높이 안에 — 스크롤 없이)
-//     together → 두 사람 전신(youth-tone.js)으로 모인다
+//     together → 두 사람 전신(youth-tone.js)으로 모인다(집과 같은 크기 — 창의 보이는 높이까지)
 //   모이는 동안 원래 글은 자리를 지킨 채 숨고, 같은 글자를 위에 띄워(.hsh-ab__fly) 옮긴다 — 글 차례대로 형상의 칸을 위 → 아래, 왼 → 오른으로 채운다.
 //   오른쪽 아래 둥근 단추를 누르면 글자들이 제자리로 돌아간다. 모양 속 '집' 을 눌러도 말풍선이 뜬다.
-//   글은 로딩 home sweet home 과 같은 글꼴 — 한글은 이 저장소 글꼴 파일에 없어서 처음 열 때 Google Fonts 에서
+//   글 · 글쓴이는 로딩 home sweet home 과 같은 글꼴 — 한글은 이 저장소 글꼴 파일에 없어서 처음 열 때 Google Fonts 에서
 //   같은 글꼴을 다른 이름(HSH Hand KR)으로 불러온다(다른 화면의 한글은 그대로). 못 받으면 Pretendard.
 
 import { YOUTH_TONE } from './youth-tone.js';
 
 // {sel:…} 자리가 고른 글자처럼 보이는 단추
 const BODY = '홍지원은 이제 새로운 {sel:집}을 찾았다. 그 집에 같은 나이의 여자애가 살았다. 스물둘이 되어 기어이 알아보았다. 일어나야 하는 일이었다는 듯이. 고로, 바이바이. 하나와 하나로 존재하던 시간과 아주아주 작별한 채, 영원히 둘이 되어서. 외로움과 괴로움과 영원히 이별하여…….';
+
+const CREDIT = '© 담(@ohmyfilmbonita) All Right Reserved';
 
 const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -33,9 +36,10 @@ function paragraph(src) {
 
 const BACK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15M8 9.5h8M8 12.5h8M8 15.5h5"/></svg>';
 
-/** about 방 안쪽 — 글 · 말풍선 · 되돌리기 단추 · 옮겨 다니는 글자 칸 */
+/** about 방 안쪽 — 글 · 글쓴이 · 말풍선 · 되돌리기 단추 · 옮겨 다니는 글자 칸 */
 export function aboutNoteMarkup() {
   return `<div class="hsh-ab__text"><p>${paragraph(BODY)}<span class="hsh-ab__caret" aria-hidden="true"></span></p></div>` +
+    `<p class="hsh-ab__credit">${esc(CREDIT)}</p>` +
     `<div class="hsh-ab__fly" aria-hidden="true"></div>` +
     `<div class="hsh-ab__menu" id="hsh-ab-menu" role="menu" hidden>` +
     `<button type="button" role="menuitem" data-shape="always">always</button>` +
@@ -217,8 +221,8 @@ export function openAboutNote(root, { reduced = false, scroller = null, onLayout
   const target = () => {
     const box = area();
     const sh = SHAPES[shape];
-    // 외곽선(집)은 글 칸보다 크게 — 너비에 맞춘 높이까지, 다만 창의 보이는 높이를 넘지 않게(스크롤 없이 한눈에). 글자가 커지게
-    if (sh.outline) box.h = Math.max(box.h, Math.min((box.w / (sh.x1 - sh.x0)) * (sh.y1 - sh.y0), visible()));
+    // 집 · 두 사람 모두 글 칸보다 크게 — 너비에 맞춘 높이까지, 다만 창의 보이는 높이를 넘지 않게(스크롤 없이 한눈에). 글자가 커지게
+    box.h = Math.max(box.h, Math.min((box.w / (sh.x1 - sh.x0)) * (sh.y1 - sh.y0), visible()));
     const { cells, gap } = cellsFor(sh, box, flies.length);
     flies.forEach((f, i) => {
       const c = cells[i] || cells[cells.length - 1];
