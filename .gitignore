@@ -3,3 +3,6 @@ node_modules/
 Thumbs.db
 *.log
 tests/out/
+
+# 글자 아트의 참고 그림(청소년기 · 프리지아) — tools/tone-art.mjs 로 밝기 지도만 만들고 원본은 저장소에 올리지 않는다
+src/images/*-ref.*

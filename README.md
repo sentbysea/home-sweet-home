@@ -72,7 +72,7 @@ ready.resolve();
 | 주소 | 화면 |
 | --- | --- |
 | `/` | 홈(창 없음) |
-| `/about` `/teatime` `/notice` | 방 버튼 창(about __VE — 아스키 집 · 짧은 글 · teatime? · notice) |
+| `/about` `/teatime` `/notice` | 방 버튼 창(about __VE — 글자 아트 · 짧은 글 · teatime? · notice) |
 | `/neighbor` | 이웃 마을(창 대신 아이보리 화면 — 아래 "neighbor") |
 | `/archive` | 열쇠꾸러미(창 대신 아이보리 화면 — 아래 "archive") |
 | `/neighbor/banner` | neighbor 우체통의 배너 교환 패널(입주 신청 · 주인은 받은 신청) |

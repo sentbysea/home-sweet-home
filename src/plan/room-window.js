@@ -5,7 +5,7 @@
 //   선은 모두 로딩 화면 집 윤곽과 같은 얇은 회색.
 //   뒤의 홈 화면은 반투명 덮개로 살짝 가리고, 창이 떠 있는 동안 홈 화면 움직임은 멈춘다(.hsh-plan.is-paused). 닫기: ×, 덮개 누르기, Esc.
 //   주소창: 지금 사이트 주소 / 방 이름. 하트: 누르면 채워지고 이 브라우저에 기억한다(방마다).
-//   about __VE 방은 아스키 집 · 짧은 글(about-note.js), Vibe · Echo 카드 두 장(about.js)은 /pair.
+//   about __VE 방은 글자 아트 · 짧은 글(about-note.js — 열려 있는 동안만 움직이고 떠나면 정리), Vibe · Echo 카드 두 장(about.js)은 /pair.
 //   버튼에 data-category(hongjiwon.love 카테고리 id 또는 slug)가 있으면 그 카테고리의 글 · 갤러리 · 메모 창
 //   (content/viewer.js). 목록 → 폴더 → 글로 갈 때마다 창 기록을 한 칸씩 쌓는다 — < > · 휴대폰 뒤로 가기가 그대로 오간다.
 //   화면마다 주소가 있다(routes.js) — 직접 들어오거나 새로고침해도 그 창이 열리고, 닫으면(×) 홈(/)으로 돌아간다.
@@ -14,7 +14,7 @@
 //   창 머리(사진 · 제목 · 검정 알약)는 주인만 보이는 오른쪽 위 edit 로 방마다 고친다 — 머리를 아예 숨길 수도(room-heads.js).
 
 import { mountAbout } from './about.js';
-import { aboutNoteMarkup, loadAboutFont } from './about-note.js';
+import { aboutNoteMarkup, openAboutNote, loadAboutFont } from './about-note.js';
 import { mountContent } from '../content/viewer.js';
 import { fetchPost } from '../content/data.js';
 import { getClient, ownerSession, hasSavedLogin, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
@@ -323,6 +323,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
   const abBox = win.querySelector('.hsh-ab');
+  let aboutNote = null; // about 이 열려 있는 동안 — 아트 · 단어 · 마지막 문장(떠나면 close)
+  const leaveAbout = () => { aboutNote?.close(); aboutNote = null; };
   const veBox = win.querySelector('.hsh-ve');
   const about = mountAbout(veBox, () => syncRail());
   const ctBox = win.querySelector('.hsh-ct-box');
@@ -530,9 +532,13 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     // 공지면 탭 + 내용(ABOUT 부터), 아니면 '곧 채워질' 안내
     const isNotice = label === 'notice';
     note.hidden = noteTabs.hidden = !isNotice;
-    // about __VE 면 아스키 집 · 글(about-note.js), /pair 면 Vibe · Echo 카드(about.js)
+    // about __VE 면 글자 아트 · 글(about-note.js — 열 때마다 청소년기부터), /pair 면 Vibe · Echo 카드(about.js)
     abBox.hidden = !isAbout || isPair;
-    if (!abBox.hidden) loadAboutFont();
+    leaveAbout();
+    if (!abBox.hidden) {
+      loadAboutFont();
+      aboutNote = openAboutNote(abBox, { reduced, scroller: inner });
+    }
     win.classList.toggle('is-about', isAbout && !isPair); // about 글은 둥근 상자 없이 창에 바로
     veBox.hidden = !isPair;
     if (isPair) about.reset();
@@ -707,6 +713,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     // archive · neighbor — 창 대신 흰 화면. ← home · Esc 는 × 와 같이 기록을 되돌리며 홈으로
     if (SCREENS.includes(label)) {
       if (!win.hidden) {
+        leaveAbout();
         content.close();
         trigger.classList.remove('is-paused');
         win.hidden = true;
@@ -756,6 +763,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     neighbor.hide();
     if (win.hidden || win.classList.contains('is-closing')) return;
     closeEditor();
+    leaveAbout();
     content.close();
     trigger.classList.remove('is-paused');
     win.classList.remove('is-open');
