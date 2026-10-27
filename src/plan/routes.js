@@ -3,7 +3,7 @@
 //   /about /teatime /notice /neighbor /archive   방 버튼(data-label → ROOM_PATHS)
 //   /neighbor/banner               neighbor 우체통의 배너 교환 패널
 //   /neighbor/mine                 neighbor 홍차네 집의 내 배너
-//   /pair                          about __VE 방의 Vibe · Echo 카드(about 은 아스키 집 · 짧은 글)
+//   /pair                          about __VE 방의 Vibe · Echo 카드(about 은 글자 아트 · 짧은 글)
 //   /category/:id                  글 · 갤러리 · 메모 목록(:id 는 카테고리 id 또는 slug — 버튼의 data-category 그대로)
 //   /category/:id/folder/:fid      폴더
 //   /category/:id?page=N           갤러리 N 쪽
