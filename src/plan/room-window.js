@@ -323,7 +323,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const empty = win.querySelector('.hsh-win__empty');
   const note = win.querySelector('.hsh-win__note');
   const abBox = win.querySelector('.hsh-ab');
-  let aboutNote = null; // about 이 열려 있는 동안 — 아트 · 단어 · 마지막 문장(떠나면 close)
+  let aboutNote = null; // about 이 열려 있는 동안 — 마지막 문장(떠나면 close)
   const leaveAbout = () => { aboutNote?.close(); aboutNote = null; };
   const veBox = win.querySelector('.hsh-ve');
   const about = mountAbout(veBox, () => syncRail());
@@ -532,7 +532,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     // 공지면 탭 + 내용(ABOUT 부터), 아니면 '곧 채워질' 안내
     const isNotice = label === 'notice';
     note.hidden = noteTabs.hidden = !isNotice;
-    // about __VE 면 글자 아트 · 글(about-note.js — 열 때마다 청소년기부터), /pair 면 Vibe · Echo 카드(about.js)
+    // about __VE 면 글(about-note.js), /pair 면 Vibe · Echo 카드(about.js)
     abBox.hidden = !isAbout || isPair;
     leaveAbout();
     if (!abBox.hidden) {

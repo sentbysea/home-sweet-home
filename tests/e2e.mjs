@@ -2085,7 +2085,7 @@ async function heads() {
   const back = JSON.parse(db.site_settings.find((r) => r.key === 'vibe_room_heads')?.value || '{}');
   check('주인 — 다 비우면 기본 머리로 · 예전 사진 지움', h.head && h.title === 'notice' && h.pill === '@3tatichearts · 수아' && h.thumb.includes('notice-thumb') && !back.notice && !db.storage.has(photoKey), JSON.stringify({ h, back }));
 
-  // about — 스크롤바는 길 없이 창 오른쪽 끝 · 글자 아트(청소년기부터) · 강조 단어 네 곳 · 아트 칸은 넘치지 않게
+  // about — 스크롤바는 길 없이 창 오른쪽 끝 · 글만(글자 아트 · 강조 단어 없음)
   await o.page.keyboard.press('Escape');
   await o.page.waitForTimeout(500);
   await o.page.setViewportSize({ width: 390, height: 700 }); // 글이 넘쳐 스크롤바가 나오게
@@ -2094,23 +2094,23 @@ async function heads() {
   const ab = await o.page.evaluate(() => {
     const rail = document.querySelector('.hsh-win__rail');
     const body = document.querySelector('.hsh-win__body').getBoundingClientRect();
-    const art = document.querySelector('.hsh-ab__art');
-    const canvas = art.querySelector('canvas');
     return {
       railShown: !rail.hidden && (() => { const k = document.querySelector('.hsh-win__knob').getBoundingClientRect(); return document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2) === document.querySelector('.hsh-win__knob'); })(),
       railBg: getComputedStyle(rail).backgroundImage, railGap: body.right - rail.getBoundingClientRect().right,
-      label: art.getAttribute('aria-label'),
-      canvas: Boolean(canvas) && canvas.getAttribute('aria-hidden') === 'true' && canvas.clientWidth <= art.parentElement.clientWidth,
-      words: [...document.querySelectorAll('.hsh-ab__word')].map((w) => `${w.textContent}:${w.dataset.art}:${w.getAttribute('aria-pressed')}`).join(),
+      textOnly: !document.querySelector('.hsh-ab canvas, .hsh-ab [role="button"]') && document.querySelector('.hsh-ab__text').textContent.includes('프리지아가 활짝'),
       font: getComputedStyle(document.querySelector('.hsh-ab__text')).fontFamily,
       lh: parseFloat(getComputedStyle(document.querySelector('.hsh-ab__text')).lineHeight) / 14,
     };
   });
   check('about — 스크롤바: 가운데 선 없이 창 오른쪽 끝(테두리 안쪽)에 딱', ab.railShown && ab.railBg === 'none' && ab.railGap >= 0 && ab.railGap <= 1.5, JSON.stringify(ab));
-  check('about — 글자 아트는 청소년기부터 · 캔버스는 장식(aria-hidden) · 강조 단어 네 곳', ab.label.startsWith('키 큰 남자') && ab.canvas && ab.words === '청소년기:youth:true,프리지아:freesia:false,작별:farewell:false,집:home:false', JSON.stringify(ab));
+  check('about — 글만(캔버스 · 단추 없음)', ab.textOnly, JSON.stringify(ab));
   await o.page.waitForTimeout(800); // 한글 글꼴(Google Fonts)이 오도록
   await o.page.screenshot({ path: path.join(OUT, 'heads-about.png') });
   check('about — 글은 로딩 글꼴(Nanum Gothic Coding) · 줄간격 1.8', ab.font.includes('HSH Hand KR') && ab.font.includes('Nanum Gothic Coding') && Math.abs(ab.lh - 1.8) < 0.01, JSON.stringify(ab));
+  // 마지막 문장 — 화면에 들어오면 한 글자씩 다 써지고 커서는 사라진다
+  await o.page.evaluate(() => document.querySelector('.hsh-ab__type').scrollIntoView({ block: 'center' }));
+  const typed = await o.page.waitForFunction(() => document.querySelector('.hsh-ab__caret').hidden && [...document.querySelectorAll('.hsh-ab__ch')].every((c) => c.classList.contains('is-on')), null, { timeout: 20000 }).then(() => true, () => false);
+  check('about — 마지막 문장이 다 써지고 커서가 사라짐', typed);
   check('콘솔 오류 없음(머리 주인)', o.errors.length === 0, o.errors.join(' | '));
   await o.context.close();
 }

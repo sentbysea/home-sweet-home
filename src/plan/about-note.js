@@ -1,18 +1,12 @@
-// about __VE 방 — 위에는 글자 아트(about-art/), 아래는 짧은 글, 맨 끝에 글쓴이(가운데 · 본문보다 살짝 연하게).
+// about __VE 방 — 짧은 글, 맨 끝에 글쓴이(가운데 · 본문보다 살짝 연하게).
 //   Vibe · Echo 카드 두 장은 /pair 로 옮겼다(about.js).
-//   본문 속 네 단어(청소년기 · 프리지아 · 작별 · 집)는 처음부터 마우스로 끌어 고른 것처럼 파란 바탕 · 흰 글씨 —
-//   누르면(클릭 · 터치 · Enter/Space) 위 칸의 글자들이 그 단어의 형상으로 옮겨 간다. 같은 단어를 또 누르면 다시 모인다.
-//   같은 낱말이 여러 번 나오므로 BODY 안에 {형상:낱말} 로 표시한 자리만 단추가 된다(조사는 밖에).
 //   마지막 문장 {type:…} 만 화면에 들어오면 한 글자씩 써진다 — 자리는 처음부터 차지하고(글자색만 투명), 방을 다시 열기 전에는 한 번만.
 //   글 · 글쓴이는 로딩 home sweet home 과 같은 글꼴 — 한글은 이 저장소 글꼴 파일에 없어서 처음 열 때 Google Fonts 에서
 //   같은 글꼴을 다른 이름(HSH Hand KR)으로 불러온다(다른 화면의 한글은 그대로). 못 받으면 Pretendard.
 
-import { mountAboutArt } from '../about-art/index.js';
-import { FIRST } from '../about-art/shapes.js';
-
 const BODY = [
-  '선생님도, 부모님도 없는 곳. 지붕이 없는 강당, 책이 없는 학교. 존재하는 것은 오로지 또래뿐이다. 하나와 하나로서만 존재했던 둘의 지루하고 재미없는 {youth:청소년기} 속에 희미하게 남아 있던 동갑내기를. 우연의 품에 그 애의 눈 색을 닮은 {freesia:프리지아}가 활짝 피어나 있는 순간을, 아주 오래도록 바라보았다. 졸업의 의의는 바이바이에 있었고, 우리는 이미 산뜻한 작별을 배운 뒤였다. 학사모 대신 열두 살과 열세 살의 검정 훈련모가 인공 노을 아래서 자리를 지켰다. 이것은 소년기와의 {farewell:작별}. 집으로 돌아가고 싶었던 오랜 밤들과의 영원한 안녕.',
-  '홍지원은 이제 새로운 {home:집}을 찾았다. 그 집에 같은 나이의 여자애가 살았다. 스물둘이 되어 기어이 알아보았다. 일어나야 하는 일이었다는 듯이. 고로, 바이바이. 하나와 하나로 존재하던 시간과 아주아주 작별한 채, 영원히 둘이 되어서. {type:외로움과 괴로움과 영원히 이별하여…….}',
+  '선생님도, 부모님도 없는 곳. 지붕이 없는 강당, 책이 없는 학교. 존재하는 것은 오로지 또래뿐이다. 하나와 하나로서만 존재했던 둘의 지루하고 재미없는 청소년기 속에 희미하게 남아 있던 동갑내기를. 우연의 품에 그 애의 눈 색을 닮은 프리지아가 활짝 피어나 있는 순간을, 아주 오래도록 바라보았다. 졸업의 의의는 바이바이에 있었고, 우리는 이미 산뜻한 작별을 배운 뒤였다. 학사모 대신 열두 살과 열세 살의 검정 훈련모가 인공 노을 아래서 자리를 지켰다. 이것은 소년기와의 작별. 집으로 돌아가고 싶었던 오랜 밤들과의 영원한 안녕.',
+  '홍지원은 이제 새로운 집을 찾았다. 그 집에 같은 나이의 여자애가 살았다. 스물둘이 되어 기어이 알아보았다. 일어나야 하는 일이었다는 듯이. 고로, 바이바이. 하나와 하나로 존재하던 시간과 아주아주 작별한 채, 영원히 둘이 되어서. {type:외로움과 괴로움과 영원히 이별하여…….}',
 ];
 const CREDIT = '© 담(@ohmyfilmbonita) All Right Reserved';
 
@@ -24,70 +18,32 @@ const graphemes = (t) => (typeof Intl !== 'undefined' && Intl.Segmenter
   : Array.from(t));
 
 function paragraph(src) {
-  return src.replace(/\{(\w+):([^}]+)\}|[^{]+/g, (m, key, word) => {
-    if (!key) return esc(m);
-    if (key === 'type') return `<span class="hsh-ab__type">${graphemes(word).map((c) => `<span class="hsh-ab__ch">${esc(c)}</span>`).join('')}</span>`;
-    return `<span class="hsh-ab__word" role="button" tabindex="0" data-art="${key}" aria-controls="hsh-ab-art" aria-pressed="false">${esc(word)}</span>`;
+  return src.replace(/\{type:([^}]+)\}|[^{]+/g, (m, typed) => {
+    if (!typed) return esc(m);
+    return `<span class="hsh-ab__type">${graphemes(typed).map((c) => `<span class="hsh-ab__ch">${esc(c)}</span>`).join('')}</span>`;
   });
 }
 
-/** about 방 안쪽 — 아트 칸 · 글 · 글쓴이 */
+/** about 방 안쪽 — 글 · 글쓴이 */
 export function aboutNoteMarkup() {
-  return `<div class="hsh-ab__art" id="hsh-ab-art" role="img" aria-label=""></div>` +
-    `<div class="hsh-ab__text">${BODY.map((p) => `<p>${paragraph(p)}</p>`).join('')}<span class="hsh-ab__caret" aria-hidden="true" hidden></span></div>` +
+  return `<div class="hsh-ab__text">${BODY.map((p) => `<p>${paragraph(p)}</p>`).join('')}<span class="hsh-ab__caret" aria-hidden="true" hidden></span></div>` +
     `<p class="hsh-ab__credit">${esc(CREDIT)}</p>`;
 }
 
 // 마지막 문장 — 글자 사이(ms). '이별하여' 뒤에 잠깐 멈추고, '…….' 은 점 하나씩(… 한 글자를 세 번에 나눠 드러낸다 — 글자는 원문 그대로)
-//   시작: 문장이 화면 안에 다 들어오고 스크롤이 멈췄을 때(idle). 방을 연 직후에는 아트가 모일 동안(minStart) 기다린다.
+//   시작: 문장이 화면 안에 다 들어오고 스크롤이 멈췄을 때(idle). 방을 연 직후에는 창이 열릴 동안(minStart) 기다린다.
 //   치는 중에 문장이 화면 밖으로 나가면 멈췄다가, 다시 들어오고 스크롤이 멈추면 이어서.
 const TYPE = { first: 300, char: 95, space: 60, pause: 560, dot: 230, blink: 380, blinks: 3, idle: 350, minStart: 1600, margin: 2 };
 
 /**
- * about 방이 열려 있는 동안 — 아트 · 단어 단추 · 마지막 문장. 방을 닫으면 close() 로 전부 정리.
+ * about 방이 열려 있는 동안 — 마지막 문장. 방을 닫으면 close() 로 전부 정리.
  * @param {HTMLElement} root  .hsh-ab
  * @param {{ reduced?: boolean, scroller?: HTMLElement }} opts
  */
 export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
-  const stage = root.querySelector('.hsh-ab__art');
-  const words = [...root.querySelectorAll('.hsh-ab__word')];
-  const art = mountAboutArt(stage, { reduced });
   const timers = new Set();
   const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); };
 
-  const press = (name) => words.forEach((w) => w.setAttribute('aria-pressed', String(w.dataset.art === name)));
-  press(FIRST);
-  art.start(FIRST);
-
-  // 아래쪽 단어를 눌렀는데 아트가 화면 밖이면 — 아트가 보이는 자리로 부드럽게
-  const reveal = () => {
-    const box = (scroller || document.documentElement).getBoundingClientRect();
-    const r = stage.getBoundingClientRect();
-    const top = scroller ? box.top : 0;
-    const bottom = scroller ? box.bottom : innerHeight;
-    if (r.top >= top - 4 && r.top + r.height * 0.6 <= bottom) return;
-    if (scroller) scroller.scrollBy({ top: r.top - top - 8, behavior: reduced ? 'auto' : 'smooth' });
-    else stage.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' });
-  };
-  const pick = (w) => {
-    press(w.dataset.art);
-    art.go(w.dataset.art);
-    reveal();
-  };
-  const onClick = (e) => {
-    const w = e.target.closest('.hsh-ab__word');
-    if (w) pick(w);
-  };
-  const onKey = (e) => {
-    const w = e.target.closest('.hsh-ab__word');
-    if (!w || (e.key !== 'Enter' && e.key !== ' ')) return;
-    e.preventDefault(); // Space 로 칸이 스크롤되지 않게
-    if (!e.repeat) pick(w);
-  };
-  root.addEventListener('click', onClick);
-  root.addEventListener('keydown', onKey);
-
-  // ---------- 마지막 문장 타자 ----------
   const text = root.querySelector('.hsh-ab__text');
   const chars = [...root.querySelectorAll('.hsh-ab__ch')];
   const caret = root.querySelector('.hsh-ab__caret');
@@ -177,16 +133,12 @@ export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
 
   return {
     close() {
-      art.stop();
       stopWatching();
       timers.forEach(clearTimeout);
       timers.clear();
-      root.removeEventListener('click', onClick);
-      root.removeEventListener('keydown', onKey);
       // 다시 열면 처음부터 — 문장은 다시 비워 두고 커서는 숨긴다
       chars.forEach((c) => { c.classList.remove('is-on'); c.style.removeProperty('--reveal'); });
       caret.hidden = true;
-      press(null);
     },
   };
 }
