@@ -1197,6 +1197,8 @@ async function neighborVillage(device, name) {
   const town = (await rects(page, '.nbh-town'))[0];
   check(`${name} — 홍차네 집이 가운데 · 조금 더 크다`, Math.abs(center(c).x - center(town).x) < town.w * 0.12 && homeRects.every((h) => c.w > h.w * 0.95 || c.h > h.h), JSON.stringify({ c, town }));
   check(`${name} — 방문자에게는 edit 없음`, !(await page.isVisible('.nbh__owner [data-act="edit"]')) && !(await page.isVisible('.nbh__owner [data-act="requests"]')));
+  const row = await page.$eval('.nbh__village', (v) => v.hshVillage.layout.filter((l) => l.kind === 'home').map((l) => l.slot.split(':')[0]).join(''));
+  check(`${name} — 이웃 세 채는 홍차네 집 줄에 한 줄로`, row === '111', row);
   check(`${name} — 가운데 집 이름표 homesweethome`,(await page.textContent('.nbh-center__tag')).trim() === 'homesweethome');
   check(`${name} — 집 · 우체통 · 장식이 겹치지 않고 화면 폭 안`, (await overlaps(page)).length === 0 && (await inWidth(page)), JSON.stringify(await overlaps(page)));
   check(`${name} — 집은 누르기 편한 크기`, homeRects.every((h) => h.w >= 44 && h.h >= 44), homeRects.map((h) => Math.round(h.w)).join(','));
@@ -1225,7 +1227,7 @@ async function neighborVillage(device, name) {
   check(`${name} — 여백 별(누르기를 막지 않음)`, look.stars >= 8 && look.starsPass === 'none', JSON.stringify(look));
   check(`${name} — 이름표: 화면 안 · 잘리지 않음 · 밑줄 없음`, look.labelsIn, JSON.stringify(look));
   check(`${name} — 선은 홈처럼 부드러운 회색 · 안쪽 선이 더 얇다`, look.line[0] === 'rgb(143, 148, 151)' && look.line[1] < 1.6 && look.line[2] < look.line[1], JSON.stringify(look.line));
-  check(`${name} — 우체통: 글 없이 화살표 · 빨간 깃발이 움직인다`, !(await page.$('.nbh-mailbox__tip')) && (await page.$eval('.nbh-mailbox__arrow', (a) => getComputedStyle(a).animationName === 'nbh-boing'))
+  check(`${name} — 우체통: 글 · 화살표 없이 '여기요' 낙서 · 빨간 깃발이 움직인다`, !(await page.$('.nbh-mailbox__tip')) && !(await page.$('.nbh-mailbox__arrow')) && (await page.$$eval('.nbh-mailbox__burst .nbh-v0 .nbh-burst', (p) => p.length === 4 && p.slice(0, 3).every((x) => getComputedStyle(x).animationName === 'nbh-here')))
     && (await page.$eval('.nbh-mailbox__pennant', (g) => getComputedStyle(g).animationName === 'nbh-flutter')));
   const looks = await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house));
   const lay = await layoutOf(page);
@@ -1264,6 +1266,11 @@ async function neighborVillage(device, name) {
     await tapOrHover(1);
     await tapOrHover(0);
     check('PC — 배너는 한 번에 하나', (await page.$$eval('.nbh-home.is-open', (x) => x.length)) === 1 && (await page.$eval('.nbh-pop__link', (n) => n.getAttribute('aria-label'))).startsWith('hongjiwon.love'));
+    // 홍차네 집 — 올리면 내 배너 말풍선, 누르면 이 사이트 대신 내 배너 패널
+    { const hc = center((await rects(page, '.nbh-center .nbh-art'))[0]); await page.mouse.move(hc.x, hc.y); await page.waitForTimeout(400); }
+    check('PC — 홍차네 집에 올리면 내 배너', (await popOpen(page)) && (await page.$eval('.nbh-pop__banner img', (i) => i.getAttribute('src'))).includes('vibe-banner') && (await page.$eval('.nbh-pop__link', (n) => n.getAttribute('aria-label'))).startsWith('homesweethome'));
+    await page.mouse.move(20, 600);
+    await page.waitForTimeout(500);
     const h1 = center((await rects(page, '.nbh-home[data-i="1"] .nbh-art'))[0]);
     await page.mouse.click(h1.x, h1.y);
     await until(() => popups.length > 0, 6000);
@@ -1791,7 +1798,7 @@ async function neighborShapes() {
       check(`${name} — 이웃 ${n}채: 첫 화면 가운데 홍차네 집 · 세 줄까지 · 겹침 없음`, ok, JSON.stringify({ n: homes.length, rows, overlaps: await overlaps(page) }));
       if (n === 0) check(`${name} — 이웃 없음: 안내 · 홍차네 집 · 우체통은 그대로`, (await page.textContent('.nbh-note')).includes('아직 이웃집이 없어요') && (await page.$$('.nbh-mailbox')).length === 1);
       const scales = await page.$$eval('.nbh-home .nbh-art', (s) => s.map((x) => Math.round((x.width.baseVal.value / x.viewBox.baseVal.width) * 100) / 100));
-      if (prev && n > prev.n) {
+      if (prev && n > prev.n && prev.n > 3) { // 세 채까지는 한 줄 마을(휴대폰은 줄인다) — 그 뒤로는 줄이지 않는다
         check(`${name} — ${prev.n} → ${n}채: 집을 줄이지 않고 마을이 옆으로`, town.w >= prev.w && town.h <= prev.h + 260 && scales.every((x) => x === prev.scale), JSON.stringify({ w: [prev.w, town.w], h: [prev.h, town.h], scale: [prev.scale, ...new Set(scales)] }));
       }
       if (homes.length) prev = { n, w: town.w, h: town.h, scale: scales[0] };

@@ -387,29 +387,45 @@
 .nbh-mailbox:hover .nbh-mailbox__flag,
 .nbh-mailbox.is-sending .nbh-mailbox__flag { rotate: -20deg; }
 .nbh-mailbox.is-sending .nbh-mailbox__letter { opacity: 1; translate: 0 -4px; }
-/* 누르기 이끌기 — 위에서 통통(띠용) 튀는 화살표 · 잘게 떠는 빨간 세모 깃발 */
-.nbh-mailbox__arrow {
+/* 누르기 이끌기 — 위에 '여기요! 여기!' 낙서 강조선(톡톡 두 번 튀어나왔다 쉰다) · 잘게 떠는 빨간 세모 깃발 */
+.nbh-mailbox__burst {
   position: absolute;
-  left: 41%; /* 우체통 몸통 가운데 */
-  bottom: calc(100% + 2px);
+  left: 50%; /* 우체통 몸통 가운데에서 깃발 쪽으로 살짝 — 집 처마와 닿지 않게 */
+  bottom: calc(100% + 1px);
   translate: -50% 0;
   pointer-events: none;
-  animation: nbh-boing 4.2s ease-in-out infinite; /* 한 번 느긋하게 튀고 오래 쉰다 */
 }
-.nbh-mailbox__arrow-art { display: block; overflow: visible; }
-@keyframes nbh-boing {
-  0%, 40%, 100% { transform: translateY(0) scaleY(1); }
-  10% { transform: translateY(-7px) scaleY(1.06); }
-  20% { transform: translateY(1px) scaleY(0.92); }
-  28% { transform: translateY(-2px) scaleY(1.02); }
-  35% { transform: translateY(0) scaleY(0.99); }
+.nbh-mailbox__burst-art { display: block; overflow: visible; }
+.nbh-mailbox__burst-art .nbh-ink path { stroke-width: 1.6; }
+.nbh-burst {
+  transform-box: fill-box;
+  animation: nbh-here 2.8s cubic-bezier(0.3, 1.6, 0.5, 1) infinite;
 }
+.nbh-burst--l { transform-origin: 100% 100%; }
+.nbh-burst--c { transform-origin: 50% 100%; animation-delay: 70ms; }
+.nbh-burst--r { transform-origin: 0 100%; animation-delay: 140ms; }
+.nbh-burst--s { transform-origin: 50% 50%; animation: nbh-twinkle 2.8s ease-in-out 220ms infinite; }
+@keyframes nbh-here {
+  0% { opacity: 0; transform: scale(0.2); }
+  7% { opacity: 1; transform: scale(1.12); }
+  13% { opacity: 1; transform: scale(0.82); }
+  20% { opacity: 1; transform: scale(1.12); }
+  27%, 60% { opacity: 1; transform: scale(1); }
+  72%, 100% { opacity: 0; transform: scale(0.6); }
+}
+@keyframes nbh-twinkle {
+  0%, 8% { opacity: 0; transform: scale(0.2) rotate(-90deg); }
+  20% { opacity: 1; transform: scale(1.25) rotate(8deg); }
+  34%, 58% { opacity: 1; transform: scale(1) rotate(0deg); }
+  70%, 100% { opacity: 0; transform: scale(0.4) rotate(45deg); }
+}
+.nbh-mailbox:hover .nbh-burst { animation-duration: 1.4s; } /* 올리면 더 신나게 */
 .nbh-mailbox__pennant { transform-box: fill-box; transform-origin: 0 50%; animation: nbh-flutter 0.55s ease-in-out infinite alternate; }
 @keyframes nbh-flutter {
   from { transform: rotate(-7deg) scaleX(0.92); }
   to { transform: rotate(6deg) scaleX(1.04); }
 }
-.nbh-mailbox.is-sending .nbh-mailbox__arrow { opacity: 0; transition: opacity 160ms ease-out; }
+.nbh-mailbox.is-sending .nbh-mailbox__burst { opacity: 0; transition: opacity 160ms ease-out; }
 .nbh-mailbox:focus-visible { outline: 1.5px dashed var(--nbh-ink-soft); outline-offset: 4px; border-radius: 6px; }
 
 /* 빈 동네 · 불러오는 중 · 오류 */
@@ -803,7 +819,7 @@
 
 .nbh.is-reduced .nbh-home__art,
 .nbh.is-reduced .nbh-center .nbh-home__art,
-.nbh.is-reduced .nbh-mailbox__arrow,
+.nbh.is-reduced .nbh-burst,
 .nbh.is-reduced .nbh-mailbox__pennant { animation: none; }
 .nbh.is-reduced .nbh-pop,
 .nbh.is-reduced .nbh-mailbox__flag,
@@ -824,7 +840,7 @@
   .nbh-panel,
   .nbh-panel__sheet { transition: none; }
   .nbh-home__art,
-  .nbh-mailbox__arrow,
+  .nbh-burst,
   .nbh-mailbox__pennant { animation: none; }
   .nbh-view,
   .nbh-view * { transition: none; animation: none; }
