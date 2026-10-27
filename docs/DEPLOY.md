@@ -25,7 +25,7 @@ https://xn--9g3b29an0p.me/
 
 - 지우지 않는다: `https://hongjiwon.love/admin/` 와 기존 pages.dev · localhost 줄(hongjiwon.love 로그인용).
 - `www.` 주소는 넣지 않아도 된다 — www · http 는 옛 주소로 모인 뒤 새 주소로 넘어간다(아래 "주소").
-- 바이브.me 홈(neighbor 방 edit)은 늘 `/` 로, 관리자는 `/admin/` 로 돌아오게 되어 있다(src/content/supabase.js `HOME_REDIRECT`, 그쪽 admin-session.js).
+- 바이브.me 홈은 늘 `/` 로, 관리자는 `/admin/` 로 돌아오게 되어 있다(src/content/supabase.js `HOME_REDIRECT`, 그쪽 admin-session.js).
 - 목록에 없는 주소면 Supabase 가 Site URL(hongjiwon.love)로 보낸다 — 로그인 뒤 hongjiwon.love 로 가 버리면 이 줄이 빠진 것이다.
 - Google Cloud 의 OAuth 리디렉션 URI 는 Supabase 콜백이라 바꾸지 않는다.
 - DB · migration 변경은 없다(새 키 `vibe_site_title` · `vibe_site_favicon_url` · `vibe_site_cursor` 는 기존 `site_settings` 행일 뿐).
@@ -50,7 +50,7 @@ https://xn--9g3b29an0p.me/
 - 주소: `/notice` · `/neighbor/banner` · `/category/1` · `/post/<공개 글>` 를 주소창에 바로 넣기 · 새로고침 · 뒤로/앞으로 · × → `/`.
   없는 주소(`/nope`)는 홈. `/admin/` 은 관리자 그대로.
   창 주소로 바로 들어오기 · 새로고침 · × 로 `/` — 로딩 화면이 한 번도 비치지 않는다(PC · 휴대폰). `/` 로 들어오면 로딩 → 집 누르기.
-- 이웃 방(`/neighbor`)에서 edit → Google 로그인 → `/neighbor` 로 돌아와 고치기 모드.
+- 이웃 방(`/neighbor`)의 edit 는 주인으로 로그인돼 있을 때만 보인다(방문자에게는 없음) — `/admin/` 에서 로그인한 뒤 `/neighbor` → edit → 고치기 모드.
 - `https://ho.xn--9g3b29an0p.me/admin/` → Google 로그인 → **바이브.me 로 돌아와** 관리 화면(주인 계정).
   다른 Google 계정이면 "사이트 주인 계정으로만" 이 떠야 한다.
 - HOME 에서 제목 저장 → 바이브.me 새로고침 → 탭 제목. hongjiwon.love 탭 제목은 그대로.
