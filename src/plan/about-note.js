@@ -1,18 +1,17 @@
-// about __VE 방 — 짧은 글, 맨 끝에 글쓴이(가운데 · 본문보다 살짝 연하게). 마지막 점 뒤에서 커서만 깜빡인다.
+// about __VE 방 — 짧은 글. 마지막 점 뒤에서 커서만 깜빡인다.
 //   Vibe · Echo 카드 두 장은 /pair 로 옮겼다(about.js).
 //   본문의 '집' 은 휴대폰에서 글자를 고른 것처럼(옅은 파랑 · 양끝 손잡이) — 누르면 위에 말풍선(always | together).
-//     always   → 글 · 글쓴이의 글자들이 집 모양으로 모인다
+//     always   → 글자들이 집 외곽선을 따라 늘어선다(창의 보이는 높이 안에 — 스크롤 없이)
 //     together → 두 사람 전신(youth-tone.js)으로 모인다
 //   모이는 동안 원래 글은 자리를 지킨 채 숨고, 같은 글자를 위에 띄워(.hsh-ab__fly) 옮긴다 — 글 차례대로 형상의 칸을 위 → 아래, 왼 → 오른으로 채운다.
 //   오른쪽 아래 둥근 단추를 누르면 글자들이 제자리로 돌아간다. 모양 속 '집' 을 눌러도 말풍선이 뜬다.
-//   글 · 글쓴이는 로딩 home sweet home 과 같은 글꼴 — 한글은 이 저장소 글꼴 파일에 없어서 처음 열 때 Google Fonts 에서
+//   글은 로딩 home sweet home 과 같은 글꼴 — 한글은 이 저장소 글꼴 파일에 없어서 처음 열 때 Google Fonts 에서
 //   같은 글꼴을 다른 이름(HSH Hand KR)으로 불러온다(다른 화면의 한글은 그대로). 못 받으면 Pretendard.
 
 import { YOUTH_TONE } from './youth-tone.js';
 
 // {sel:…} 자리가 고른 글자처럼 보이는 단추
 const BODY = '홍지원은 이제 새로운 {sel:집}을 찾았다. 그 집에 같은 나이의 여자애가 살았다. 스물둘이 되어 기어이 알아보았다. 일어나야 하는 일이었다는 듯이. 고로, 바이바이. 하나와 하나로 존재하던 시간과 아주아주 작별한 채, 영원히 둘이 되어서. 외로움과 괴로움과 영원히 이별하여…….';
-const CREDIT = '© 담(@ohmyfilmbonita) All Right Reserved';
 
 const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -34,10 +33,9 @@ function paragraph(src) {
 
 const BACK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15M8 9.5h8M8 12.5h8M8 15.5h5"/></svg>';
 
-/** about 방 안쪽 — 글 · 글쓴이 · 말풍선 · 되돌리기 단추 · 옮겨 다니는 글자 칸 */
+/** about 방 안쪽 — 글 · 말풍선 · 되돌리기 단추 · 옮겨 다니는 글자 칸 */
 export function aboutNoteMarkup() {
   return `<div class="hsh-ab__text"><p>${paragraph(BODY)}<span class="hsh-ab__caret" aria-hidden="true"></span></p></div>` +
-    `<p class="hsh-ab__credit">${letters(CREDIT)}</p>` +
     `<div class="hsh-ab__fly" aria-hidden="true"></div>` +
     `<div class="hsh-ab__menu" id="hsh-ab-menu" role="menu" hidden>` +
     `<button type="button" role="menuitem" data-shape="always">always</button>` +
@@ -156,11 +154,11 @@ const MOVE = { dur: 950, stagger: 380, jitter: 140 }; // 글자 하나가 옮겨
 /**
  * about 방이 열려 있는 동안 — '집' 말풍선 · 모양 바꾸기. 방을 닫으면 close() 로 원래 글로 되돌리고 정리.
  * @param {HTMLElement} root  .hsh-ab
- * @param {{ reduced?: boolean, scroller?: HTMLElement }} opts  scroller — 글이 들어 있는 스크롤 칸(말풍선이 넘치는지 볼 때)
+ * @param {{ reduced?: boolean, scroller?: HTMLElement, onLayout?: () => void }} opts
+ *   scroller — 글이 들어 있는 스크롤 칸(말풍선 · 집이 보이는 높이), onLayout — 모양이 바뀌어 넘침이 달라졌을 때(창이 스크롤바를 다시 잰다)
  */
-export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
+export function openAboutNote(root, { reduced = false, scroller = null, onLayout = () => {} } = {}) {
   const text = root.querySelector('.hsh-ab__text');
-  const credit = root.querySelector('.hsh-ab__credit');
   const sel = root.querySelector('.hsh-ab__sel');
   const fly = root.querySelector('.hsh-ab__fly');
   const menu = root.querySelector('.hsh-ab__menu');
@@ -182,14 +180,17 @@ export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
       return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
     });
   };
-  // 글 · 글쓴이가 차지한 칸 — 모양은 이 안에
+  // 글이 차지한 칸 — 모양은 이 안에
   const area = () => {
     const base = root.getBoundingClientRect();
     const a = text.getBoundingClientRect();
-    const b = credit.getBoundingClientRect();
-    const x0 = Math.min(a.left, b.left) - base.left;
-    const y0 = a.top - base.top;
-    return { x: x0, y: y0, w: Math.max(a.right, b.right) - base.left - x0, h: b.bottom - base.top - y0 };
+    return { x: a.left - base.left, y: a.top - base.top, w: a.width, h: a.height };
+  };
+  // 스크롤 칸을 맨 위에 두었을 때 글 첫 줄부터 창 바닥까지 보이는 높이
+  const visible = () => {
+    if (!scroller) return Infinity;
+    const top = text.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    return scroller.clientHeight - top - 12;
   };
 
   const spawn = () => {
@@ -216,8 +217,8 @@ export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
   const target = () => {
     const box = area();
     const sh = SHAPES[shape];
-    // 외곽선(집)은 글 칸 너비에 맞추고 높이는 그만큼 — 글 칸보다 길면 아래로 넘친다(스크롤로 본다). 글자가 커지게
-    if (sh.outline) box.h = Math.max(box.h, ((box.w * 0.94) / (sh.x1 - sh.x0)) * (sh.y1 - sh.y0) / 0.94);
+    // 외곽선(집)은 글 칸보다 크게 — 너비에 맞춘 높이까지, 다만 창의 보이는 높이를 넘지 않게(스크롤 없이 한눈에). 글자가 커지게
+    if (sh.outline) box.h = Math.max(box.h, Math.min((box.w / (sh.x1 - sh.x0)) * (sh.y1 - sh.y0), visible()));
     const { cells, gap } = cellsFor(sh, box, flies.length);
     flies.forEach((f, i) => {
       const c = cells[i] || cells[cells.length - 1];
@@ -237,6 +238,7 @@ export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
     fly.replaceChildren();
     flies = [];
     root.classList.remove('is-shaped', 'is-moving');
+    onLayout();
   };
   const maxMove = MOVE.dur + MOVE.stagger + MOVE.jitter;
 
@@ -252,8 +254,11 @@ export function openAboutNote(root, { reduced = false, scroller = null } = {}) {
     shape = name;
     root.dataset.shape = name;
     root.classList.toggle('is-moving', !reduced);
+    scroller?.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); // 모양은 맨 위에서 한눈에
     target();
     back.hidden = false;
+    onLayout();
+    homeTimer = setTimeout(() => { homeTimer = 0; onLayout(); }, reduced ? 0 : maxMove + 60);
   };
   const goHome = () => {
     closeMenu();

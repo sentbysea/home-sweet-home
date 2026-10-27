@@ -2073,23 +2073,33 @@ async function heads() {
   // about — 스크롤바는 길 없이 창 오른쪽 끝 · 글 · 집 말풍선 · 모양 바꾸기
   await o.page.keyboard.press('Escape');
   await o.page.waitForTimeout(500);
-  await o.page.setViewportSize({ width: 390, height: 520 }); // 글이 넘쳐 스크롤바가 나오게
+  await o.page.setViewportSize({ width: 390, height: 520 }); // 글이 다 들어가는 높이 — 스크롤바 없음
   await o.page.evaluate(() => document.querySelector('.hsh-plan').dispatchEvent(new CustomEvent('hsh:room', { bubbles: true, detail: { room: 'v', label: 'about __VE', name: '지원 · 우연 소개', bg: '#fbefae', fg: '#e8893a' } })));
   await o.page.waitForTimeout(1200);
   const ab = await o.page.evaluate(() => {
     const rail = document.querySelector('.hsh-win__rail');
-    const body = document.querySelector('.hsh-win__body').getBoundingClientRect();
     return {
-      railShown: !rail.hidden && (() => { const k = document.querySelector('.hsh-win__knob').getBoundingClientRect(); return document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2) === document.querySelector('.hsh-win__knob'); })(),
-      railBg: getComputedStyle(rail).backgroundImage, railGap: body.right - rail.getBoundingClientRect().right,
+      railShown: !rail.hidden,
       text: document.querySelector('.hsh-ab__text').textContent,
       sel: document.querySelector('.hsh-ab__sel')?.textContent,
       caret: getComputedStyle(document.querySelector('.hsh-ab__caret')).animationName,
       font: getComputedStyle(document.querySelector('.hsh-ab__text')).fontFamily,
-      lh: parseFloat(getComputedStyle(document.querySelector('.hsh-ab__text')).lineHeight) / 14,
+      lh: parseFloat(getComputedStyle(document.querySelector('.hsh-ab__text')).lineHeight) / 13,
     };
   });
-  check('about — 스크롤바: 가운데 선 없이 창 오른쪽 끝(테두리 안쪽)에 딱', ab.railShown && ab.railBg === 'none' && ab.railGap >= 0 && ab.railGap <= 1.5, JSON.stringify(ab));
+  const fitsNow = await o.page.$eval('.hsh-win__scroll', (el) => el.scrollHeight - el.clientHeight < 2);
+  check('about — 글이 다 들어가면 스크롤바 없음', fitsNow && !ab.railShown, JSON.stringify({ fitsNow, railShown: ab.railShown }));
+  await o.page.setViewportSize({ width: 390, height: 380 }); // 넘치게
+  await o.page.waitForTimeout(400);
+  const rl = await o.page.evaluate(() => {
+    const rail = document.querySelector('.hsh-win__rail');
+    const body = document.querySelector('.hsh-win__body').getBoundingClientRect();
+    const k = document.querySelector('.hsh-win__knob').getBoundingClientRect();
+    return { shown: !rail.hidden && document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2) === document.querySelector('.hsh-win__knob'), bg: getComputedStyle(rail).backgroundImage, gap: body.right - rail.getBoundingClientRect().right };
+  });
+  check('about — 넘칠 때만 스크롤바: 가운데 선 없이 창 오른쪽 끝(테두리 안쪽)에 딱', rl.shown && rl.bg === 'none' && rl.gap >= 0 && rl.gap <= 1.5, JSON.stringify(rl));
+  await o.page.setViewportSize({ width: 390, height: 520 });
+  await o.page.waitForTimeout(400);
   check('about — 글은 홍지원은~부터 · 고른 글자는 집 · 마지막 점 뒤 커서만 깜빡', ab.text.startsWith('홍지원은 이제 새로운 집을') && !ab.text.includes('선생님도') && ab.text.endsWith('이별하여…….') && ab.sel === '집' && ab.caret === 'hsh-ab-blink', JSON.stringify(ab));
   await o.page.waitForTimeout(800); // 한글 글꼴(Google Fonts)이 오도록
   await o.page.screenshot({ path: path.join(OUT, 'heads-about.png') });
@@ -2115,13 +2125,15 @@ async function heads() {
       moved: flies.filter((f) => f.style.transform).length,
       textHidden: getComputedStyle(root.querySelector('.hsh-ab__text')).visibility === 'hidden',
       back: !root.querySelector('.hsh-ab__back').hidden, menu: !root.querySelector('.hsh-ab__menu').hidden,
+      fits: (() => { const sc = document.querySelector('.hsh-win__scroll').getBoundingClientRect(); return flies.every((f) => { const r = f.getBoundingClientRect(); return r.top >= sc.top - 1 && r.bottom <= sc.bottom + 1; }); })(),
+      rail: !document.querySelector('.hsh-win__rail').hidden,
     };
   });
   await o.page.click('.hsh-ab__menu [data-shape="always"]');
   await o.page.waitForTimeout(1700);
   let sh = await shapeLook();
   await o.page.screenshot({ path: path.join(OUT, 'heads-about-always.png') });
-  check('about — always: 글자가 모두 집 모양 자리로 · 원래 글은 숨김 · 되돌리기 단추', sh.shaped && sh.shape === 'always' && sh.flies === sh.glyphs && sh.moved === sh.flies && sh.textHidden && sh.back && !sh.menu, JSON.stringify(sh));
+  check('about — always: 글자가 모두 집 모양 자리로(창 안에 스크롤 없이) · 원래 글은 숨김 · 되돌리기 단추', sh.shaped && sh.shape === 'always' && sh.flies === sh.glyphs && sh.moved === sh.flies && sh.textHidden && sh.back && !sh.menu && sh.fits, JSON.stringify(sh));
   await o.page.click('.hsh-ab__f.is-sel');
   await o.page.click('.hsh-ab__menu [data-shape="together"]');
   await o.page.waitForTimeout(1700);
