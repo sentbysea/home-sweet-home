@@ -2103,7 +2103,7 @@ async function heads() {
   await o.page.setViewportSize({ width: 390, height: 520 });
   await o.page.waitForTimeout(400);
   check('about — 글은 홍지원은~부터 · 고른 글자는 집 · 마지막 점 뒤 커서만 깜빡', ab.text.startsWith('홍지원은 이제 새로운 집을') && !ab.text.includes('선생님도') && ab.text.endsWith('이별하여…….') && ab.sel === '집' && ab.caret === 'hsh-ab-blink', JSON.stringify(ab));
-  check('about — 글쓴이 줄은 보이고 모양에는 들지 않음', ab.credit === '© 담(@ohmyfilmbonita) All Right Reserved' && !ab.creditInShape, JSON.stringify(ab));
+  check('about — 글쓴이 줄은 보이고 모양에는 들지 않음', ab.credit === '© 담(@ohmyfilmbonita)' && !ab.creditInShape, JSON.stringify(ab));
   await o.page.waitForTimeout(800); // 한글 글꼴(Google Fonts)이 오도록
   await o.page.screenshot({ path: path.join(OUT, 'heads-about.png') });
   check('about — 글은 로딩 글꼴(Nanum Gothic Coding) · 줄간격 1.8', ab.font.includes('HSH Hand KR') && ab.font.includes('Nanum Gothic Coding') && Math.abs(ab.lh - 1.8) < 0.01, JSON.stringify(ab));
