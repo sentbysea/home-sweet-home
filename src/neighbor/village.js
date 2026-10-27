@@ -36,10 +36,10 @@ const tree = (s, seed) => boiled('-16 -46 32 48', 32 * s, 48 * s, (v) =>
   `<path d="${sketchEllipse(0, -28, 12, 14, seed + 2, v)}" fill="#a9d6a0"/>`, 'nbh-deco');
 // 우체통 위 '여기요!' 낙서 — 위로 퍼지는 강조선 셋 + 작은 반짝이. 선마다 따로 톡톡 튀어나온다(CSS)
 const burst = (s) => boiled('-18 -22 36 24', 36 * s, 24 * s, (v) =>
-  `<path class="nbh-burst nbh-burst--l" d="${sketch([[-6, -3], [-13, -10]], { seed: 71, v })}" fill="none"/>` +
-  `<path class="nbh-burst nbh-burst--c" d="${sketch([[0, -6], [0, -16]], { seed: 72, v })}" fill="none"/>` +
-  `<path class="nbh-burst nbh-burst--r" d="${sketch([[6, -3], [13, -10]], { seed: 73, v })}" fill="none"/>` +
-  `<path class="nbh-burst nbh-burst--s" d="${sketch([[13, -19], [13, -15]], { seed: 74, v })} ${sketch([[11, -17], [15, -17]], { seed: 75, v })}" fill="none"/>`,
+  `<path class="nbh-burst nbh-burst--l" d="${sketch([[-5, -3], [-9, -7]], { seed: 71, v })}" fill="none"/>` +
+  `<path class="nbh-burst nbh-burst--c" d="${sketch([[0, -5], [0, -11]], { seed: 72, v })}" fill="none"/>` +
+  `<path class="nbh-burst nbh-burst--r" d="${sketch([[5, -3], [9, -7]], { seed: 73, v })}" fill="none"/>` +
+  `<path class="nbh-burst nbh-burst--s" d="${sketch([[11, -14], [11, -10]], { seed: 74, v })} ${sketch([[9, -12], [13, -12]], { seed: 75, v })}" fill="none"/>`,
 'nbh-mailbox__burst-art');
 const fence = (s, seed) => boiled('-2 -16 46 18', 46 * s, 18 * s, (v) =>
   [0, 10, 20, 30, 40].map((x, i) => `<path d="${sketch([[x, 0], [x, -12], [x + 2, -14], [x + 4, -12], [x + 4, 0]], { seed: seed + i, v, radius: 1 })}" fill="#f3e6d8"/>`).join('') +

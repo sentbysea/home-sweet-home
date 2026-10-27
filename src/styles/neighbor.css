@@ -390,8 +390,8 @@
 /* 누르기 이끌기 — 위에 '여기요! 여기!' 낙서 강조선(톡톡 두 번 튀어나왔다 쉰다) · 잘게 떠는 빨간 세모 깃발 */
 .nbh-mailbox__burst {
   position: absolute;
-  left: 50%; /* 우체통 몸통 가운데에서 깃발 쪽으로 살짝 — 집 처마와 닿지 않게 */
-  bottom: calc(100% + 1px);
+  left: 41%; /* 우체통 몸통 가운데 */
+  bottom: calc(100% - 7px); /* 몸통 바로 위 */
   translate: -50% 0;
   pointer-events: none;
 }
