@@ -1,6 +1,7 @@
 // neighbor 마을 — 가운데 홍차네 집, 둘레에 배너를 교환한 이웃집들이 느슨하게 모인 손그림 동네(house-art.js 로 그린다).
-//   · 배치: 칸(PC 5 · 휴대폰 3)으로 나눈 동네에서 홍차네 집 둘레 칸부터 가까운 순서로 채우고, 넘치면 아래로 줄을 늘린다
-//     (집을 줄이지 않는다). 칸 안 자리 · 높낮이는 칸 번호로 정한 작은 어긋남 — 새로고침 · 고르기에도 그대로.
+//   · 배치: 늘 세 줄, 줄마다 반 칸씩 어긋난 벽돌 자리(바둑판이 아니게). 첫 화면 가운데 홍차네 집, 화면 안 자리는 그 둘레부터
+//     가까운 순서로 채우고, 넘치면 오른쪽으로 이어 붙여 가로로 스크롤(집을 줄이지 않는다 — 휠 · 손가락 · 키보드 모두).
+//     칸 안 자리 · 높낮이는 칸 번호로 정한 작은 어긋남 — 새로고침 · 고르기에도 그대로.
 //     나무 · 울타리는 집이 없는 빈 칸 몇 곳에 — 어느 칸 · 칸 안 어디 · 무엇인지는 새로고침마다 무작위(화면 크기가 바뀌어도 그대로),
 //     칸 가장자리에서 떼어 이웃집과 간격을 둔다.
 //   · 집마다 다른 주기로 2~4px 둥실(CSS). 외곽선 위글은 .nbh 의 data-boil(index.js)이 돌린다.
@@ -47,26 +48,49 @@ const mailbox = (s) => boiled('-14 -44 34 46', 34 * s, 46 * s, (v) =>
   `<g class="nbh-mailbox__pennant"><path d="${sketch([[10, -42], [17, -40], [10, -37]], { seed: 65, v, closed: true, radius: 1 })}" fill="#e5604f"/></g></g>` +
   `<path class="nbh-mailbox__letter" d="${sketch([[-6, -36], [6, -36], [6, -44], [-6, -44]], { seed: 66, v, closed: true, radius: 1 })}" fill="#ffffff"/>`, 'nbh-mailbox__art');
 
-/** 동네 칸 — 너비에 맞춰 칸 수 · 크기를 정하고, 홍차네 집 둘레부터 가까운 칸 순서 */
-function grid(width) {
-  const W = Math.min(width, 980);
-  const cols = W < 560 ? 3 : 5;
-  const pad = 12;
-  const cw = Math.min((W - pad * 2) / cols, cols === 3 ? 180 : 150);
-  const scale = cols === 3 ? Math.min(1.15, cw / 114) : 1.25; // 114 — 장식을 다 단 가장 넓은 집(넓은 집 + 개집 · 우체통)도 칸 안에
+const ROWS = 3;
+const ROW_OFF = [0.5, 0, 0.3]; // 줄마다 어긋나게(벽돌, 위 · 아래 줄도 서로 다르게) — 가운데 줄에 홍차네 집
+
+/**
+ * 동네 자리 — 늘 세 줄. 화면(V) 안에 드는 자리는 홍차네 집 둘레부터 가까운 순서로 채우고,
+ * 넘치면 오른쪽으로 이어 붙인다(가로 스크롤 — 집을 줄이지 않는다). 홍차네 집은 첫 화면 가운데.
+ * @param {number} V  화면 폭
+ * @param {number} n  놓을 집 수
+ * @param {(g: { scale: number, cw: number, hx: number }) => number} homeRight  홍차네 집 + 우체통 덩어리의 오른쪽 끝 —
+ *   그 오른쪽 칸(가운데 줄 j=1)이 덩어리와 닿으면 비워 둔다
+ */
+function grid(V, n, homeRight) {
+  const phone = V < 560;
+  const cw = phone ? Math.min((V - 24) / 3, 180) : 150;
+  const scale = phone ? Math.min(1.15, cw / 114) : 1.25; // 114 — 장식을 다 단 가장 넓은 집(넓은 집 + 개집 · 우체통)도 칸 안에
+  const pitch = phone ? cw : 172; // PC 는 칸 사이를 조금 더 띄운다
   const rowH = Math.round(112 * scale + 64); // 이름표 자리까지(긴 이름은 두세 줄)
-  const mid = (cols - 1) / 2;
+  const hx = V / 2;
   const r0 = rng(7);
-  const ring = [];
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (r === 1 && c === mid) continue; // 홍차네 집
-      if (r === 1 && c === mid + 1) continue; // 우체통 자리
-      ring.push({ r, c, d: Math.hypot(c - mid, (r - 1) * 1.3) + r0() * 0.35 });
+  const xOf = (r, j) => hx + (j + ROW_OFF[r]) * pitch;
+  const inView = (x) => x - pitch / 2 >= 0 && x + pitch / 2 <= V;
+  const right = homeRight({ scale, cw, hx });
+  const taken = (r, j) => r === 1 && (j === 0 || (j === 1 && right > xOf(1, 1) - pitch / 2 - 4)); // 홍차네 집 · 우체통
+  const near = [];
+  const far = [];
+  const jMin = Math.floor(-hx / pitch) - 1;
+  for (let r = 0; r < ROWS; r++) {
+    for (let j = jMin; inView(xOf(r, j)) || xOf(r, j) < hx; j++) {
+      if (taken(r, j)) continue;
+      const x = xOf(r, j);
+      if (inView(x)) near.push({ r, j, x, d: Math.hypot((x - hx) / pitch, (r - 1) * 1.3) + r0() * 0.35 });
     }
   }
-  ring.sort((a, b) => a.d - b.d);
-  return { W, cols, cw, scale, rowH, mid, ring, left: (W - cw * cols) / 2 };
+  near.sort((a, b) => a.d - b.d);
+  // 화면 밖 — 오른쪽으로 한 칸씩(왼쪽에서 오른쪽, 위에서 아래)
+  for (let j = 1; near.length + far.length < n + ROWS * 2; j++) {
+    for (let r = 0; r < ROWS; r++) {
+      const x = xOf(r, j);
+      if (x + pitch / 2 > V && !taken(r, j)) far.push({ r, j, x });
+    }
+  }
+  far.sort((a, b) => a.x - b.x || a.r - b.r);
+  return { V, cw, pitch, scale, rowH, hx, slots: [...near, ...far] };
 }
 
 /**
@@ -74,8 +98,12 @@ function grid(width) {
  * @param {{ reduced?: boolean, onMail?: () => void, onEdit?: (item: any, from: Element) => void, onHouse?: (from: Element) => void }} opts  onHouse — 홍차네 집을 눌렀을 때
  */
 export function createVillage(stage, { reduced = false, onMail = () => {}, onEdit = () => {}, onHouse = () => {} } = {}) {
+  // 길(가로 스크롤) 안에 동네 — 배너 말풍선은 길 밖(stage)에 두어 잘리지 않게
+  const street = document.createElement('div');
+  street.className = 'nbh-street';
   const town = document.createElement('div');
   town.className = 'nbh-town';
+  street.append(town);
   const pop = document.createElement('div');
   pop.className = 'nbh-pop';
   pop.id = 'nbh-pop';
@@ -86,7 +114,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     <a class="nbh-pop__link" target="_blank" rel="noopener noreferrer">
       <span class="nbh-pop__banner"><img alt="" decoding="async"><span class="nbh-pop__alt"></span></span>
     </a>`;
-  stage.append(town, pop);
+  stage.append(street, pop);
   let items = [];
   let homeHouse = null; // 홍차네 집 — 주인이 고친 모양(없으면 HOME_HOUSE)
   let state = 'loading';
@@ -100,6 +128,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   let homes = [];
   let mailBtn = null;
   let layout = [];
+  let builtW = 0; // 마지막으로 그린 길 폭
 
   const itemSpec = (it) => normalizeHouse(it.house) || defaultHouse(it.id ?? it.href);
 
@@ -107,31 +136,33 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
 
   const build = () => {
     closePop(true);
-    const g = grid(stage.clientWidth || window.innerWidth);
+    const shown = state === 'ready' ? items : [];
+    builtW = street.clientWidth;
+    const homeSpec = normalizeHouse(homeHouse) || HOME_HOUSE;
+    let hs = null;
+    const g = grid(builtW || window.innerWidth, shown.length, ({ scale, cw, hx }) => {
+      hs = houseSvg(homeSpec, { scale: scale * 1.35, seed: 3 });
+      // 장식을 많이 단 넓은 모양이면 옆 칸을 넘지 않게 조금 줄인다(홍차네 집만)
+      if (hs.w > cw * 1.2) hs = houseSvg(homeSpec, { scale: scale * 1.35 * (cw * 1.2) / hs.w, seed: 3 });
+      return hx + hs.w / 2 + 12 * scale; // 우체통 오른쪽 끝(아래 mailOff 의 반)
+    });
+    // 동네 폭 — 첫 화면, 넘치면 마지막 집 칸까지(가로 스크롤)
+    const TW = Math.max(g.V, ...g.slots.slice(0, shown.length).map((s) => s.x + g.pitch / 2 + 12));
     town.textContent = '';
-    town.style.width = `${f(g.W)}px`;
+    town.style.width = `${f(TW)}px`;
     homes = [];
     layout = [];
-    // 칸 → 자리(그 칸의 집 크기로 어긋남 폭을 정한다)
-    const slotFor = (i) => {
-      if (i < g.ring.length) return g.ring[i];
-      const k = i - g.ring.length;
-      return { r: 3 + Math.floor(k / g.cols), c: k % g.cols };
-    };
+    // 자리 → 칸 안 위치(그 집 크기로 어긋남 폭을 정한다 — 칸 밖으로는 나가지 않는다)
     const place = (slot, w, h, salt) => {
-      const sr = rng(slot.r * 31 + slot.c * 7 + salt);
-      const room = Math.max(0, (g.cw - w) / 2 - 6);
-      const x = g.left + (slot.c + 0.5) * g.cw + (sr() * 2 - 1) * room * 0.8;
+      const sr = rng(slot.r * 31 + (slot.j + 50) * 7 + salt);
+      const room = Math.max(0, (g.pitch - w) / 2 - 6);
+      const x = slot.x + (sr() * 2 - 1) * room * 0.8;
       const base = (slot.r + 0.82) * g.rowH + (sr() * 2 - 1) * g.rowH * 0.07;
       return { x, base };
     };
 
     // 홍차네 집 + 이름표 + 우체통
-    const center = { r: 1, c: g.mid };
-    const homeSpec = normalizeHouse(homeHouse) || HOME_HOUSE;
-    let hs = houseSvg(homeSpec, { scale: g.scale * 1.35, seed: 3 });
-    // 장식을 많이 단 넓은 모양이면 옆 칸을 넘지 않게 조금 줄인다(홍차네 집만)
-    if (hs.w > g.cw * 1.2) hs = houseSvg(homeSpec, { scale: g.scale * 1.35 * (g.cw * 1.2) / hs.w, seed: 3 });
+    const center = { r: 1 };
     const home = document.createElement('button');
     home.type = 'button';
     home.className = 'nbh-center';
@@ -143,10 +174,10 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     // 집 + 우체통을 한 덩어리로 — 우체통은 집 오른쪽 벽에 바짝(두 그림의 빈 여백만큼 겹쳐), 덩어리 가운데가 칸 가운데
     const ms = 34 * g.scale;
     const mailOff = ms - 10 * g.scale; // 집 오른쪽 끝에서 우체통 오른쪽 끝까지(처마 밑으로 살짝 들어간다)
-    const cx = g.left + (center.c + 0.5) * g.cw - mailOff / 2;
+    const cx = g.hx - mailOff / 2;
     const gx = cx + mailOff / 2; // 덩어리 가운데 — 이름표는 여기에
     // 이름표 폭 — 이름 길이만큼, 단 화면(동네) 밖으로 나가지 않게
-    const tagMax = (x) => `${f(Math.max(60, Math.min(170, 2 * Math.min(x - 4, g.W - x - 4))))}px`;
+    const tagMax = (x) => `${f(Math.max(60, Math.min(170, 2 * Math.min(x - 4, TW - x - 4))))}px`;
     home.style.setProperty('--tag-bg', tagTone(homeSpec));
     home.style.setProperty('--tag-max', tagMax(gx));
     home.style.setProperty('--tag-dx', `${f(gx - cx)}px`);
@@ -158,11 +189,10 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     layout.push({ kind: 'center', x: cx, base: cbase, w: hs.w, h: hs.h });
 
     // 이웃집
-    const shown = state === 'ready' ? items : [];
     shown.forEach((it, i) => {
       const spec = itemSpec(it);
       const art = houseSvg(spec, { scale: g.scale, seed: i + 1 });
-      const slot = slotFor(i);
+      const slot = g.slots[i];
       const { x, base } = place(slot, art.w, art.h, 1);
       const b = document.createElement('button');
       b.type = 'button';
@@ -191,7 +221,7 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       b.style.setProperty('--tilt', `${f((hr() * 2 - 1) * 2.5)}deg`);
       town.append(b);
       homes.push(b);
-      layout.push({ kind: 'home', i, x, base, w: art.w, h: art.h, slot: `${slot.r}:${slot.c}` });
+      layout.push({ kind: 'home', i, x, base, w: art.w, h: art.h, slot: `${slot.r}:${slot.j}` });
     });
 
     // 홍차네 집 · 우체통 — 이웃집 다음(Tab 은 이웃집부터)
@@ -210,23 +240,19 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     layout.push({ kind: 'mail', x: mx + ms / 2, base: cbase, w: ms, h: 46 * g.scale });
 
 
-    // 장식 — 집이 없는 빈 칸(둘레 · 마지막 줄)에서 무작위로 2~4곳, 칸 가장자리에서 GAP 만큼 떼어
+    // 장식 — 집이 없는 빈 칸(동네 폭 안)에서 무작위로 2~4곳, 칸 가장자리에서 GAP 만큼 떼어
     const used = new Set(layout.filter((l) => l.slot).map((l) => l.slot));
-    const rowsUsed = shown.length > g.ring.length ? 3 + Math.ceil((shown.length - g.ring.length) / g.cols) : 3;
-    const free = [];
-    for (let rr = 0; rr < rowsUsed; rr++) {
-      for (let c = 0; c < g.cols; c++) {
-        if (rr === 1 && (c === g.mid || c === g.mid + 1)) continue; // 홍차네 집 · 우체통
-        if (rr === 2 && c === g.mid && !shown.length) continue; // 빈 동네 안내 자리
-        if (!used.has(`${rr}:${c}`)) free.push({ r: rr, c });
-      }
-    }
+    const free = g.slots.filter((s) => !used.has(`${s.r}:${s.j}`) && s.x + g.pitch / 2 <= TW
+      && !(s.r === 2 && !shown.length && Math.abs(s.x - g.hx) < g.pitch)); // 빈 동네 안내 자리
     const dr = rng(DECO_SEED);
     for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(dr() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
     const GAP = 14;
     // 이미 놓인 것(집 · 이름표 자리 · 우체통 · 다른 장식)과 GAP 이상 — 홍차네 집은 옆 칸까지 넓을 수 있다
     const TAG_H = 44; // 집 아래 이름표 자리
-    const clear = (x, base, w, h) => layout.every((l) => {
+    // 장식은 집들이 차지한 위아래 안에서만 — 새로고침마다 자리가 달라도 동네 높이 · 줄인 위 여백은 그대로
+    const houseTop = Math.min(...layout.map((l) => l.base - l.h));
+    const houseBottom = Math.max(...layout.map((l) => l.base));
+    const clear = (x, base, w, h) => base - h >= houseTop && base <= houseBottom && layout.every((l) => {
       const house = l.kind === 'home' || l.kind === 'center';
       const below = house ? TAG_H : 0;
       const hw = house ? Math.max(l.w / 2, 75) : l.w / 2; // 이름표는 집보다 넓을 수 있다
@@ -241,12 +267,12 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       const ts = g.scale * (0.85 + dr() * 0.3);
       const w = isFence ? 46 * g.scale : 32 * ts;
       const h = isFence ? 18 * g.scale : 48 * ts;
-      const span = Math.max(0, g.cw - w - GAP * 2);
+      const span = Math.max(0, g.pitch - w - GAP * 2);
       let x = 0;
       let base = 0;
       let ok = false;
       for (let t = 0; t < 6 && !ok; t++) { // 겹치면 칸 안 다른 자리로 — 끝내 안 되면 이 칸은 비운다
-        x = g.left + s.c * g.cw + GAP + w / 2 + dr() * span;
+        x = s.x - g.pitch / 2 + GAP + w / 2 + dr() * span;
         base = (s.r + 0.82) * g.rowH + (dr() * 2 - 1) * g.rowH * 0.06;
         ok = clear(x, base, w, h);
       }
@@ -272,12 +298,10 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
     }
 
     // 쓰지 않은 위 · 아래 빈 줄은 줄인다(배치는 그대로)
-    const tops = layout.map((l) => l.base - l.h);
-    const minTop = Math.min(...tops);
-    const shift = Math.max(0, minTop - 24);
+    const shift = Math.max(0, houseTop - 24);
     for (const el of town.children) el.style.top = `${f(parseFloat(el.style.top) - shift)}px`;
     layout.forEach((l) => { l.base -= shift; });
-    const bottom = Math.max(...layout.map((l) => l.base)) + (state === 'ready' && items.length ? 52 : 90);
+    const bottom = houseBottom - shift + (state === 'ready' && items.length ? 52 : 90);
     town.style.height = `${f(bottom)}px`;
   };
 
@@ -448,10 +472,25 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
   document.addEventListener('pointerdown', onDocDown, true);
   const onScroll = () => { if (open >= 0) position(); };
   window.addEventListener('scroll', onScroll, true);
+  // 마우스 휠(세로)로도 옆 집으로 — 화면이 세로로 더 내려갈 곳이 없을 때만
+  street.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY) || street.scrollWidth <= street.clientWidth + 1) return;
+    const page = stage.closest('.nbh__scroll');
+    if (page && page.scrollHeight > page.clientHeight + 1) return;
+    const max = street.scrollWidth - street.clientWidth;
+    if ((e.deltaY < 0 && street.scrollLeft <= 0) || (e.deltaY > 0 && street.scrollLeft >= max - 1)) return;
+    e.preventDefault();
+    street.scrollLeft += e.deltaY;
+  }, { passive: false });
 
   let resizing = 0;
   const onResize = () => { clearTimeout(resizing); resizing = setTimeout(build, 120); };
-  window.addEventListener('resize', onResize);
+  // 길 폭이 바뀌면(창 크기 · 세로 스크롤바가 생기고 사라질 때) 다시 — 숨겨 둔 동안(폭 0)은 그대로
+  const ro = new ResizeObserver(() => {
+    const w = street.clientWidth;
+    if (w && w !== builtW) onResize();
+  });
+  ro.observe(street);
 
   return {
     /** @param {{ items?: Array<{ id?: any, href: string, image: string, label: string, house?: object | null }>, home?: object | null, state?: string, editing?: boolean }} next */
@@ -479,8 +518,8 @@ export function createVillage(stage, { reduced = false, onMail = () => {}, onEdi
       document.removeEventListener('keydown', onKey, true);
       document.removeEventListener('pointerdown', onDocDown, true);
       window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onResize);
-      town.remove();
+      ro.disconnect();
+      street.remove();
       pop.remove();
     },
   };

@@ -314,6 +314,8 @@ console.log(`browser: ${BROWSER}`);
 async function open(user, viewport = { width: 1280, height: 900 }, extra = {}) {
   const context = await browser.newContext({ viewport, acceptDownloads: true, ...extra });
   if (user) await context.addInitScript(mock.authInitScript(user));
+  // 로그인한 사람 — supabase-js 가 두는 로그인 자리도(화면이 주인인지 미리 본다)
+  if (user) await context.addInitScript(() => { try { localStorage.setItem('sb-iokdgqzfprtggsnrusez-auth-token', '{}'); } catch { /* 샌드박스 프레임 */ } });
   await mock.attachMockSupabase(context, db);
   // 이웃 배너 이미지 — 5:1 PNG(missing 은 없는 이미지)
   await context.route('https://img.test/**', (route) => {
@@ -1143,7 +1145,6 @@ const watchLoader = (context) => context.addInitScript(() => {
   };
   requestAnimationFrame(look);
 });
-const toBottom = async (page) => { await page.$eval('.nbh__scroll', (s) => { s.scrollTop = s.scrollHeight; }); await page.waitForTimeout(300); };
 const rects = (page, sel) => page.$$eval(sel, (els) => els.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }).filter((r) => r.w > 0));
 const center = (r) => ({ x: (r.x + r.r) / 2, y: (r.y + r.b) / 2 });
 const clickMail = async (page) => { const m = (await rects(page, '.nbh-mailbox__art'))[0]; await page.mouse.click(m.x + m.w / 2, m.y + m.h * 0.45); };
@@ -1165,9 +1166,13 @@ const overlaps = (page) => page.evaluate(() => {
   }
   return bad;
 });
-/** 그림 상자들이 화면 폭 안 */
-const inWidth = (page) => page.evaluate(() => [...document.querySelectorAll('.nbh-art, .nbh-mailbox__art, .nbh-deco')]
-  .every((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= document.documentElement.clientWidth; }));
+/** 그림 상자들이 화면 폭 안 — 넘쳐 옆으로 스크롤하는 동네면 동네 폭 안 */
+const inWidth = (page) => page.evaluate(() => {
+  const t = document.querySelector('.nbh-town').getBoundingClientRect();
+  const right = Math.max(document.documentElement.clientWidth, t.right);
+  return [...document.querySelectorAll('.nbh-art, .nbh-mailbox__art, .nbh-deco')]
+    .every((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= right; });
+});
 const layoutOf = (page) => page.$eval('.nbh__village', (v) => v.hshVillage.layout.filter((l) => !['tree', 'fence'].includes(l.kind)).map((l) => [l.kind, Math.round(l.x), Math.round(l.base)].join(':')).join('|'));
 
 async function neighborVillage(device, name) {
@@ -1191,7 +1196,8 @@ async function neighborVillage(device, name) {
   const c = (await rects(page, '.nbh-center .nbh-art'))[0];
   const town = (await rects(page, '.nbh-town'))[0];
   check(`${name} — 홍차네 집이 가운데 · 조금 더 크다`, Math.abs(center(c).x - center(town).x) < town.w * 0.12 && homeRects.every((h) => c.w > h.w * 0.95 || c.h > h.h), JSON.stringify({ c, town }));
-  check(`${name} — 가운데 집 이름표 homesweethome`, (await page.textContent('.nbh-center__tag')).trim() === 'homesweethome');
+  check(`${name} — 방문자에게는 edit 없음`, !(await page.isVisible('.nbh__owner [data-act="edit"]')) && !(await page.isVisible('.nbh__owner [data-act="requests"]')));
+  check(`${name} — 가운데 집 이름표 homesweethome`,(await page.textContent('.nbh-center__tag')).trim() === 'homesweethome');
   check(`${name} — 집 · 우체통 · 장식이 겹치지 않고 화면 폭 안`, (await overlaps(page)).length === 0 && (await inWidth(page)), JSON.stringify(await overlaps(page)));
   check(`${name} — 집은 누르기 편한 크기`, homeRects.every((h) => h.w >= 44 && h.h >= 44), homeRects.map((h) => Math.round(h.w)).join(','));
   check(`${name} — 배너는 평소 숨김 · 카드 테두리 없음`, (await page.$eval('.nbh-pop', (p) => p.hidden)) && (await page.$eval('.nbh-home', (b) => getComputedStyle(b).borderTopWidth === '0px' && getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)')));
@@ -1320,7 +1326,7 @@ async function neighborVillage(device, name) {
   await page.reload();
   await page.waitForSelector('.nbh.is-open .nbh-home', { timeout: 20000 });
   await villageReady(page);
-  check(`${name} — 새로고침해도 같은 배치 · 같은 집`, (await layoutOf(page)) === lay && JSON.stringify(await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house))) === JSON.stringify(looks));
+  { const now = await layoutOf(page); check(`${name} — 새로고침해도 같은 배치 · 같은 집`, now === lay && JSON.stringify(await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house))) === JSON.stringify(looks), `${lay} → ${now}`); }
 
   // 우체통 → 배너 교환
   await clickMail(page);
@@ -1779,20 +1785,24 @@ async function neighborShapes() {
       const homes = await rects(page, '.nbh-home .nbh-art');
       const town = (await rects(page, '.nbh-town'))[0];
       const c = (await rects(page, '.nbh-center .nbh-art'))[0];
-      const ok = homes.length === n && (await overlaps(page)).length === 0 && (await inWidth(page)) && Math.abs(center(c).x - center(town).x) < town.w * 0.14;
-      check(`${name} — 이웃 ${n}채: 홍차네 집 가운데 · 겹침 없음 · 화면 폭 안`, ok, JSON.stringify({ n: homes.length, overlaps: await overlaps(page) }));
+      const vw = await page.evaluate(() => document.documentElement.clientWidth);
+      const rows = await page.$eval('.nbh__village', (v) => new Set(v.hshVillage.layout.filter((l) => l.kind === 'home').map((l) => l.slot.split(':')[0])).size);
+      const ok = homes.length === n && (await overlaps(page)).length === 0 && (await inWidth(page)) && Math.abs(center(c).x - vw / 2) < vw * 0.14 && rows <= 3;
+      check(`${name} — 이웃 ${n}채: 첫 화면 가운데 홍차네 집 · 세 줄까지 · 겹침 없음`, ok, JSON.stringify({ n: homes.length, rows, overlaps: await overlaps(page) }));
       if (n === 0) check(`${name} — 이웃 없음: 안내 · 홍차네 집 · 우체통은 그대로`, (await page.textContent('.nbh-note')).includes('아직 이웃집이 없어요') && (await page.$$('.nbh-mailbox')).length === 1);
       const scales = await page.$$eval('.nbh-home .nbh-art', (s) => s.map((x) => Math.round((x.width.baseVal.value / x.viewBox.baseVal.width) * 100) / 100));
       if (prev && n > prev.n) {
-        check(`${name} — ${prev.n} → ${n}채: 집을 줄이지 않고 마을이 아래로`, town.h >= prev.h && scales.every((x) => x === prev.scale), JSON.stringify({ h: [prev.h, town.h], scale: [prev.scale, ...new Set(scales)] }));
+        check(`${name} — ${prev.n} → ${n}채: 집을 줄이지 않고 마을이 옆으로`, town.w >= prev.w && town.h <= prev.h + 260 && scales.every((x) => x === prev.scale), JSON.stringify({ w: [prev.w, town.w], h: [prev.h, town.h], scale: [prev.scale, ...new Set(scales)] }));
       }
-      if (homes.length) prev = { n, h: town.h, scale: scales[0] };
+      if (homes.length) prev = { n, w: town.w, h: town.h, scale: scales[0] };
       if (n === 30) {
         await page.screenshot({ path: path.join(OUT, `neighbor-${name}-30.png`), fullPage: false });
-        check(`${name} — 30채: 페이지가 아래로 스크롤`, await page.$eval('.nbh__scroll', (s) => s.scrollHeight > s.clientHeight + 200));
-        await toBottom(page);
+        check(`${name} — 30채: 길이 옆으로 스크롤`, await page.$eval('.nbh-street', (s) => s.scrollWidth > s.clientWidth + 200));
+        await page.$eval('.nbh-street', (s) => { s.scrollLeft = s.scrollWidth; });
+        await page.waitForTimeout(300);
         const last = (await rects(page, '.nbh-home[data-i="29"] .nbh-art'))[0];
-        check(`${name} — 30채: 끝까지 내리면 마지막 집`, last && last.b <= (await page.evaluate(() => innerHeight)));
+        check(`${name} — 30채: 끝까지 밀면 마지막 집`, last && last.x >= 0 && last.r <= vw);
+        await page.screenshot({ path: path.join(OUT, `neighbor-${name}-30-end.png`), fullPage: false });
       }
       if (n === 12) await page.screenshot({ path: path.join(OUT, `neighbor-${name}-12.png`) });
     }

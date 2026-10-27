@@ -4,7 +4,8 @@
 //     그 뒤에 홈페이지 없는 이웃(neighbor_residents) — 집 + 이름표만, 눌러도 배너 · 이동 없음.
 //   · 홍차네 집 옆 우체통 → 배너 교환 패널(panel.js) — 주소 /neighbor/banner.
 //   · 홍차네 집 → 내 배너(복사) — 주소 /neighbor/mine. 주인 고치기 중이면 홍차네 집 고치기(모양 · 색, neighbor_home 에 저장).
-//   · 주인: 아래 'edit' → Google 로그인(돌아오면 보던 주소로) → 집을 누르면 그 집 고치기, '+ add banner', 받은 신청.
+//   · 주인: 아래 'edit'(주인으로 로그인돼 있을 때만 보인다 — 로그인은 /admin, 같은 사이트라 여기서도 이어진다)
+//     → 집을 누르면 그 집 고치기, '+ add banner', 받은 신청.
 //   · 손그림 위글: 선 변형 4장을 190ms 마다(로딩 · 평면도와 같은 박자) — 이 화면의 모든 집(패널 미리보기까지)이 같이. 모션 줄이기면 멈춘다.
 //   · 바탕은 홈과 같은 아이보리, 여백에 홈 · archive 와 같은 작은 별(shared/star.js)을 성글게 — 자리는 고정 비율이라
 //     창 크기가 바뀌어도 그대로, 마을 뒤에 깔려 집 · 이름표를 가리거나 누르기를 막지 않는다.
@@ -17,7 +18,7 @@ import { createVillage } from './village.js';
 import { mountPanel } from './panel.js';
 import { BOIL, HOME_NAME } from './house-art.js';
 import { starSvg } from '../shared/star.js';
-import { getClient, ownerSession, hasSavedLogin, HOME_REDIRECT, consumeAuthError, rememberReturnPath } from '../content/supabase.js';
+import { getClient, ownerSession, hasSavedLogin, consumeAuthError } from '../content/supabase.js';
 
 const BOIL_MS = 190;
 const VIEW_KEY = 'hsh:nbh-view'; // 'village' | 'banner'
@@ -56,7 +57,7 @@ function build() {
         <div class="nbh__owner">
           <button class="nbh__link" type="button" data-act="requests" hidden>받은 신청 <span class="nbh__count"></span></button>
           <button class="nbh__link" type="button" data-act="add" hidden>+ add banner</button>
-          <button class="nbh__link" type="button" data-act="edit">edit</button>
+          <button class="nbh__link" type="button" data-act="edit" hidden>edit</button>
         </div>
       </footer>
       <!-- 보기 스위치 — 화면 오른쪽 위에 고정. Tab 은 이웃집 · edit 다음에 -->
@@ -198,28 +199,17 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     $('[data-act="edit"]').textContent = editing ? 'done' : 'edit';
     root.classList.toggle('is-editing', editing);
     $('[data-act="add"]').hidden = !editing;
+    $('[data-act="edit"]').hidden = !session.owner;
     $('[data-act="requests"]').hidden = !session.owner;
   };
 
   // ---------- 주인 ----------
 
-  // edit — 로그인 안 했으면 Google 로, 주인이면 고치기 모드
-  const toggleEdit = async () => {
+  // edit — 주인에게만 보인다(checkOwner). 누르면 고치기 모드
+  const toggleEdit = () => {
     if (editing) { editing = false; paintOwner(); paint(); return; }
+    if (!session.owner) return;
     setView('village'); // 고치기는 마을에서
-    say('확인 중…');
-    let client;
-    try { client = await getClient(); } catch { say('불러오지 못했어요.'); return; }
-    session = await ownerSession(client);
-    if (!session.user) {
-      say('Google 로그인으로 이동 중…');
-      // 돌아오는 곳은 허용 목록의 루트(/) 하나 — 보던 주소(/neighbor 등)는 적어 두었다가 돌아온 뒤 연다
-      rememberReturnPath();
-      const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: HOME_REDIRECT } });
-      if (error) { console.error(error); say('로그인하지 못했어요.'); }
-      return;
-    }
-    if (!session.owner) { say('사이트 주인만 고칠 수 있어요.'); return; }
     say('집을 누르면 그 집을 고칠 수 있어요.');
     editing = true;
     paintOwner();
@@ -227,7 +217,7 @@ export function mountNeighbor(host, { reduced = false, cover = null } = {}) {
     panel.refreshCount();
   };
 
-  // 로그인돼 있으면 조용히 주인인지 본다(받은 신청 수)
+  // 로그인돼 있으면 조용히 주인인지 본다(edit · 받은 신청 수)
   const checkOwner = async () => {
     if (!hasSavedLogin() && !/access_token=|[?&]code=/.test(location.hash + location.search)) return;
     try {
