@@ -3,6 +3,8 @@
 //     { [방 label]: { title, pill, image, imagePath, hidden, stickers: [최소, 최대] } }. 누구나 읽고 주인만 쓴다. 비운 칸은 코드의 기본값.
 //   사진: user-banners/{주인}/vibe-rooms/{uuid} — 고를 때마다 새 경로(주소가 바뀌어 캐시에 예전 사진이 남지 않는다),
 //     저장이 끝난 뒤에 밀려난 예전 사진을 지운다. 정사각형으로 가운데를 잘라 600px 까지 줄인다(움직이는 GIF 는 그대로).
+//   마지막으로 읽은 값은 이 브라우저에 적어 둔다(localStorage) — 새로고침 때 받아 오기 전부터 그 값으로 그려,
+//     숨긴 머리가 잠깐 보였다 사라지지 않게. 받아 오면 새 값으로 바꾼다.
 
 import { SUPABASE_URL, SUPABASE_KEY, getClient } from '../content/supabase.js';
 import { SITE_OWNER_ID } from '../content/home-settings.js';
@@ -10,18 +12,33 @@ import { SITE_OWNER_ID } from '../content/home-settings.js';
 const KEY = 'vibe_room_heads';
 const BUCKET = 'user-banners';
 const FOLDER = 'vibe-rooms';
+const CACHE = 'hsh:room-heads';
 
-/** 방마다 머리 — 못 읽으면 {}(코드 기본값 그대로) */
+const remember = (heads) => { try { localStorage.setItem(CACHE, JSON.stringify(heads)); } catch { /* 다음엔 받아 온 뒤에 */ } };
+
+/** 이 브라우저에 적어 둔 머리 — 없으면 null(아직 한 번도 받아 오지 않았다) */
+export function cachedRoomHeads() {
+  try {
+    const heads = JSON.parse(localStorage.getItem(CACHE) || 'null');
+    return heads && typeof heads === 'object' ? heads : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 방마다 머리 — 못 읽으면 null(적어 둔 값 · 코드 기본값 그대로) */
 export async function fetchRoomHeads() {
   try {
     const q = `select=value&user_id=eq.${SITE_OWNER_ID}&key=eq.${KEY}`;
     const res = await fetch(`${SUPABASE_URL}/rest/v1/site_settings?${q}`, { headers: { apikey: SUPABASE_KEY } });
-    if (!res.ok) return {};
+    if (!res.ok) return null;
     const value = (await res.json())?.[0]?.value;
     const heads = typeof value === 'string' ? JSON.parse(value) : value;
-    return heads && typeof heads === 'object' ? heads : {};
+    const out = heads && typeof heads === 'object' ? heads : {};
+    remember(out);
+    return out;
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -30,6 +47,7 @@ export async function saveRoomHeads(userId, heads) {
   const client = await getClient();
   const { error } = await client.from('site_settings').upsert({ user_id: userId, key: KEY, value: JSON.stringify(heads) }, { onConflict: 'user_id,key' });
   if (error) throw error;
+  remember(heads);
 }
 
 /** 정사각형으로 가운데를 잘라 600px 까지 — 못 읽으면 원본 그대로 */

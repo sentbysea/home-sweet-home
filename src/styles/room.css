@@ -327,6 +327,7 @@
 
 /* 머리 숨기기 — 사진 · 제목 · 검정 알약 줄이 통째로 빠진다 */
 .hsh-win.is-headless .hsh-win__head { display: none; }
+.hsh-win.is-head-pending .hsh-win__head { visibility: hidden; } /* 처음 온 브라우저 — 머리 설정을 받아 올 때까지(room-heads.js) */
 
 .hsh-win__head {
   display: flex;

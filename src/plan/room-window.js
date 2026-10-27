@@ -18,7 +18,7 @@ import { aboutNoteMarkup, openAboutNote, loadAboutFont } from './about-note.js';
 import { mountContent } from '../content/viewer.js';
 import { fetchPost } from '../content/data.js';
 import { getClient, ownerSession, hasSavedLogin, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
-import { fetchRoomHeads, saveRoomHeads, uploadRoomPhoto, removeRoomPhoto } from './room-heads.js';
+import { fetchRoomHeads, cachedRoomHeads, saveRoomHeads, uploadRoomPhoto, removeRoomPhoto } from './room-heads.js';
 import { pathOf, parsePath, withKeep } from './routes.js';
 import { mountArchive } from '../archive/index.js';
 import { mountNeighbor } from '../neighbor/index.js';
@@ -367,7 +367,10 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const field = (name) => editor.elements.namedItem(name);
   const edThumb = editor.querySelector('.hsh-win__ed-thumb');
   const edMsg = editor.querySelector('.hsh-win__ed-msg');
-  let heads = {};
+  // 적어 둔 값이 있으면 그것부터 — 없으면(처음 온 브라우저) 받아 올 때까지 머리를 감춰 둔다(숨긴 머리가 잠깐 보이지 않게)
+  const cached = cachedRoomHeads();
+  let heads = cached || {};
+  win.classList.toggle('is-head-pending', !cached);
   let headLabel = ''; // 지금 방(data-label)
   let basePill = ''; // 그 방의 기본 검정 알약
   let pairNow = false; // about 의 /pair — 제목은 늘 pair
@@ -398,8 +401,9 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     syncRail();
   };
   fetchRoomHeads().then((h) => {
-    heads = h;
+    if (h) heads = h;
     repaintHead();
+    win.classList.remove('is-head-pending');
     // 창을 먼저 열었는데 이 방 스티커 개수를 고쳐 두었으면 — 그 개수로 다시 붙인다
     if (!win.hidden && !win.dataset.category && heads[headLabel]?.stickers) scatter(frame, stickersOf(headLabel));
   });
