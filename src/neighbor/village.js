@@ -401,7 +401,9 @@ export function createVillage(stage, { reduced = false, mine = null, onMail = ()
     left = Math.max(8, Math.min(vw - pw - 8, left));
     let top = hr.top - ph - 10;
     let below = false;
-    if (top < 8) { top = hr.bottom + 10; below = true; } // 위에 자리가 없으면 아래로
+    // 위에 자리가 없으면(위 줄 · 스크롤 구역 위 끝) 아래로
+    const ceil = stage.closest('.nbh__scroll')?.getBoundingClientRect().top ?? 0;
+    if (top < ceil + 8) { top = hr.bottom + 10; below = true; }
     pop.classList.toggle('is-below', below);
     pop.style.left = `${f(left - sr.left)}px`;
     pop.style.top = `${f(top - sr.top)}px`;

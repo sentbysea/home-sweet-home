@@ -26,10 +26,10 @@
 .nbh.is-closing { opacity: 0; pointer-events: none; }
 .hsh-nbh-on, .hsh-nbh-on body { overflow: hidden; }
 
-/* 세로 스크롤 — 일반 스크롤 그대로(가로는 잘리지 않게 숨김) */
+/* 세로 스크롤 — 위 줄(← home · 제목 · 스위치) 아래 구역에서만. 집 · 배너가 위 줄로 올라가 겹치지 않는다(가로는 잘리지 않게 숨김) */
 .nbh__scroll {
   position: absolute;
-  inset: 0;
+  inset: calc(var(--hsh-top) + 56px) 0 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -37,7 +37,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--hsh-top) 0 0; /* 위 줄 자리 — archive 와 같다(base.css) */
+  padding: 0;
 }
 
 /* ← home — 위 줄 구역 왼쪽 끝에 늘(긴 집을 내려가도) */
@@ -220,7 +220,13 @@
 
 /* 제목 — 영단어(첫 글자 대문자) + 밑줄은 홈 neighbor 버튼 색종이 색(민트). ← home · 보기 스위치와 한 줄 */
 .nbh__title {
-  margin: 0 0 6px;
+  position: fixed; /* 위 줄은 ← home · 스위치와 함께 늘 그 자리 — 스크롤은 그 아래 구역에서만(.nbh__scroll) */
+  top: var(--hsh-top);
+  left: 50%;
+  z-index: 3;
+  translate: -50% 0;
+  margin: 0;
+  white-space: nowrap;
   font-family: var(--hsh-mono);
   font-size: 26px;
   line-height: 44px; /* 위 줄 높이 — archive 제목과 같은 자리 */

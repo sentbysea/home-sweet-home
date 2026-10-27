@@ -1197,6 +1197,15 @@ async function neighborVillage(device, name) {
   const town = (await rects(page, '.nbh-town'))[0];
   check(`${name} — 홍차네 집이 가운데 · 조금 더 크다`, Math.abs(center(c).x - center(town).x) < town.w * 0.12 && homeRects.every((h) => c.w > h.w * 0.95 || c.h > h.h), JSON.stringify({ c, town }));
   check(`${name} — 방문자에게는 edit 없음`, !(await page.isVisible('.nbh__owner [data-act="edit"]')) && !(await page.isVisible('.nbh__owner [data-act="requests"]')));
+  const head = await page.evaluate(async () => {
+    const t = () => document.querySelector('.nbh__title').getBoundingClientRect();
+    const sc = document.querySelector('.nbh__scroll');
+    const before = t().top;
+    sc.style.paddingBottom = '2000px'; sc.scrollTop = 600; await new Promise((r) => setTimeout(r, 50));
+    const r = { moved: Math.abs(t().top - before), gap: sc.getBoundingClientRect().top - t().bottom };
+    sc.scrollTop = 0; sc.style.paddingBottom = ''; return r;
+  });
+  check(`${name} — 제목은 스크롤해도 제자리 · 집은 제목 줄 아래 구역에서만`, head.moved < 1 && head.gap >= 0, JSON.stringify(head));
   const row = await page.$eval('.nbh__village', (v) => v.hshVillage.layout.filter((l) => l.kind === 'home').map((l) => l.slot.split(':')[0]).join(''));
   check(`${name} — 이웃 세 채는 홍차네 집 줄에 한 줄로`, row === '111', row);
   check(`${name} — 가운데 집 이름표 homesweethome`,(await page.textContent('.nbh-center__tag')).trim() === 'homesweethome');
