@@ -364,7 +364,15 @@ const imgLoaded = (page, sel) => page.waitForFunction((sel) => {
 async function visitor() {
   console.log('\n[visitor — 로그인 없음]');
   const { page, errors, coverRequests, context } = await open(null);
+  const collects = [];
+  page.on('request', (r) => { if (r.url().includes('/api/collect')) collects.push(r.url()); });
   await home(page);
+  // 방문 집계(content/visits.js) — 화면 이름 · 운영 주소가 아니면 보내지 않음
+  const pages = await page.evaluate(async () => {
+    const { pageOf } = await import('/src/content/visits.js');
+    return ['/', '/about', '/pair', '/teatime', '/notice', '/neighbor', '/neighbor/banner', '/archive', '/category/3', '/category/3/folder/1/read', '/post/13', '/post/13/quote', '/nope'].map((p) => pageOf(p, ''));
+  });
+  check('방문 집계 — 주소 → 화면 이름', pages.join() === 'home,about,pair,teatime,notice,neighbor,neighbor,archive,category,category,post,post,home', pages.join());
   await openRoom(page, '1');
   await page.waitForSelector('.hsh-ct__folders', { timeout: 20000 });
   const folders = await page.$$eval('.hsh-ct__folder', (b) => b.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
@@ -422,6 +430,7 @@ async function visitor() {
   await openRoom(page, '3', 'memo');
   await page.waitForSelector('.hsh-ct__memos', { timeout: 15000 });
   check('메모 — 쪽지 모양', (await page.textContent('.hsh-ct__memos')).includes('짧은 메모'));
+  check('방문 집계 — 운영 주소(ho.바이브.me)가 아니면 보내지 않음', collects.length === 0, collects.join(' | '));
   check('콘솔 오류 없음(visitor)', errors.length === 0, errors.join(' | '));
   await context.close();
 }
@@ -554,7 +563,7 @@ async function admin() {
   await page.waitForTimeout(800);
   check('주인 → 관리 화면', await page.$eval('#adminDashboard', (e) => getComputedStyle(e).display !== 'none') && !(await page.$('.hsh-admin-denied:not([hidden])')));
   const scopes = await page.$$eval('.hsh-admin-scope', (s) => s.map((x) => x.textContent));
-  check('적용 범위 표시(Home 3 · Category · Quote · 사용 중 · Dashboard)', scopes.filter((s) => s.includes('바이브.me')).length === 3 && scopes.filter((s) => s.includes('두 사이트')).length === 3 && scopes.some((s) => s.includes('hongjiwon.love 통계')), scopes.join(' | '));
+  check('적용 범위 표시(Home 3 · Category · Quote · 사용 중 · Dashboard)', scopes.filter((s) => s.includes('바이브.me')).length === 3 && scopes.filter((s) => s.includes('두 사이트')).length === 4 && scopes.some((s) => s.includes('두 사이트 따로')), scopes.join(' | '));
 
   // Home — 바이브.me 키에만, 새로고침 뒤에도
   await page.click('#openSettingsButton');
@@ -597,7 +606,7 @@ async function admin() {
   await page.waitForSelector('#statsDashboardMount .e2e-post', { timeout: 20000 });
   check('Dashboard 묶음 → 그쪽 /api/ops', (await page.$eval('#statsDashboardMount', (m) => m.dataset.apiBase)) === `${WEB_ORIGIN}/api/ops`);
   await page.waitForTimeout(300);
-  check('내 방문 제외 — 여기서는 잠그고 안내', await page.$eval('[data-ops-optout]', (b) => b.disabled) && (await page.textContent('.ops-dash-mine')).includes('hongjiwon.love'));
+  check('내 방문 제외 — 여기서는 바이브.me 방문에(켤 수 있고, hongjiwon.love 쪽 안내)', !(await page.$eval('[data-ops-optout]', (b) => b.disabled)) && (await page.textContent('.ops-dash-mine')).includes('바이브.me 방문을 세지 않아요'));
   const [popup] = await Promise.all([context.waitForEvent('page'), page.click('#statsDashboardMount .e2e-post')]);
   check('인기 글 링크 → 그쪽 글 주소', popup.url().startsWith(`${WEB_ORIGIN}/post/101`), popup.url());
   await popup.close();

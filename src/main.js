@@ -2,6 +2,7 @@ import { runLoader, prefersReducedMotion } from './loader/index.js';
 import { demoReady } from './loader/ready.js';
 import { loadPlan, mountPlan } from './plan/index.js';
 import { applyHomeSettings } from './content/home-settings.js';
+import { startVisits } from './content/visits.js';
 
 // 지금은 데모 준비 신호. 실제 앱에서는 createReadySignal() 로 바꿔 데이터가 준비되면 resolve 한다.
 // ?ready=ms 로 준비 시점을 늦춰 볼 수 있다(데모 도구가 쓴다).
@@ -13,6 +14,9 @@ const reduced = params.get('reduced') === '1' || prefersReducedMotion();
 
 // 관리자 Settings > Home 의 탭 제목 · 파비콘 · 커서 — 로딩을 막지 않고 뒤에서
 applyHomeSettings().catch((e) => console.warn('home settings', e));
+
+// 방문 집계(ho.바이브.me 에서만 — 관리자 DASHBOARD 의 '바이브.me')
+startVisits();
 
 // 창 주소(/notice · /post/13 …)로 들어왔다 — 새로고침 · 공유 링크 · 로그인에서 돌아오기. index.html 머리 스크립트가 첫 화면 전에 정한다.
 // 로딩 화면 없이 평면도(다 그려진 채) 위에 그 창을 바로 연다. 불러오는 중은 창 안에서만 보인다
