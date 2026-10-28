@@ -372,7 +372,22 @@ async function visitor() {
     const { pageOf } = await import('/src/content/visits.js');
     return ['/', '/about', '/pair', '/teatime', '/notice', '/neighbor', '/neighbor/banner', '/archive', '/category/3', '/category/3/folder/1/read', '/post/13', '/post/13/quote', '/nope'].map((p) => pageOf(p, ''));
   });
-  check('방문 집계 — 주소 → 화면 이름', pages.join() === 'home,about,pair,teatime,notice,neighbor,neighbor,archive,category,category,post,post,home', pages.join());
+  const optLink = await page.evaluate(async () => {
+    const base = location.pathname;
+    const run = async (v) => {
+      history.replaceState(history.state, '', `${base}?hsh-optout=${v}`);
+      const { startVisits } = await import('/src/content/visits.js');
+      startVisits();
+      return { stored: localStorage.getItem('hj-analytics-optout'), url: location.search, note: document.querySelector('.hsh-visit-note')?.textContent || '' };
+    };
+    const on = await run('1');
+    document.querySelectorAll('.hsh-visit-note').forEach((n) => n.remove());
+    const off = await run('0');
+    document.querySelectorAll('.hsh-visit-note').forEach((n) => n.remove());
+    return { on, off };
+  });
+  check('hongjiwon.love 의 \'바이브.me 에도 적용\' 링크(?hsh-optout) → 이 브라우저에 적고 주소에서 지운다', optLink.on.stored === '1' && optLink.on.url === '' && optLink.on.note.includes('세지 않아요') && optLink.off.stored === null && optLink.off.note.includes('다시'), JSON.stringify(optLink));
+  check('방문 집계 — 주소 → 화면 이름', pages.join() ==='home,about,pair,teatime,notice,neighbor,neighbor,archive,category,category,post,post,home', pages.join());
   await openRoom(page, '1');
   await page.waitForSelector('.hsh-ct__folders', { timeout: 20000 });
   const folders = await page.$$eval('.hsh-ct__folder', (b) => b.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));

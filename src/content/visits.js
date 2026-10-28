@@ -86,8 +86,35 @@ function freshNavigation() {
   }
 }
 
+/**
+ * hongjiwon.love 관리자 DASHBOARD 의 '바이브.me 에도 적용' 링크(?hsh-optout=1|0) — 그쪽 '내 방문 집계 제외'를 이 브라우저의
+ * 바이브.me 저장소에도 적는다(주소가 달라 그쪽 값을 읽을 수 없다). 주소에서는 바로 지우고 잠깐 알린다.
+ */
+function applyOptoutLink() {
+  const q = new URLSearchParams(location.search);
+  const v = q.get('hsh-optout');
+  if (v !== '1' && v !== '0') return;
+  q.delete('hsh-optout');
+  const s = q.toString();
+  history.replaceState(history.state, '', `${location.pathname}${s ? `?${s}` : ''}${location.hash}`);
+  let ok = false;
+  try {
+    if (v === '1') localStorage.setItem(OPTOUT_KEY, '1');
+    else localStorage.removeItem(OPTOUT_KEY);
+    ok = optedOut() === (v === '1');
+  } catch { /* 저장이 막힌 브라우저 */ }
+  const note = document.createElement('p');
+  note.className = 'hsh-visit-note';
+  note.setAttribute('role', 'status');
+  note.textContent = !ok ? '이 브라우저에 설정을 저장하지 못했어요.'
+    : v === '1' ? '이제 이 브라우저의 바이브.me 방문은 세지 않아요.' : '이 브라우저의 바이브.me 방문을 다시 세요.';
+  document.body.append(note);
+  setTimeout(() => note.remove(), 4000);
+}
+
 /** main.js 가 한 번 부른다 */
 export function startVisits() {
+  applyOptoutLink();
   if (location.protocol !== 'https:' || !HOSTS.includes(location.hostname)) return;
   if (navigator.webdriver) return;
   const via = bounced();
