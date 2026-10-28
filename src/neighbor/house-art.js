@@ -6,13 +6,13 @@
 //   · 기존 이웃은 house 가 비어 있으면 배너 id 로 정한 기본 모양 — 새로고침해도 같다.
 //   · 장식(deco)은 여러 개 — 배열(비면 장식 없음). 지붕 무늬(roofPattern)는 사이트 스티커 무늬(plan/room-window.js)와 같은 결.
 //   · 옛 꼴(v1 — deco 가 글자 하나, roofPattern 없음)도 읽는다: 다락창 · 없음은 장식 없음으로, 무늬는 민무늬로.
-//   · 고르는 칸에서 뺀 지붕(헛간) · 무늬(도트 · 사선 줄무늬)도 이미 저장된 집은 그대로 그린다(OLD_ROOFS · OLD_PATTERNS).
+//   · 고르는 칸에서 뺀 지붕(헛간) · 무늬(도트)도 이미 저장된 집은 그대로 그린다(OLD_ROOFS · OLD_PATTERNS).
 
 export const BODIES = ['cozy', 'tall', 'wide', 'two', 'tiny'];
 export const ROOFS = ['tri', 'round', 'trap', 'gable', 'twin'];
-export const PATTERNS = ['solid', 'halftone', 'hstripe', 'vstripe', 'gingham'];
+export const PATTERNS = ['solid', 'halftone', 'hstripe', 'vstripe', 'stripe', 'gingham'];
 const OLD_ROOFS = ['barn'];
-const OLD_PATTERNS = ['dot', 'stripe'];
+const OLD_PATTERNS = ['dot'];
 export const DOORS = ['arch', 'square', 'side'];
 export const WINDOWS = ['one', 'two', 'round', 'cross', 'band'];
 export const DECOS = ['chimney', 'pot', 'dog', 'mailbox', 'tree'];
@@ -26,8 +26,8 @@ export const LABELS = {
   deco: { chimney: '굴뚝', pot: '화분', dog: '개집', mailbox: '우체통', tree: '작은 나무' },
 };
 
-// 파스텔 — 홈 라벨 색(base.css)과 같은 결
-export const WALLS = ['#fffaf0', '#fbefae', '#fbd5e3', '#cfe0fb', '#cdeed6', '#e4d4fb', '#f3e6d8', '#e4e7ea'];
+// 파스텔 — 홈 라벨 색(base.css)과 같은 결. 벽의 분홍 · 연보라는 다른 색과 어울리게 채도를 빼고 밝혔다
+export const WALLS = ['#fffaf0', '#fbefae', '#f8e2e9', '#cfe0fb', '#cdeed6', '#ebe5f5', '#f3e6d8', '#e4e7ea'];
 export const ROOF_COLORS = ['#e88a8a', '#7fa7d9', '#8cc3a0', '#e8b56a', '#b39ddb', '#f2a7c3', '#9aa5ad', '#c9a27e'];
 export const DOOR_COLORS = ['#c9a27e', '#8fa3b8', '#e2b36b', '#b5838d', '#7e9c7a', '#ffffff'];
 
@@ -260,16 +260,13 @@ function plan(h) {
     add({ kind: 'poly', pts: [[x0, 0], [x0, Math.min(top, atX(x0))], [0, peak], [-x0, Math.min(top, atX(x0))], [-x0, 0]], fill: h.wall });
     add({ kind: 'poly', pts: [L, A, R, [ix, R[1]], [0, A[1] + inner], [-ix, L[1]]], roof: true, r: 1.5 });
   } else if (h.roof === 'twin') {
-    // 쌍둥이 박공(사진 3) — 무늬 지붕 위로 벽 세모 둘이 솟는다
+    // 쌍둥이 박공(사진 3) — 무늬 지붕 위로 벽 세모 둘이 솟는다. 몸체와 세모를 한 덩어리로 그려 사이에 가로선이 없다
     add({ kind: 'poly', pts: roofPts, roof: true, r: 1.5 });
-    for (const k of [-1, 1]) {
-      const a = k < 0 ? x0 : 0;
-      const b = k < 0 ? 0 : -x0;
-      add({ kind: 'poly', pts: [[a + 1, top + 1], [(a + b) / 2, top - rh * 0.82], [b - 1, top + 1]], fill: h.wall, r: 1 });
-    }
+    const peak = top - rh * 0.82;
+    add({ kind: 'poly', pts: [[x0, 0], [x0, top], [x0 / 2, peak], [0, top + 1], [-x0 / 2, peak], [-x0, top], [-x0, 0]], fill: h.wall, r: 1 });
   } else add({ kind: 'poly', pts: roofPts, roof: true, r: h.roof === 'round' ? 1 : 2.5 });
-  // 몸체(처마 지붕은 위에서 오각형으로 그렸다)
-  if (h.roof !== 'gable') add({ kind: 'poly', pts: [[x0, top], [-x0, top], [-x0, 0], [x0, 0]], fill: h.wall });
+  // 몸체(처마 · 쌍둥이 박공 지붕은 위에서 세모까지 한 덩어리로 그렸다)
+  if (h.roof !== 'gable' && h.roof !== 'twin') add({ kind: 'poly', pts: [[x0, top], [-x0, top], [-x0, 0], [x0, 0]], fill: h.wall });
   if (h.body === 'two') add({ d: true, kind: 'poly', pts: [[x0 + 3, top + bh * 0.48], [-x0 - 3, top + bh * 0.48]], closed: false });
   // 문
   const dw = h.body === 'wide' ? 13 : 11;
@@ -377,7 +374,7 @@ export function houseSvg(house, { scale = 1, seed = 0, still = false, cls = 'nbh
 }
 
 // ---------- 지붕 무늬 ----------
-//   사이트 스티커 무늬(plan/room-window.js)와 같은 결 — 단색 · 망점 · 가로 줄무늬 · 세로 줄무늬 · 깅엄 체크(도트 · 사선은 옛 집만).
+//   사이트 스티커 무늬(plan/room-window.js)와 같은 결 — 단색 · 망점 · 가로 줄무늬 · 세로 줄무늬 · 사선 줄무늬 · 깅엄 체크(도트는 옛 집만).
 //   무늬 색: 밝은 지붕엔 같은 색을 진하게, 그 밖엔 흰색 — 직접 고른 색에서도 보이게.
 
 let patternNo = 0;

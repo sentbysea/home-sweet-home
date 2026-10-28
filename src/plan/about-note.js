@@ -382,18 +382,26 @@ export function openAboutNote(root, { reduced = false, scroller = null, onLayout
   };
 }
 
-let fontAsked = false;
+let fontReady = null;
 
-/** 글 · 글쓴이 한글 글꼴 — 처음 한 번, Google Fonts 의 Nanum Gothic Coding 을 HSH Hand KR 이름으로(실패하면 조용히) */
+/**
+ * 글 · 글쓴이 한글 글꼴 — 처음 한 번, Google Fonts 의 Nanum Gothic Coding 을 HSH Hand KR 이름으로.
+ * 이 글에 든 글자 조각까지 받아 두면 풀린다(실패하거나 2.5초가 넘으면 그냥 풀린다 — 기본 글꼴로).
+ * 홈이 뜬 뒤 한가할 때 미리 부르고(room-window.js), 글을 열 때는 풀릴 때까지 글을 숨겨 둔다 — 줄 간격이 바뀌며 다시 짜이는 게 안 보이게.
+ * @returns {Promise<void>}
+ */
 export function loadAboutFont() {
-  if (fontAsked) return;
-  fontAsked = true;
-  fetch('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap')
+  if (fontReady) return fontReady;
+  const sample = `${BODY.replace(/\{sel:(.+?)\}/g, '$1')}${CREDIT}`;
+  const load = fetch('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap')
     .then((res) => (res.ok ? res.text() : Promise.reject(new Error(`fonts ${res.status}`))))
     .then((css) => {
       const style = document.createElement('style');
       style.textContent = css.replace(/font-family:\s*'Nanum Gothic Coding'/g, "font-family: 'HSH Hand KR'");
       document.head.append(style);
+      return document.fonts.load("13px 'HSH Hand KR'", sample);
     })
-    .catch(() => { fontAsked = false; });
+    .then(() => {}, () => { fontReady = null; });
+  fontReady = Promise.race([load, new Promise((r) => setTimeout(r, 2500))]);
+  return fontReady;
 }

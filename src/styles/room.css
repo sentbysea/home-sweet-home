@@ -618,6 +618,7 @@
 .hsh-ab__menu button:focus-visible { background: rgb(0 0 0 / 0.06); outline: none; }
 
 /* 모양 — 원래 글은 자리만 지키고 숨는다, 띄운 글자가 대신 옮겨 다닌다 */
+.hsh-ab.is-font-wait { visibility: hidden; } /* 글꼴이 오기 전(room-window.js) */
 .hsh-ab.is-shaped .hsh-ab__text,
 .hsh-ab.is-shaped .hsh-ab__credit { visibility: hidden; } /* 글쓴이 줄은 모양에 들지 않고 같이 숨는다 */
 .hsh-ab__fly { position: absolute; inset: 0; pointer-events: none; }
