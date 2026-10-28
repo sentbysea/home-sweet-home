@@ -35,12 +35,13 @@ const tree = (s, seed) => boiled('-16 -46 32 48', 32 * s, 48 * s, (v) =>
   `<path d="${sketch([[0, 0], [0, -16]], { seed: seed + 1, v })}" fill="none"/>` +
   `<path d="${sketchEllipse(0, -28, 12, 14, seed + 2, v)}" fill="#a9d6a0"/>`, 'nbh-deco');
 // 우체통 위 '여기요!' 낙서 — 위로 퍼지는 강조선 셋 + 작은 반짝이. 선마다 따로 톡톡 튀어나온다(CSS)
-const burst = (s) => boiled('-18 -22 36 24', 36 * s, 24 * s, (v) =>
-  `<path class="nbh-burst nbh-burst--l" d="${sketch([[-5, -3], [-9, -7]], { seed: 71, v })}" fill="none"/>` +
-  `<path class="nbh-burst nbh-burst--c" d="${sketch([[0, -5], [0, -11]], { seed: 72, v })}" fill="none"/>` +
-  `<path class="nbh-burst nbh-burst--r" d="${sketch([[5, -3], [9, -7]], { seed: 73, v })}" fill="none"/>` +
-  `<path class="nbh-burst nbh-burst--s" d="${sketch([[11, -14], [11, -10]], { seed: 74, v })} ${sketch([[9, -12], [13, -12]], { seed: 75, v })}" fill="none"/>`,
-'nbh-mailbox__burst-art');
+//   위글 변형 없이 한 장 — 변형을 갈아 끼우면(display) 애니메이션이 매번 처음부터 다시 돌아 제자리에서 떨기만 한다
+const burst = (s) => `<svg class="nbh-mailbox__burst-art" viewBox="-18 -22 36 24" width="${f(36 * s)}" height="${f(24 * s)}" aria-hidden="true" focusable="false"><g class="nbh-ink">` +
+  `<path class="nbh-burst nbh-burst--l" d="${sketch([[-5, -3], [-9, -7]], { seed: 71 })}" fill="none"/>` +
+  `<path class="nbh-burst nbh-burst--c" d="${sketch([[0, -5], [0, -11]], { seed: 72 })}" fill="none"/>` +
+  `<path class="nbh-burst nbh-burst--r" d="${sketch([[5, -3], [9, -7]], { seed: 73 })}" fill="none"/>` +
+  `<path class="nbh-burst nbh-burst--s" d="${sketch([[11, -14], [11, -10]], { seed: 74 })} ${sketch([[9, -12], [13, -12]], { seed: 75 })}" fill="none"/>` +
+  '</g></svg>';
 const fence = (s, seed) => boiled('-2 -16 46 18', 46 * s, 18 * s, (v) =>
   [0, 10, 20, 30, 40].map((x, i) => `<path d="${sketch([[x, 0], [x, -12], [x + 2, -14], [x + 4, -12], [x + 4, 0]], { seed: seed + i, v, radius: 1 })}" fill="#f3e6d8"/>`).join('') +
   `<path d="${sketch([[-1, -8], [45, -8]], { seed: seed + 9, v })}" fill="none"/>`, 'nbh-deco');

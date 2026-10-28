@@ -325,6 +325,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   const abBox = win.querySelector('.hsh-ab');
   let aboutNote = null; // about 이 열려 있는 동안 — 집 말풍선 · 모양 바꾸기(떠나면 close)
   const leaveAbout = () => { aboutNote?.close(); aboutNote = null; };
+  // about 글꼴은 홈이 뜬 뒤 한가할 때 미리 받아 둔다 — 열자마자 깔끔하게
+  (window.requestIdleCallback || ((fn) => setTimeout(fn, 1200)))(() => loadAboutFont());
   const veBox = win.querySelector('.hsh-ve');
   const about = mountAbout(veBox, () => syncRail());
   const ctBox = win.querySelector('.hsh-ct-box');
@@ -540,7 +542,9 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
     abBox.hidden = !isAbout || isPair;
     leaveAbout();
     if (!abBox.hidden) {
-      loadAboutFont();
+      // 글꼴이 오기 전엔 글을 숨겨 둔다 — 기본 글꼴로 먼저 그렸다가 줄이 다시 짜이는 게 안 보이게(대개는 미리 받아 두어 바로 풀린다)
+      abBox.classList.add('is-font-wait');
+      loadAboutFont().then(() => { abBox.classList.remove('is-font-wait'); syncRail(); });
       aboutNote = openAboutNote(abBox, { reduced, scroller: inner, onLayout: () => syncRail() });
     }
     win.classList.toggle('is-about', isAbout && !isPair); // about 글은 둥근 상자 없이 창에 바로

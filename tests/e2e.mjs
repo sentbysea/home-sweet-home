@@ -1236,7 +1236,7 @@ async function neighborVillage(device, name) {
   check(`${name} — 여백 별(누르기를 막지 않음)`, look.stars >= 8 && look.starsPass === 'none', JSON.stringify(look));
   check(`${name} — 이름표: 화면 안 · 잘리지 않음 · 밑줄 없음`, look.labelsIn, JSON.stringify(look));
   check(`${name} — 선은 홈처럼 부드러운 회색 · 안쪽 선이 더 얇다`, look.line[0] === 'rgb(143, 148, 151)' && look.line[1] < 1.6 && look.line[2] < look.line[1], JSON.stringify(look.line));
-  check(`${name} — 우체통: 글 · 화살표 없이 '여기요' 낙서 · 빨간 깃발이 움직인다`, !(await page.$('.nbh-mailbox__tip')) && !(await page.$('.nbh-mailbox__arrow')) && (await page.$$eval('.nbh-mailbox__burst .nbh-v0 .nbh-burst', (p) => p.length === 4 && p.slice(0, 3).every((x) => getComputedStyle(x).animationName === 'nbh-here')))
+  check(`${name} — 우체통: 글 · 화살표 없이 '여기요' 낙서 · 빨간 깃발이 움직인다`, !(await page.$('.nbh-mailbox__tip')) && !(await page.$('.nbh-mailbox__arrow')) && (await page.$$eval('.nbh-mailbox__burst .nbh-burst', (p) => p.length === 4 && p.slice(0, 3).every((x) => getComputedStyle(x).animationName === 'nbh-here')))
     && (await page.$eval('.nbh-mailbox__pennant', (g) => getComputedStyle(g).animationName === 'nbh-flutter')));
   const looks = await page.$$eval('.nbh-home', (b) => b.map((x) => x.dataset.house));
   const lay = await layoutOf(page);
@@ -1427,7 +1427,7 @@ async function neighborApply() {
   check('꾸미기 — 색은 칩만(직접 고르기 없음)', !(await page.$(`${D} input[type="color"]`)) && !(await page.$(`${D} .nbh-diy__custom`)));
   check('꾸미기 — 마을과 같은 렌더러(.nbh-art · 위글 변형 4장)', await page.$eval(`${D} .nbh-diy__preview svg`, (s) => s.classList.contains('nbh-art') && s.querySelectorAll('.nbh-v').length === 4));
   const opts = (key) => page.$$eval(`${D} [data-key="${key}"] [data-v]`, (b) => b.map((x) => x.dataset.v).join('|'));
-  check('꾸미기 — 지붕(처마 · 쌍둥이 박공, 헛간 없음) · 무늬 순서(단색-망점-가로-세로-깅엄)', (await opts('roof')) === 'tri|round|trap|gable|twin' && (await opts('roofPattern')) === 'solid|halftone|hstripe|vstripe|gingham', `${await opts('roof')} / ${await opts('roofPattern')}`);
+  check('꾸미기 — 지붕(처마 · 쌍둥이 박공, 헛간 없음) · 무늬 순서(단색-망점-가로-세로-사선-깅엄)', (await opts('roof')) === 'tri|round|trap|gable|twin' && (await opts('roofPattern')) === 'solid|halftone|hstripe|vstripe|stripe|gingham', `${await opts('roof')} / ${await opts('roofPattern')}`);
   const previewName = () => page.$eval(`${D} .nbh-diy__name`, (t) => t.textContent);
   check('꾸미기 — 미리보기 집 아래 이름표(비면 안내)', (await previewName()) === '사이트 이름');
   const r1 = await chosen();
