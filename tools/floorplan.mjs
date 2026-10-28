@@ -607,6 +607,8 @@ tag('kitchen', 'teatime?', '티타임', 662, 462, '#fbd5e3', '#4a98e4', 3);
 tag('living', 'notice', '공지', 582, 726, '#e4d4fb', '#34b468', -2);
 tag('entry', 'neighbor', '이웃', 359, 1150, '#cdeed6', '#e65d98', -4);
 tag('e', 'archive', '기록', 712, 1180, '#cfe0fb', '#8a62dc', 3);
+// 현관 화분 — 보이지 않는 누름 자리. 누르면 관리자(/admin/)로(plan/index.js)
+stickers.push(`<circle class="hsh-plan__link" data-href="/admin/" role="link" aria-label="관리자" cx="224" cy="1032" r="30" fill="transparent"/>`);
 
 // ---------- SVG ----------
 

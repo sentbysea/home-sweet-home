@@ -147,7 +147,8 @@
 
 /* ---------- 방 버튼 — 길쭉한 색 네모 + 글자 ---------- */
 
-.hsh-sticker {
+.hsh-sticker,
+.hsh-plan__link {
   cursor: pointer;
   outline: none;
 }
