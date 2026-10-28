@@ -492,11 +492,15 @@
   display: grid;
   place-items: center;
   width: 100%;
-  aspect-ratio: 5 / 1; /* 5:1 — 비율이 다른 배너는 가운데를 잘라 채운다 */
   background: #fff;
   transition: rotate 160ms ease-out;
 }
-.nbh-pop__banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* 배너 비율 그대로 — 5:1 이 아니어도 자르지 않고 칸이 늘어난다(너무 길쭉하면 화면 높이의 절반까지만, 그 안에 다 보이게).
+   사진을 받기 전 · 못 받았을 때만 5:1 자리 */
+.nbh-pop__banner img { display: block; width: 100%; height: auto; max-height: 50vh; object-fit: contain; }
+.nbh-pop.is-loading .nbh-pop__banner,
+.nbh-pop.is-broken .nbh-pop__banner { aspect-ratio: 5 / 1; }
+.nbh-pop.is-loading .nbh-pop__banner img { height: 100%; opacity: 0; }
 .nbh-pop__alt { display: none; font-family: var(--nbh-font); font-size: 13px; color: var(--hsh-link); }
 .nbh-pop.is-broken .nbh-pop__banner img { display: none; }
 .nbh-pop.is-broken .nbh-pop__alt { display: block; }
