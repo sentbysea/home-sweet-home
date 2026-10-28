@@ -240,7 +240,7 @@ function enableStickers(el) {
   let y0 = 0;
   let moved = false;
 
-  const pick = (e) => e.target.closest?.('.hsh-sticker') ?? null;
+  const pick = (e) => e.target.closest?.('.hsh-sticker, .hsh-plan__link') ?? null;
   const release = () => pressed?.classList.remove('is-pressed');
 
   el.addEventListener('pointerdown', (e) => {
@@ -266,6 +266,8 @@ function enableStickers(el) {
 }
 
 function activate(s) {
+  // 그림 위 숨은 누름 자리(현관 화분 → 관리자) — 창 없이 그 주소로
+  if (s.dataset.href) { location.href = s.dataset.href; return; }
   s.querySelector('.hsh-sticker__body').animate(
     [{ scale: '0.9' }, { scale: '1.12', offset: 0.5 }, { scale: '1' }],
     { duration: 300, easing: 'ease-out' },
