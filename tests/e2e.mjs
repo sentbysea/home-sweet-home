@@ -317,14 +317,15 @@ async function open(user, viewport = { width: 1280, height: 900 }, extra = {}) {
   // 로그인한 사람 — supabase-js 가 두는 로그인 자리도(화면이 주인인지 미리 본다)
   if (user) await context.addInitScript(() => { try { localStorage.setItem('sb-iokdgqzfprtggsnrusez-auth-token', '{}'); } catch { /* 샌드박스 프레임 */ } });
   await mock.attachMockSupabase(context, db);
-  // 이웃 배너 이미지 — 5:1 PNG(missing 은 없는 이미지)
+  // 이웃 배너 이미지 — 5:1 PNG, 88x31 은 5:1 이 아닌 배너(missing 은 없는 이미지)
   await context.route('https://img.test/**', (route) => {
     const name = new URL(route.request().url()).pathname;
     if (name.includes('missing')) return route.fulfill({ status: 404, body: '' });
     const color = name.includes('lucky') ? [120, 160, 240] : name.includes('new') ? [240, 200, 120] : [250, 210, 225];
     // nocors — 다른 출처에서 색을 읽지 못하게 막은 이미지(보이기는 한다)
     const headers = name.includes('nocors') ? {} : { 'access-control-allow-origin': '*' };
-    return route.fulfill({ status: 200, contentType: 'image/png', headers, body: png(200, 40, color) });
+    const [w, h] = name.includes('88x31') ? [88, 31] : [200, 40];
+    return route.fulfill({ status: 200, contentType: 'image/png', headers, body: png(w, h, color) });
   });
   const page = await context.newPage();
   const errors = [];
@@ -1287,7 +1288,24 @@ async function neighborVillage(device, name) {
     const h0 = await tapOrHover(0);
     const pb = await popBox();
     const pop = await page.evaluate(() => ({ link: document.querySelector('.nbh-pop__link').getAttribute('href'), shadow: getComputedStyle(document.querySelector('.nbh-pop')).boxShadow, frame: document.querySelectorAll('.nbh-pop__frame .nbh-v').length, src: document.querySelector('.nbh-pop__banner img').getAttribute('src'), name: Boolean(document.querySelector('.nbh-pop__name')), label: document.querySelector('.nbh-pop__link').getAttribute('aria-label'), ratio: (() => { const b = document.querySelector('.nbh-pop__banner').getBoundingClientRect(); return b.width / b.height; })(), fit: getComputedStyle(document.querySelector('.nbh-pop__banner img')).objectFit }));
-    check('PC — 집에 올리면 그 배너가 집 위로(5:1 칸 · 비율이 달라도 꽉 채워 자름 · 배너만(이름 글 없음) · 손그림 말풍선 · 방문하기 버튼 없음)', (await popOpen(page)) && pop.link === 'https://hongjiwon.love/' && pop.shadow === 'none' && pop.frame === 4 && !(await page.$('.nbh-pop__go')) && pop.src === 'https://img.test/love.png' && !pop.name && pop.label.startsWith('hongjiwon.love') && Math.abs(pop.ratio - 5) < 0.1 && pop.fit === 'cover' && pb.b <= h0.y, JSON.stringify(pop));
+    check('PC — 집에 올리면 그 배너가 집 위로(배너 비율 그대로 · 배너만(이름 글 없음) · 손그림 말풍선 · 방문하기 버튼 없음)', (await popOpen(page)) && pop.link === 'https://hongjiwon.love/' && pop.shadow === 'none' && pop.frame === 4 && !(await page.$('.nbh-pop__go')) && pop.src === 'https://img.test/love.png' && !pop.name && pop.label.startsWith('hongjiwon.love') && Math.abs(pop.ratio - 5) < 0.1 && pop.fit === 'contain' && pb.b <= h0.y, JSON.stringify(pop));
+    // 5:1 이 아닌 배너 — 칸이 그 비율로 늘고, 말풍선도 그 크기로 다시 그린다(삐져나오지 않는다)
+    const odd = await page.evaluate(async () => {
+      const img = document.querySelector('.nbh-pop__banner img');
+      img.src = 'https://img.test/88x31.png';
+      await new Promise((ok) => (img.complete ? ok() : img.addEventListener('load', ok, { once: true })));
+      await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+      const b = document.querySelector('.nbh-pop__banner').getBoundingClientRect();
+      const i = img.getBoundingClientRect();
+      const pop = document.querySelector('.nbh-pop').getBoundingClientRect();
+      const frame = Number(document.querySelector('.nbh-pop__frame').getAttribute('height'));
+      const out = { ratio: b.width / b.height, inside: i.top >= pop.top - 0.5 && i.bottom <= pop.bottom + 0.5, frame, popH: pop.height };
+      img.src = 'https://img.test/love.png'; // 다음 확인을 위해 원래 배너로
+      await new Promise((ok) => (img.complete ? ok() : img.addEventListener('load', ok, { once: true })));
+      await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+      return out;
+    });
+    check('PC — 5:1 이 아닌 배너(88x31)는 그 비율로 · 말풍선 안에 · 테두리도 그 높이', Math.abs(odd.ratio - 88 / 31) < 0.1 && odd.inside && Math.abs(odd.frame - odd.popH - 8) < 1.5, JSON.stringify(odd));
     check('PC — 배너가 화면 안 · 가로로 길게(280px)', pb.x >= 0 && pb.r <= vw && pb.y >= 0 && Math.abs(pb.w - 280) < 1, JSON.stringify(pb));
     // 집 → 배너로 천천히 옮겨도 그대로
     for (let k = 1; k <= 8; k++) { await page.mouse.move(h0.x, h0.y - ((h0.y - (pb.y + pb.h / 2)) * k) / 8); await page.waitForTimeout(25); }

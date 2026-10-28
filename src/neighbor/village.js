@@ -376,7 +376,9 @@ export function createVillage(stage, { reduced = false, mine = null, onMail = ()
   const popLink = pop.querySelector('.nbh-pop__link');
   const popFrame = pop.querySelector('.nbh-pop__frame');
   const popAlt = pop.querySelector('.nbh-pop__alt');
-  popImg.addEventListener('error', () => pop.classList.add('is-broken'));
+  // 배너 비율대로 칸이 늘어나므로 — 받으면(또는 못 받으면) 말풍선을 그 크기로 다시 그린다
+  const settlePop = () => { pop.classList.remove('is-loading'); if (open >= 0) position(); };
+  popImg.addEventListener('error', () => { pop.classList.add('is-broken'); settlePop(); });
   // 내 배너 말풍선 — 누르면 이 사이트 새 탭 대신 내 배너(복사) 패널
   popLink.addEventListener('click', (e) => {
     if (open !== homeIdx) return;
@@ -385,7 +387,7 @@ export function createVillage(stage, { reduced = false, mine = null, onMail = ()
     closePop(true);
     onHouse(b);
   });
-  popImg.addEventListener('load', () => pop.classList.remove('is-broken'));
+  popImg.addEventListener('load', () => { pop.classList.remove('is-broken'); settlePop(); });
 
   const position = () => {
     const b = homes[open];
@@ -437,6 +439,7 @@ export function createVillage(stage, { reduced = false, mine = null, onMail = ()
       popImg.alt = `${it.label} 배너`;
       pop.classList.toggle('is-broken', !it.image);
       if (it.image) popImg.src = it.image; else popImg.removeAttribute('src');
+      pop.classList.toggle('is-loading', Boolean(it.image) && !(popImg.complete && popImg.naturalWidth));
       popAlt.textContent = it.label;
       if (it.href) popLink.href = it.href; else popLink.removeAttribute('href');
       popLink.setAttribute('aria-label', `${it.label} 방문하기 — 새 탭`);
