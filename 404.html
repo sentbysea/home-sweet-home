@@ -9,6 +9,11 @@
     // index.html 이 그 주소로 되돌리고 그 창을 연다(src/plan/routes.js). 정말 없는 주소면 홈이 열린다.
     // 새로고침이면 이 칸에 창 화면이 적혀 있다(history.state) — 되돌린 뒤에도 같은 칸이게 잠깐 넘긴다
     try { if (history.state) sessionStorage.setItem("hsh:route-state", JSON.stringify(history.state)); } catch (e) {}
+    // 방문 집계(src/content/visits.js) — 돌려보내면 유입 출처 · 새로고침 여부가 이 문서 것으로 바뀌므로 원래 값을 넘긴다
+    try {
+      var nav = performance.getEntriesByType("navigation")[0];
+      sessionStorage.setItem("hsh:route-visit", JSON.stringify({ ref: document.referrer, fresh: !nav || nav.type === "navigate" || nav.type === "prerender" }));
+    } catch (e) {}
     location.replace("/?route=" + encodeURIComponent(location.pathname + location.search) + location.hash);
   </script>
 </head>

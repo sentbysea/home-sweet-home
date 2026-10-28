@@ -5,6 +5,8 @@
 //        PROFILE · BGM · MY BANNER · CARD PRESET 은 이 사이트에 그 화면이 없어 숨긴다(코드는 그대로 실려 있다).
 //     2. Settings > Home 키를 바이브.me 전용으로(content/home-settings.js 의 VIBE_HOME_KEYS) — 그쪽 값과 섞이지 않게.
 //     3. Dashboard 를 그쪽 /api/ops 로(그쪽이 이 출처에만 CORS 를 연다). 인기 글 링크는 그쪽 글 주소로.
+//        대시보드는 hongjiwon.love · 바이브.me 를 골라 본다(여기서 열면 바이브.me 부터). '내 방문 제외'는 이 브라우저의
+//        바이브.me 방문에 적용된다(같은 열쇠를 content/visits.js 가 읽는다).
 //   로그인 · 저장은 그쪽 코드 그대로 Supabase(같은 프로젝트)로 간다. 권한은 DB(RLS) · Worker(주인 토큰)가 정하고,
 //   여기서는 화면만 주인 계정이 아니면 닫는다(site_owner_id(), neighbor 방과 같은 기준).
 
@@ -61,7 +63,7 @@ function trimMarkup(root) {
   const list = root.querySelector('#quotePresetList');
   if (list) list.before(chip('사용 중 지정 · 두 사이트 함께', '사용 중 프리셋은 두 사이트에서 프리셋을 따로 고르지 않은 글의 본문 · Quote 에 쓰여요', 'is-both'));
   const dashHead = root.querySelector('#statsDashboardPanel .view-heading');
-  if (dashHead) dashHead.append(chip('hongjiwon.love 통계', '바이브.me 방문은 세지 않아요', 'is-origin'));
+  if (dashHead) dashHead.append(chip('두 사이트 따로', 'hongjiwon.love · 바이브.me 방문은 따로 세요 — 대시보드 위에서 골라 보세요', 'is-both'));
 }
 
 function chip(text, title, kind) {
@@ -76,7 +78,7 @@ function scope(button, text, title, kind) {
   button?.after(chip(text, title, kind));
 }
 
-/** 대시보드 — 그쪽 글 주소 · '내 방문 제외'는 그쪽 브라우저 저장소라 여기서 바꿀 수 없다 */
+/** 대시보드 — 그쪽 글 주소 · '내 방문 제외'는 여기서는 바이브.me 방문에(hongjiwon.love 쪽은 그쪽 관리자에서) */
 function adaptDashboard() {
   const mount = document.getElementById('statsDashboardMount');
   if (!mount) return;
@@ -90,16 +92,14 @@ function adaptDashboard() {
     const mine = mount.querySelector('.ops-dash-mine');
     if (!mine || mine.dataset.hshAdapted) return;
     mine.dataset.hshAdapted = '1';
-    const box = mine.querySelector('[data-ops-optout]');
-    if (box) box.disabled = true;
     const p = document.createElement('p');
     p.className = 'hsh-admin-note';
-    p.append('방문 통계는 hongjiwon.love 방문만 셉니다. 이 설정은 그 사이트를 여는 브라우저에 저장돼서 여기서는 바꿀 수 없어요 — ');
+    p.append('여기서 켜면 이 브라우저의 바이브.me 방문을 세지 않아요. hongjiwon.love 방문은 그 사이트의 브라우저 저장소라 ');
     const a = document.createElement('a');
     a.href = `${ORIGIN}/admin/?view=dashboard`;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.textContent = 'hongjiwon.love 관리자에서 바꾸기 ↗';
+    a.textContent = 'hongjiwon.love 관리자에서 따로 ↗';
     p.append(a);
     mine.append(p);
   }).observe(mount, { childList: true, subtree: true });

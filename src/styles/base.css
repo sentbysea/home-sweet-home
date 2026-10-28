@@ -99,3 +99,20 @@ body {
   transition: opacity 300ms ease;
 }
 .hsh-star.is-away { opacity: 0; }
+
+/* 방문 집계 설정을 받았을 때 잠깐(content/visits.js) */
+.hsh-visit-note {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1000;
+  margin: 0;
+  padding: 8px 14px;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: #3b3d40;
+  color: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
