@@ -47,9 +47,10 @@ function build() {
   root.tabIndex = -1;
   root.innerHTML = `
     <div class="nbh__stars" aria-hidden="true">${STARS.map(([x, y, rot, size]) => starSvg(x, y, rot, size)).join('')}</div>
+    <!-- 위 줄(← home · 제목 · 스위치)은 스크롤 구역 밖 — 안에 두면 iOS Safari 가 fixed 를 스크롤 구역 경계에서 잘라 안 보인다 -->
+    <button class="nbh__home" type="button"><span aria-hidden="true">←</span> home</button>
+    <h2 class="nbh__title" id="nbh-title">Neighbor</h2>
     <div class="nbh__scroll">
-      <button class="nbh__home" type="button"><span aria-hidden="true">←</span> home</button>
-      <h2 class="nbh__title" id="nbh-title">Neighbor</h2>
       <div class="nbh__village" role="group" aria-label="이웃 마을 — 집을 고르면 그 집의 배너가 보여요"></div>
       <div class="nbh__banners" role="region" aria-label="이웃 배너" hidden></div>
       <footer class="nbh__foot">
@@ -60,14 +61,14 @@ function build() {
           <button class="nbh__link" type="button" data-act="edit" hidden>edit</button>
         </div>
       </footer>
-      <!-- 보기 스위치 — 화면 오른쪽 위에 고정. Tab 은 이웃집 · edit 다음에 -->
-      <button class="nbh-view" type="button" role="switch" aria-checked="false" aria-label="배너로 보기">
-        <span class="nbh-view__txt is-village" aria-hidden="true">village</span>
-        <span class="nbh-view__txt is-banner" aria-hidden="true">banner</span>
-        <span class="nbh-view__knob" aria-hidden="true">${VIEW_ICONS}</span>
-        <span class="nbh-view__spark" aria-hidden="true"><i></i><i></i><i></i></span>
-      </button>
     </div>
+    <!-- 보기 스위치 — 화면 오른쪽 위에 고정. Tab 은 이웃집 · edit 다음에 -->
+    <button class="nbh-view" type="button" role="switch" aria-checked="false" aria-label="배너로 보기">
+      <span class="nbh-view__txt is-village" aria-hidden="true">village</span>
+      <span class="nbh-view__txt is-banner" aria-hidden="true">banner</span>
+      <span class="nbh-view__knob" aria-hidden="true">${VIEW_ICONS}</span>
+      <span class="nbh-view__spark" aria-hidden="true"><i></i><i></i><i></i></span>
+    </button>
     <div class="nbh-panel" hidden></div>`;
   return root;
 }
