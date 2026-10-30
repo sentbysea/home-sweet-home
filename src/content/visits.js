@@ -1,4 +1,4 @@
-// 바이브.me 방문 집계 — ho.바이브.me 에서만. hongjiwon.love 의 /api/collect 로 보내면 그쪽 집계가
+// 바이브.me 방문 집계 — ho.바이브.me 에서만. hongjiwon.love 의 /api/hsh 로 보내면 그쪽 집계가
 //   바이브.me 표에 따로 센다(hongjiwon.love 숫자와 섞이지 않는다).
 //   보내지 않는 경우 — 처음부터 아무것도 보내지 않는다:
 //     · 운영 주소가 아님(localhost · 미리보기) · 자동화 브라우저(navigator.webdriver)
@@ -12,7 +12,8 @@ import { parsePath, ROOM_PATHS } from '../plan/routes.js';
 import { AUTH_KEY } from './supabase.js';
 import { SITE_OWNER_ID } from './home-settings.js';
 
-const ENDPOINT = 'https://hongjiwon.love/api/collect';
+// /api/collect 는 다른 사이트에서 보내면 추적 차단기에 걸려 나가지 않는다 — 같은 일을 하는 /api/hsh 로
+const ENDPOINT = 'https://hongjiwon.love/api/hsh';
 const HOSTS = ['ho.xn--9g3b29an0p.me', 'xn--9g3b29an0p.me', 'www.xn--9g3b29an0p.me'];
 const OPTOUT_KEY = 'hj-analytics-optout';
 const VISITOR_KEY = 'hj-visitor-id';

@@ -349,7 +349,7 @@ async function visitor() {
   console.log('\n[visitor — 로그인 없음]');
   const { page, errors, coverRequests, context } = await open(null);
   const collects = [];
-  page.on('request', (r) => { if (r.url().includes('/api/collect')) collects.push(r.url()); });
+  page.on('request', (r) => { if (/\/api\/(collect|hsh)\b/.test(r.url())) collects.push(r.url()); });
   await home(page);
   // 방문 집계(content/visits.js) — 화면 이름 · 운영 주소가 아니면 보내지 않음
   const pages = await page.evaluate(async () => {
