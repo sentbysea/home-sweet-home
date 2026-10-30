@@ -3,9 +3,8 @@
 //   node tests/e2e.mjs [--only=heads|visitor|owner|admin|routing|mobile|layout|archive|neighbor] [--browser=webkit]   (WEB_DIR=../web 이 기본)
 //
 //   · web 저장소의 tests/lib/harness.mjs(Playwright 찾기 · 정적 서버) · mock-supabase.mjs(RLS 흉내 메모리 DB)를 쓴다.
-//   · "hongjiwon.love" = web 작업 트리를 띄운 정적 서버(127.0.0.1:8789). 그쪽 함수 두 개는 실제 코드를 그대로 돌린다:
+//   · "hongjiwon.love" = web 작업 트리를 띄운 정적 서버(127.0.0.1:8789). 그쪽 함수는 실제 코드를 그대로 돌린다:
 //       /api/post-cover  functions/api/post-cover.js — 그 함수가 부르는 Supabase(판정 RPC · Storage)만 흉내 DB 로
-//       /api/ops/*       functions/api/ops/[[path]].js — 서비스 바인딩 OPS 는 가짜(주인 토큰만 통과)
 //   · 바이브.me = 이 저장소 정적 서버(127.0.0.1:5174), 모든 주소에 ?content-origin=http://127.0.0.1:8789.
 
 import fs from 'node:fs';
@@ -23,7 +22,6 @@ fs.mkdirSync(OUT, { recursive: true });
 const { loadPlaywright, startStaticServer, createChecker } = await import(pathToFileURL(path.join(WEB, 'tests/lib/harness.mjs')).href);
 const mock = await import(pathToFileURL(path.join(WEB, 'tests/lib/mock-supabase.mjs')).href);
 const { onRequest: postCover } = await import(pathToFileURL(path.join(WEB, 'functions/api/post-cover.js')).href);
-const { onRequest: opsProxy } = await import(pathToFileURL(path.join(WEB, 'functions/api/ops/[[path]].js')).href);
 const { OWNER_ID, USERS, SUPABASE_HOST } = mock;
 
 const WEB_PORT = 8789;
@@ -266,20 +264,6 @@ globalThis.fetch = async (input, init = {}) => {
   return new Response('{}', { status: 404 });
 };
 
-// 가짜 OPS Worker — 주인 토큰만, 대시보드 묶음은 시험용
-const OPS = {
-  async fetch(request) {
-    const owner = request.headers.get('authorization') === `Bearer ${USERS.owner.token}`;
-    if (!owner) return new Response(JSON.stringify({ error: 'forbidden' }), { status: request.headers.get('authorization') ? 403 : 401, headers: { 'Content-Type': 'application/json' } });
-    const bundle = {
-      html: '<section class="ops-dash-mine"><label><input type="checkbox" data-ops-optout> 내 방문 제외</label></section><a class="e2e-post" href="/post/101">인기 글</a>',
-      css: '.ops-dash-mine{border:1px solid #ccc}',
-      js: 'window.HongjiwonOpsDashboard={mount(root,host){root.dataset.apiBase=host.apiBase;return{refresh(){}}}};',
-    };
-    return new Response(JSON.stringify(bundle), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  },
-};
-
 const toRequest = async (req) => {
   const chunks = [];
   for await (const c of req) chunks.push(c);
@@ -296,9 +280,8 @@ const webServer = await startStaticServer(WEB_PORT, {
   handle(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*'); // Cloudflare Pages 정적 파일과 같게
     const p = new URL(req.url, WEB_ORIGIN).pathname;
-    const env = { CROSS_SITE_ORIGINS: VIBE_ORIGIN, OPS, SUPABASE_URL: SUPABASE };
+    const env = { CROSS_SITE_ORIGINS: VIBE_ORIGIN, SUPABASE_URL: SUPABASE };
     if (p === '/api/post-cover') { res.removeHeader('Access-Control-Allow-Origin'); toRequest(req).then((request) => postCover({ request, env })).then((r) => sendResponse(res, r)); return true; }
-    if (p.startsWith('/api/ops')) { res.removeHeader('Access-Control-Allow-Origin'); toRequest(req).then((request) => opsProxy({ request, env })).then((r) => sendResponse(res, r)); return true; }
     return false;
   },
 });
@@ -366,7 +349,7 @@ async function visitor() {
   console.log('\n[visitor — 로그인 없음]');
   const { page, errors, coverRequests, context } = await open(null);
   const collects = [];
-  page.on('request', (r) => { if (r.url().includes('/api/collect')) collects.push(r.url()); });
+  page.on('request', (r) => { if (/\/api\/(collect|hsh)\b/.test(r.url())) collects.push(r.url()); });
   await home(page);
   // 방문 집계(content/visits.js) — 화면 이름 · 운영 주소가 아니면 보내지 않음
   const pages = await page.evaluate(async () => {
@@ -387,7 +370,7 @@ async function visitor() {
     document.querySelectorAll('.hsh-visit-note').forEach((n) => n.remove());
     return { on, off };
   });
-  check('hongjiwon.love 의 \'바이브.me 에도 적용\' 링크(?hsh-optout) → 이 브라우저에 적고 주소에서 지운다', optLink.on.stored === '1' && optLink.on.url === '' && optLink.on.note.includes('세지 않아요') && optLink.off.stored === null && optLink.off.note.includes('다시'), JSON.stringify(optLink));
+  check('통계 대시보드의 \'바이브.me 에도 적용\' 링크(?hsh-optout) → 이 브라우저에 적고 주소에서 지운다', optLink.on.stored === '1' && optLink.on.url === '' && optLink.on.note.includes('세지 않아요') && optLink.off.stored === null && optLink.off.note.includes('다시'), JSON.stringify(optLink));
   check('방문 집계 — 주소 → 화면 이름', pages.join() ==='home,about,pair,teatime,notice,neighbor,neighbor,archive,category,category,post,post,home', pages.join());
   await openRoom(page, '1');
   await page.waitForSelector('.hsh-ct__folders', { timeout: 20000 });
@@ -579,7 +562,7 @@ async function admin() {
   await page.waitForTimeout(800);
   check('주인 → 관리 화면', await page.$eval('#adminDashboard', (e) => getComputedStyle(e).display !== 'none') && !(await page.$('.hsh-admin-denied:not([hidden])')));
   const scopes = await page.$$eval('.hsh-admin-scope', (s) => s.map((x) => x.textContent));
-  check('적용 범위 표시(Home 3 · Category · Quote · 사용 중 · Dashboard)', scopes.filter((s) => s.includes('바이브.me')).length === 3 && scopes.filter((s) => s.includes('두 사이트')).length === 4 && scopes.some((s) => s.includes('두 사이트 따로')), scopes.join(' | '));
+  check('적용 범위 표시(Home 3 · Category · Quote · 사용 중)', scopes.filter((s) => s.includes('바이브.me')).length === 3 && scopes.filter((s) => s.includes('두 사이트')).length === 3, scopes.join(' | '));
 
   // Home — 바이브.me 키에만, 새로고침 뒤에도
   await page.click('#openSettingsButton');
@@ -617,15 +600,6 @@ async function admin() {
   await until(() => Number(db.quote_presets.find((p) => p.id === 201)?.settings?.bodySize) === 17);
   check('Quote Preset 저장 → 같은 표(201 bodySize 17)', Number(db.quote_presets.find((p) => p.id === 201)?.settings?.bodySize) === 17, JSON.stringify(db.quote_presets.find((p) => p.id === 201)?.settings));
 
-  // Dashboard — 그쪽 /api/ops(이 출처에만 CORS), 인기 글은 그쪽 주소로, 내 방문 제외는 그쪽에서
-  await page.evaluate(() => showStatsDashboardPanel());
-  await page.waitForSelector('#statsDashboardMount .e2e-post', { timeout: 20000 });
-  check('Dashboard 묶음 → 그쪽 /api/ops', (await page.$eval('#statsDashboardMount', (m) => m.dataset.apiBase)) === `${WEB_ORIGIN}/api/ops`);
-  await page.waitForTimeout(300);
-  check('내 방문 제외 — 여기서는 바이브.me 방문에(켤 수 있고, hongjiwon.love 쪽 안내)', !(await page.$eval('[data-ops-optout]', (b) => b.disabled)) && (await page.textContent('.ops-dash-mine')).includes('바이브.me 방문을 세지 않아요'));
-  const [popup] = await Promise.all([context.waitForEvent('page'), page.click('#statsDashboardMount .e2e-post')]);
-  check('인기 글 링크 → 그쪽 글 주소', popup.url().startsWith(`${WEB_ORIGIN}/post/101`), popup.url());
-  await popup.close();
   check('콘솔 오류 없음(admin)', errors.length === 0, errors.join(' | '));
   await context.close();
 
