@@ -1,13 +1,10 @@
 // 바이브.me 관리자 — hongjiwon.love /admin/ 의 같은 판(마크업 · CSS · 스크립트)을 받아 이 도메인에서 그대로 띄운다.
 //   다시 만들지 않는다: 입력 칸 · 저장 · 기본값 · 미리보기 · 프리셋 규칙이 그쪽과 한 벌이라 어긋날 수 없다.
-//   이 파일이 하는 일은 셋뿐이다.
-//     1. 메뉴를 이 사이트 범위로 — SETTINGS(HOME · CATEGORY) · QUOTE PRESET · DASHBOARD.
+//   이 파일이 하는 일은 둘뿐이다.
+//     1. 메뉴를 이 사이트 범위로 — SETTINGS(HOME · CATEGORY) · QUOTE PRESET.
 //        PROFILE · BGM · MY BANNER · CARD PRESET 은 이 사이트에 그 화면이 없어 숨긴다(코드는 그대로 실려 있다).
 //     2. Settings > Home 키를 바이브.me 전용으로(content/home-settings.js 의 VIBE_HOME_KEYS) — 그쪽 값과 섞이지 않게.
-//     3. Dashboard 를 그쪽 /api/ops 로(그쪽이 이 출처에만 CORS 를 연다). 인기 글 링크는 그쪽 글 주소로.
-//        대시보드는 hongjiwon.love · 바이브.me 를 골라 본다(여기서 열면 바이브.me 부터). '내 방문 제외'는 이 브라우저의
-//        바이브.me 방문에 적용된다(같은 열쇠를 content/visits.js 가 읽는다).
-//   로그인 · 저장은 그쪽 코드 그대로 Supabase(같은 프로젝트)로 간다. 권한은 DB(RLS) · Worker(주인 토큰)가 정하고,
+//   로그인 · 저장은 그쪽 코드 그대로 Supabase(같은 프로젝트)로 간다. 권한은 DB(RLS)가 정하고,
 //   여기서는 화면만 주인 계정이 아니면 닫는다(site_owner_id(), neighbor 방과 같은 기준).
 
 import { ORIGIN, loadScripts, loadStyles } from '../content/remote.js';
@@ -19,9 +16,6 @@ const bootMsg = boot.querySelector('.hsh-admin-boot__msg');
 
 let windowLoaded = document.readyState === 'complete';
 window.addEventListener('load', () => { windowLoaded = true; }, { once: true });
-
-// admin-dashboard.js 가 이 값을 읽는다(그쪽 저장소 admin/admin-dashboard.js)
-window.SITE_OPS_API_BASE = `${ORIGIN}/api/ops`;
 
 /** 그쪽 문서 안 loadVersionedStyles([...]) · loadVersionedScripts([...]) 목록 → 그쪽 루트 기준 경로 */
 function listedPaths(doc, fn) {
@@ -48,8 +42,6 @@ function loadExternal(src) {
 /** 마크업을 이 사이트 범위로 — 스크립트가 돌기 전에 */
 function trimMarkup(root) {
   root.querySelector('#openCardButton')?.setAttribute('hidden', '');
-  const dash = root.querySelector('#openStatsDashboardButton .menu-number');
-  if (dash) dash.textContent = '03';
   for (const id of ['profileTabButton', 'bgmTabButton', 'myBannerTabButton']) root.querySelector(`#${id}`)?.setAttribute('hidden', '');
   const title = root.querySelector('#siteTitleInput');
   if (title) title.placeholder = 'home sweet home';
@@ -62,8 +54,6 @@ function trimMarkup(root) {
   // 사용 중(활성) 지정은 목록 버튼마다 — 목록 바로 위에 한 번
   const list = root.querySelector('#quotePresetList');
   if (list) list.before(chip('사용 중 지정 · 두 사이트 함께', '사용 중 프리셋은 두 사이트에서 프리셋을 따로 고르지 않은 글의 본문 · Quote 에 쓰여요', 'is-both'));
-  const dashHead = root.querySelector('#statsDashboardPanel .view-heading');
-  if (dashHead) dashHead.append(chip('두 사이트 따로', 'hongjiwon.love · 바이브.me 방문은 따로 세요 — 대시보드 위에서 골라 보세요', 'is-both'));
 }
 
 function chip(text, title, kind) {
@@ -76,33 +66,6 @@ function chip(text, title, kind) {
 
 function scope(button, text, title, kind) {
   button?.after(chip(text, title, kind));
-}
-
-/** 대시보드 — 그쪽 글 주소 · '내 방문 제외'는 여기서는 바이브.me 방문에(hongjiwon.love 쪽은 그쪽 관리자에서) */
-function adaptDashboard() {
-  const mount = document.getElementById('statsDashboardMount');
-  if (!mount) return;
-  mount.addEventListener('click', (e) => {
-    const a = e.target.closest?.('a[href^="/post/"]');
-    if (!a) return;
-    e.preventDefault();
-    window.open(`${ORIGIN}${a.getAttribute('href')}`, '_blank', 'noopener');
-  });
-  new MutationObserver(() => {
-    const mine = mount.querySelector('.ops-dash-mine');
-    if (!mine || mine.dataset.hshAdapted) return;
-    mine.dataset.hshAdapted = '1';
-    const p = document.createElement('p');
-    p.className = 'hsh-admin-note';
-    p.append('여기서 켜면 이 브라우저의 바이브.me 방문을 세지 않아요. hongjiwon.love 방문은 그 사이트의 브라우저 저장소라 ');
-    const a = document.createElement('a');
-    a.href = `${ORIGIN}/admin/?view=dashboard`;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.textContent = 'hongjiwon.love 관리자에서 따로 ↗';
-    p.append(a);
-    mine.append(p);
-  }).observe(mount, { childList: true, subtree: true });
 }
 
 /** 주인 계정이 아니면 관리 화면을 닫는다(데이터는 어차피 RLS 가 막는다 — 화면만) */
@@ -167,7 +130,6 @@ async function start() {
   if (typeof showSection === 'function') window.showSettingsSection = (s) => showSection(HIDDEN_SECTIONS.includes(s) ? 'home' : s);
   if (typeof window.showAdminHome === 'function') window.showCardPanel = () => window.showAdminHome(true);
 
-  adaptDashboard();
   guardOwner();
   boot.remove();
   // 그쪽 스크립트는 window load 에서 시작한다(로그인 확인 · 프리셋 목록). 이미 지나갔으면 한 번 더 알린다

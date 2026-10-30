@@ -20,20 +20,6 @@
 .hsh-admin-boot__title { font-size: 14px; letter-spacing: 0.06em; }
 .hsh-admin-boot__msg { font-size: 12px; color: #7d8386; }
 
-/* 이 사이트에서 달라지는 점 — 패널 머리 아래 한 줄 */
-.hsh-admin-note {
-  margin: 8px 0 14px;
-  padding: 8px 12px;
-  border: 1px dashed #8f9497;
-  border-radius: 8px;
-  background: #fffefb;
-  font-size: 12px;
-  line-height: 1.55;
-  color: #6b7074;
-  word-break: keep-all;
-}
-.hsh-admin-note a { color: inherit; }
-
 /* 주인 계정이 아니면 — 로그인 화면은 그대로, 관리 화면만 닫는다 */
 [data-not-owner] #adminDashboard { display: none !important; }
 .hsh-admin-denied {

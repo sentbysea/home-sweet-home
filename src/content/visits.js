@@ -1,8 +1,8 @@
-// 바이브.me 방문 집계 — ho.바이브.me 에서만. hongjiwon.love 의 /api/collect 로 보내면 그쪽 Worker(sentbysea/hongjiwon-ops)가
-//   바이브.me 표에 따로 센다(hongjiwon.love 숫자와 섞이지 않는다). 숫자는 관리자 DASHBOARD 의 '바이브.me'.
+// 바이브.me 방문 집계 — ho.바이브.me 에서만. hongjiwon.love 의 /api/collect 로 보내면 그쪽 집계가
+//   바이브.me 표에 따로 센다(hongjiwon.love 숫자와 섞이지 않는다). 숫자는 통계 대시보드의 '바이브.me'.
 //   보내지 않는 경우 — 처음부터 아무것도 보내지 않는다:
 //     · 운영 주소가 아님(localhost · 미리보기) · 자동화 브라우저(navigator.webdriver)
-//     · 이 브라우저의 '내 방문 집계 제외'(바이브.me 관리자 DASHBOARD 에서 켠다 — 그쪽 core/site-analytics.js 와 같은 열쇠)
+//     · 이 브라우저의 '내 방문 집계 제외'(통계 대시보드의 ?hsh-optout 링크로 켠다 — 그쪽 core/site-analytics.js 와 같은 열쇠)
 //     · 이 브라우저에 사이트 주인 로그인이 저장돼 있음(supabase-js 를 받지 않고, 저장된 로그인의 사용자 id 로 본다)
 //   무엇을 세나: 문서를 연 화면 하나 + 그 뒤 화면 종류가 바뀔 때마다 하나(주소 → 화면 이름, 같은 화면 안 이동은 세지 않는다).
 //   no-cors · text/plain — 사전 요청 없이 보내고 응답은 읽지 않는다. 실패해도 다시 보내지 않고 화면에는 영향이 없다.
@@ -87,7 +87,7 @@ function freshNavigation() {
 }
 
 /**
- * hongjiwon.love 관리자 DASHBOARD 의 '바이브.me 에도 적용' 링크(?hsh-optout=1|0) — 그쪽 '내 방문 집계 제외'를 이 브라우저의
+ * 통계 대시보드의 '바이브.me 에도 적용' 링크(?hsh-optout=1|0) — '내 방문 집계 제외'를 이 브라우저의
  * 바이브.me 저장소에도 적는다(주소가 달라 그쪽 값을 읽을 수 없다). 주소에서는 바로 지우고 잠깐 알린다.
  */
 function applyOptoutLink() {

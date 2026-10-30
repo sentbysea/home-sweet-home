@@ -15,7 +15,7 @@ const reduced = params.get('reduced') === '1' || prefersReducedMotion();
 // 관리자 Settings > Home 의 탭 제목 · 파비콘 · 커서 — 로딩을 막지 않고 뒤에서
 applyHomeSettings().catch((e) => console.warn('home settings', e));
 
-// 방문 집계(ho.바이브.me 에서만 — 관리자 DASHBOARD 의 '바이브.me')
+// 방문 집계(ho.바이브.me 에서만 — 통계 대시보드의 '바이브.me')
 startVisits();
 
 // 창 주소(/notice · /post/13 …)로 들어왔다 — 새로고침 · 공유 링크 · 로그인에서 돌아오기. index.html 머리 스크립트가 첫 화면 전에 정한다.
