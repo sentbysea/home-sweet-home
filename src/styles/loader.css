@@ -198,100 +198,32 @@
 .hsh-status[data-step="door"] .hsh-icon--door,
 .hsh-status[data-step="tap"] .hsh-icon--tap { display: inline; }
 
-/* 초인종 — 잠깐 쉬었다 딩동 */
+/* 아이콘 움직임(딩동 · 통통 · 빼꼼 · 톡)은 icon-motion.js 가 매 프레임 쓴다 — 여기는 기준점만 */
 .hsh-bell {
   transform-box: view-box;
-  transform-origin: 12px 3px;
-  animation: hsh-bell 1.6s ease-in-out infinite;
+  transform-origin: 12px 3px; /* 초인종 꼭지 */
 }
 
 .hsh-ring {
   fill: none;
   opacity: 0;
-  animation: hsh-ring 1.6s ease-out infinite;
 }
 
-@keyframes hsh-bell {
-  0%, 52%, 100% { rotate: 0deg; }
-  60% { rotate: 14deg; }
-  68% { rotate: -12deg; }
-  76% { rotate: 8deg; }
-  84% { rotate: -4deg; }
-  92% { rotate: 0deg; }
-}
-
-@keyframes hsh-ring {
-  0%, 55% { opacity: 0; }
-  62%, 84% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-/* 달려나옴 — 다리 두 자세를 번갈아, 통통 */
 .hsh-icon--run path {
   fill: none;
 }
 
-.hsh-run__body {
-  animation: hsh-bob 0.36s ease-in-out infinite alternate;
-}
-
-.hsh-run__a,
-.hsh-run__b {
-  animation: hsh-stride 0.36s steps(1, end) infinite;
-}
-
-.hsh-run__b {
-  animation-delay: -0.18s;
-}
-
-.hsh-run__speed {
-  animation: hsh-speed 0.72s ease-out infinite;
-}
-
-@keyframes hsh-bob {
-  from { translate: 0 0; }
-  to { translate: 0 -1px; }
-}
-
-@keyframes hsh-stride {
-  0% { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
-
-@keyframes hsh-speed {
-  0% { opacity: 0; translate: 1.5px 0; }
-  40% { opacity: 1; }
-  100% { opacity: 0; translate: -1.5px 0; }
-}
-
-/* 문 — 빼꼼 열렸다 닫힘 */
 .hsh-door__gap {
   fill: var(--hsh-tone-door);
 }
 
 .hsh-door__panel {
   transform-box: fill-box;
-  transform-origin: left center;
-  animation: hsh-door 2.2s ease-in-out infinite;
+  transform-origin: left center; /* 경첩 */
 }
 
-@keyframes hsh-door {
-  0%, 15% { scale: 1 1; }
-  50%, 72% { scale: 0.3 1; }
-  100% { scale: 1 1; }
-}
-
-/* 들어가기 */
 .hsh-tap {
   fill: none;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: hsh-tap 1.8s ease-out infinite;
-}
-
-@keyframes hsh-tap {
-  0% { scale: 0.7; opacity: 1; }
-  100% { scale: 1.5; opacity: 0; }
 }
 
 /* ---------- 모션 줄이기 — 완성 상태 그대로 ---------- */
@@ -304,19 +236,6 @@
 
   .hsh-loader.is-leaving .hsh-loader__house {
     scale: none;
-  }
-
-  .hsh-bell,
-  .hsh-ring,
-  .hsh-run__body,
-  .hsh-run__speed,
-  .hsh-door__panel,
-  .hsh-tap {
-    animation: none;
-  }
-
-  .hsh-run__a {
-    animation: none;
   }
 
   .hsh-run__b {

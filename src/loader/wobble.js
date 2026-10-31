@@ -2,7 +2,7 @@
 //   · 집 윤곽: .hsh-loader__frame 4장 중 하나만 .is-on(덧그린 굵은 선 .hsh-loader__ink 도 같은 장)
 //   · 집 안 글자(SVG tspan): rotate 속성으로 글자마다 살짝 기울임
 //   · 아래 작은 글(HTML span): transform 으로 살짝 기울이고 들썩임
-//   · 작은 글 옆 아이콘: 선·도형마다 transform 으로 살짝(아이콘 자체 움직임과 겹쳐진다)
+//   · 작은 글 옆 아이콘: icon-motion.js 가 움직임과 함께 매 프레임 쓴다(같은 값 · 같은 박자)
 // 프레임은 4장으로 정해져 있어 같은 모양이 돌아온다(손그림 boil 느낌).
 
 export const WOBBLE_FRAME = 190;
@@ -26,13 +26,6 @@ function paint(root, k) {
     const r = (jitter(i, k, 2) * 4).toFixed(1);
     const y = (jitter(i, k, 3) * 0.6).toFixed(2);
     c.style.transform = `translateY(${y}px) rotate(${r}deg)`;
-  });
-
-  root.querySelectorAll('.hsh-status__icon :is(path, circle, rect)').forEach((s, i) => {
-    const x = (jitter(i, k, 4) * 0.4).toFixed(2);
-    const y = (jitter(i, k, 5) * 0.4).toFixed(2);
-    const r = (jitter(i, k, 6) * 4).toFixed(1);
-    s.style.transform = `translate(${x}px, ${y}px) rotate(${r}deg)`;
   });
 }
 
