@@ -12,6 +12,7 @@
 //   archive · neighbor 버튼은 브라우저 창 대신 흰 화면 — 열쇠꾸러미(archive/index.js) · 이웃 간판 집(neighbor/index.js).
 //   주소 · 뒤로/앞으로 · 닫기는 같은 길. neighbor 의 우체통 패널은 기록 한 칸(/neighbor/banner).
 //   창 머리(사진 · 제목 · 검정 알약)는 주인만 보이는 오른쪽 위 edit 로 방마다 고친다 — 머리를 아예 숨길 수도(room-heads.js).
+//   방에 들어가면(홈에서 · 다른 방에서) 그 방 대사가 있을 때 화면 아래 대화창(talk/box.js · 대사는 talk/lines.js).
 
 import { mountAbout } from './about.js';
 import { aboutNoteMarkup, openAboutNote, loadAboutFont } from './about-note.js';
@@ -19,9 +20,11 @@ import { mountContent } from '../content/viewer.js';
 import { fetchPost } from '../content/data.js';
 import { getClient, ownerSession, hasSavedLogin, AUTH_RETURN, takeReturnPath } from '../content/supabase.js';
 import { fetchRoomHeads, cachedRoomHeads, saveRoomHeads, uploadRoomPhoto, removeRoomPhoto } from './room-heads.js';
-import { pathOf, parsePath, withKeep } from './routes.js';
+import { pathOf, parsePath, withKeep, ROOM_PATHS } from './routes.js';
 import { mountArchive } from '../archive/index.js';
 import { mountNeighbor } from '../neighbor/index.js';
+import { mountTalk } from '../talk/box.js';
+import { TALKS } from '../talk/lines.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const SCREENS = ['archive', 'neighbor']; // 창 대신 흰 화면으로 여는 방
@@ -316,6 +319,15 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   host.append(win);
   const archive = mountArchive(host, { reduced, cover: trigger });
   const neighbor = mountNeighbor(host, { reduced, cover: trigger });
+  const talk = mountTalk(host, { reduced });
+  let talkRoom = null; // 대화창을 띄운 방 — 같은 방 안에서 화면만 바뀔 때(우체통 · 글 · 뒤로/앞으로)는 다시 띄우지 않는다
+  const enterRoom = (label) => {
+    if (label === talkRoom) return;
+    talkRoom = label;
+    const slug = ROOM_PATHS[label];
+    if (TALKS[slug]) talk.play(TALKS[slug], slug); // 끝까지 본 대화는 다시 띄우지 않는다
+    else talk.close({ instant: true });
+  };
   const frame = win.querySelector('.hsh-win__frame');
   const title = win.querySelector('.hsh-win__title');
   const url = win.querySelector('.hsh-win__url');
@@ -718,6 +730,7 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
 
   const openWindow = ({ room, label, name, bg, fg, category, auto }, from, page = 'room') => {
     clearTimeout(closing);
+    enterRoom(label);
     // archive · neighbor — 창 대신 흰 화면. ← home · Esc 는 × 와 같이 기록을 되돌리며 홈으로
     if (SCREENS.includes(label)) {
       if (!win.hidden) {
@@ -767,6 +780,8 @@ export function enableRoomWindow(host, trigger, { reduced = false } = {}) {
   };
 
   const closeWindow = () => {
+    talk.close();
+    talkRoom = null;
     archive.hide();
     neighbor.hide();
     if (win.hidden || win.classList.contains('is-closing')) return;

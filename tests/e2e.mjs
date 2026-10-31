@@ -1,6 +1,6 @@
 // 바이브.me E2E — 실제 파일(이 저장소 + 이웃 web 저장소) · 흉내 Supabase(임시 데이터, 운영 DB 에 닿지 않는다)
 //
-//   node tests/e2e.mjs [--only=heads|visitor|owner|admin|routing|mobile|layout|archive|neighbor] [--browser=webkit]   (WEB_DIR=../web 이 기본)
+//   node tests/e2e.mjs [--only=heads|visitor|owner|admin|routing|mobile|layout|archive|talk|neighbor] [--browser=webkit]   (WEB_DIR=../web 이 기본)
 //
 //   · web 저장소의 tests/lib/harness.mjs(Playwright 찾기 · 정적 서버) · mock-supabase.mjs(RLS 흉내 메모리 DB)를 쓴다.
 //   · "hongjiwon.love" = web 작업 트리를 띄운 정적 서버(127.0.0.1:8789). 그쪽 함수는 실제 코드를 그대로 돌린다:
@@ -950,7 +950,15 @@ async function mobile() {
 const TEST_URL = 'https://example.com/hsh-archive-test';
 const keyPoint = (page, i) => page.$eval('.hsh-arc__canvas', (c, i) => c.hshKeyPoint?.(i), i);
 const pressed = (page) => page.$$eval('.hsh-arc__chip', (b) => b.findIndex((x) => x.getAttribute('aria-pressed') === 'true'));
-const arcOpen = (page) => page.$eval('.hsh-arc', (a) => !a.hidden && a.classList.contains('is-open')).catch(() => false);
+// 들어올 때 뜨는 대화창을 끝까지 넘겨 닫는다(그동안 아래 라벨 줄은 숨어 있다 — 대화창 시험은 talk())
+const skipTalk = async (page) => {
+  await page.waitForSelector('.hsh-say.is-open', { timeout: 3000 }).catch(() => {});
+  for (let i = 0; i < 20 && (await page.$eval('.hsh-say', (t) => !t.hidden).catch(() => false)); i++) {
+    await page.$eval('.hsh-say__box', (b) => b.click());
+  }
+  await page.waitForTimeout(250);
+};
+const arcOpen = (page) =>page.$eval('.hsh-arc', (a) => !a.hidden && a.classList.contains('is-open')).catch(() => false);
 
 async function archiveCase(device, name) {
   const d = await open(null, device ? undefined : { width: 1280, height: 860 }, device || {});
@@ -982,6 +990,7 @@ async function archiveCase(device, name) {
   // 직접 들어오기 — 로딩 화면 없이 꾸러미
   await page.goto(`${VIBE_ORIGIN}/archive?${Q}`);
   await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
+  await skipTalk(page);
   await page.waitForTimeout(900);
   check(`${name} — /archive 직접 → 로딩 없이 열쇠꾸러미`, at() === '/archive' && !(await page.evaluate(() => window.__loaderSeen)) && (await arcOpen(page)));
   const top = await page.evaluate(() => {
@@ -1078,6 +1087,7 @@ async function archiveCase(device, name) {
   // 홈의 archive 버튼 → /archive, Esc → 홈
   await page.locator('.hsh-sticker[data-label="archive"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
   await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
+  await skipTalk(page);
   check(`${name} — 홈 archive 버튼 → /archive`, at() === '/archive');
   // 키보드 — 버튼 줄로 고르고 링크로 이동
   await page.focus('.hsh-arc__chip[data-i="3"]');
@@ -1104,6 +1114,7 @@ async function archive() {
   const rm = await open(null, { width: 1000, height: 800 }, { reducedMotion: 'reduce' });
   await rm.page.goto(`${VIBE_ORIGIN}/archive?${Q}`);
   await rm.page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 });
+  await skipTalk(rm.page);
   await rm.page.click('.hsh-arc__chip[data-i="1"]');
   await rm.page.waitForTimeout(300);
   check('모션 줄이기 — 고르기 · 별 움직임 없음', (await pressed(rm.page)) === 1 && (await rm.page.$eval('.hsh-arc .hsh-star', (s) => getComputedStyle(s).animationName)) === 'none');
@@ -1126,6 +1137,143 @@ async function archive() {
   check('목록 — 설정 · 코드 안내 문구 없음', !/(links\.js|url:|TODO|설정)/.test(await nw.page.textContent('.hsh-arc')));
   check('콘솔 오류 없음(archive 목록)', nw.errors.length === 0, nw.errors.join(' | '));
   await nw.context.close();
+}
+
+// ---------- 대화창 — 방에 들어가면 화면 아래(talk/box.js · 대사 talk/lines.js) ----------
+//   archive 에 들어가면 뜬다 · 한 문장씩 타이핑 · 쓰는 중 누르면 바로 완성 · 다 나오면 다음 · 마지막 뒤 닫힘 ·
+//   테두리만 위글(상자 자리는 그대로) · 같은 방 안에서는 다시 안 뜸 · 대사 없는 방은 안 뜸 · 모션 줄이기는 바로.
+
+const readTalk = () => {
+  const t = document.querySelector('.hsh-say');
+  if (!t || t.hidden) return { open: false };
+  const r = t.querySelector('.hsh-say__box').getBoundingClientRect();
+  return {
+    open: t.classList.contains('is-open'),
+    done: t.classList.contains('is-done'),
+    who: t.querySelector('.hsh-say__who').textContent,
+    whoBg: getComputedStyle(t.querySelector('.hsh-say__who')).backgroundColor,
+    shown: t.querySelector('.hsh-say__shown').textContent,
+    rest: t.querySelector('.hsh-say__rest').textContent,
+    next: getComputedStyle(t.querySelector('.hsh-say__next')).opacity,
+    d: t.querySelector('.hsh-say__outer').getAttribute('d'),
+    label: t.querySelector('.hsh-say__box').getAttribute('aria-label'),
+    box: { x: r.left, y: r.top, w: r.width, h: r.height, b: innerHeight - r.bottom, vw: innerWidth },
+  };
+};
+const talkState = (page) => page.evaluate(readTalk);
+/** 대화창을 n 번 누르고 [누르기 전, 누른 뒤] — 페이지 안에서 한 번에 */
+const pressTalk = (page, n = 1) => page.evaluate(([src, n]) => {
+  const read = new Function(`return (${src})()`);
+  const before = read();
+  for (let i = 0; i < n; i++) document.querySelector('.hsh-say__box').click();
+  return [before, read()];
+}, [readTalk.toString(), n]);
+
+async function talkCase(device, name) {
+  const d = await open(null, device ? undefined : { width: 1280, height: 860 }, device || {});
+  const { page } = d;
+  await home(page);
+  check(`${name} — 홈에는 대화창 없음`, !(await talkState(page)).open);
+  await page.locator('.hsh-sticker[data-label="archive"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('.hsh-say.is-open', { timeout: 5000 }).catch(() => {});
+  let s = await talkState(page);
+  check(`${name} — archive 에 들어가면 대화창`, s.open);
+  check(`${name} — 첫 대사 화자 차우연 · 연노랑 이름표`, s.who === '차우연' && s.whoBg === 'rgb(251, 239, 174)', `${s.who} ${s.whoBg}`);
+  // 쓰는 도중 누르기 — 읽기 · 누르기 · 읽기를 페이지 안에서 한 번에(왕복 사이에 대사가 끝나지 않게)
+  let [before, after] = await pressTalk(page);
+  check(`${name} — 한 글자씩 쓰는 중(▼ 아직 없음)`, !before.done && before.shown.length > 0 && before.rest.length > 0 && before.next === '0', JSON.stringify(before));
+  check(`${name} — 쓰는 중 누르면 바로 완성`, after.done && after.who === '차우연' && after.shown === '야, 열쇠고리 어디에 뒀었지?' && after.rest === '', JSON.stringify(after));
+  await page.waitForTimeout(250);
+  check(`${name} — 대화 중에는 아래 라벨 줄을 숨긴다(대화창 뒤로 삐져나오지 않게)`, (await page.$eval('.hsh-arc__foot', (f) => getComputedStyle(f).opacity)) === '0');
+  await page.waitForTimeout(400); // 등장 전환이 끝난 뒤
+  s = await talkState(page);
+  check(`${name} — 화면 아래 가운데 · 좌우 여백 16px 이상 · 너비 680px 이하`, s.box.b >= 12 && s.box.b < 60 && s.box.x >= 15 && Math.abs(s.box.x * 2 + s.box.w - s.box.vw) < 2 && s.box.w <= 680, JSON.stringify(s.box));
+  // 위글 — 테두리 선만 바뀌고 상자 자리는 그대로
+  const ds = new Set();
+  const boxes = new Set();
+  for (let i = 0; i < 6; i++) { const x = await talkState(page); ds.add(x.d); boxes.add(JSON.stringify(x.box)); await page.waitForTimeout(110); }
+  check(`${name} — 테두리만 위글(선 모양은 바뀌고 상자 자리는 그대로)`, ds.size >= 2 && boxes.size === 1, `${ds.size} ${[...boxes].join(' ')}`);
+  check(`${name} — 다 나오면 오른쪽 아래 ▼`, (await talkState(page)).next !== '0');
+  await page.screenshot({ path: path.join(OUT, `talk-${name}.png`) });
+  [, after] = await pressTalk(page);
+  check(`${name} — 다시 누르면 다음 대사(홍지원 · 연하늘 이름표)`, after.who === '홍지원' && after.whoBg === 'rgb(207, 224, 251)' && !after.done, JSON.stringify(after));
+  await page.waitForFunction(() => document.querySelector('.hsh-say')?.classList.contains('is-done'), null, { timeout: 5000 }).catch(() => {});
+  s = await talkState(page);
+  check(`${name} — 기다리면 저절로 끝까지`, s.done && s.shown === '그걸 와 나한테 묻는데.', JSON.stringify(s.shown + '|' + s.rest));
+  [, after] = await pressTalk(page, 2); // 다음 대사 → 바로 완성
+  check(`${name} — 세 번째 대사`, after.who === '홍지원' && after.shown === '...니 화장대 위에 있더라.', JSON.stringify(after));
+  [, after] = await pressTalk(page, 2);
+  check(`${name} — 마지막 대사`, after.who === '차우연' && after.shown === '여기 있다! 땡큐.' && after.label === '대화 닫기', JSON.stringify(after));
+  await (device ? page.tap('.hsh-say__box') : page.click('.hsh-say__box'));
+  await page.waitForTimeout(300);
+  check(`${name} — 마지막에서 한 번 더 → 닫힘`, !(await talkState(page)).open && (await page.$eval('.hsh-say', (t) => t.hidden)));
+  check(`${name} — 대화 다시 보기 버튼 · 안내 없음`, !/다시 보기/.test(await page.textContent('body')));
+  // 닫은 뒤 꾸러미는 그대로 쓴다(아래 라벨 줄)
+  await page.waitForSelector('.hsh-arc.is-ready', { timeout: 30000 }).catch(() => {});
+  await page.click('.hsh-arc__chip[data-i="1"]');
+  await page.waitForTimeout(400);
+  check(`${name} — 닫은 뒤 꾸러미 고르기 그대로`, (await pressed(page)) === 1);
+  // 홈 → 대사 없는 방(notice) → 안 뜸, 다시 archive → 또 뜸
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  await page.locator('.hsh-sticker[data-label="notice"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForTimeout(600);
+  check(`${name} — 대사 없는 방(notice)은 대화창 없음 · 창은 그대로 열림`, !(await talkState(page)).open && (await page.$eval('.hsh-win', (w) => !w.hidden)));
+  await page.click('.hsh-win__x');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  await page.locator('.hsh-sticker[data-label="archive"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForTimeout(1200);
+  check(`${name} — 끝까지 본 대화는 다시 들어와도 안 뜸 · 라벨 줄 그대로`, !(await talkState(page)).open && (await page.$eval('.hsh-arc__foot', (f) => getComputedStyle(f).opacity)) === '1');
+  await page.reload();
+  await page.waitForSelector('.hsh-arc.is-open', { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(1200);
+  check(`${name} — 새로고침해도 안 뜸`, !(await talkState(page)).open);
+  // 대사가 바뀌면(서명이 다르면) 새 대화로 다시 — 적어 둔 서명을 바꿔 흉내
+  await page.evaluate(() => localStorage.setItem('hsh:talk-seen', JSON.stringify({ archive: 'old' })));
+  await page.click('.hsh-arc__home');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForSelector('.hsh-plan.is-done', { timeout: 20000 }).catch(() => {});
+  await page.locator('.hsh-sticker[data-label="archive"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('.hsh-say.is-open', { timeout: 5000 }).catch(() => {});
+  check(`${name} — 대사가 바뀌면 다시 처음부터`, (await talkState(page)).who === '차우연');
+  // 도중에 떠나면 같이 닫히고, 다 본 게 아니라 다음에 또 뜬다
+  await page.click('.hsh-arc__home');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  check(`${name} — ← home 으로 떠나면 대화창도 닫힘`, !(await talkState(page)).open);
+  await page.locator('.hsh-sticker[data-label="archive"]').evaluate((s) => s.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('.hsh-say.is-open', { timeout: 5000 }).catch(() => {});
+  check(`${name} — 도중에 떠난 대화는 다음에 다시`, (await talkState(page)).who === '차우연');
+  await page.click('.hsh-arc__home');
+  await page.waitForFunction(() => location.pathname === '/', null, { timeout: 5000 }).catch(() => {});
+  // neighbor 우체통(같은 방 안 화면 바뀜)은 대화창과 무관 · neighbor 는 대사 없음
+  await page.goto(`${VIBE_ORIGIN}/neighbor?${Q}`);
+  await page.waitForTimeout(1200);
+  check(`${name} — neighbor(대사 없음) 대화창 없음`, !(await talkState(page)).open);
+  check(`콘솔 오류 없음(대화창 ${name})`, d.errors.length === 0, d.errors.join(' | '));
+  await d.context.close();
+}
+
+async function talk() {
+  console.log('\n[대화창]');
+  await talkCase(null, 'PC');
+  await talkCase(playwright.devices['iPhone 13'], '휴대폰');
+
+  // 모션 줄이기 — 위글 · 타이핑 없이 바로
+  const rm = await open(null, { width: 1000, height: 800 }, { reducedMotion: 'reduce' });
+  await rm.page.goto(`${VIBE_ORIGIN}/archive?${Q}`);
+  await rm.page.waitForSelector('.hsh-say.is-open', { timeout: 15000 }).catch(() => {});
+  const a = await talkState(rm.page);
+  await rm.page.waitForTimeout(500);
+  const b = await talkState(rm.page);
+  check('모션 줄이기 — 대사가 바로 다 보인다', a.open && a.done && a.shown === '야, 열쇠고리 어디에 뒀었지?', JSON.stringify(a));
+  check('모션 줄이기 — 테두리 위글 없음 · ▼ 움직임 없음', a.d === b.d && (await rm.page.$eval('.hsh-say__next', (n) => getComputedStyle(n).animationName)) === 'none');
+  await rm.page.click('.hsh-say__box');
+  check('모션 줄이기 — 누르면 다음 대사도 바로', (await talkState(rm.page)).shown === '그걸 와 나한테 묻는데.');
+  check('콘솔 오류 없음(대화창 모션 줄이기)', rm.errors.length === 0, rm.errors.join(' | '));
+  await rm.context.close();
 }
 
 // ---------- neighbor — 손그림 마을 ----------
@@ -2201,6 +2349,7 @@ try {
   if (!ONLY || ONLY === 'mobile') await mobile();
   if (!ONLY || ONLY === 'layout') await layout();
   if (!ONLY || ONLY === 'archive') await archive();
+  if (!ONLY || ONLY === 'talk') await talk();
   if (!ONLY || ONLY === 'neighbor') await neighbor();
 } catch (e) {
   console.error(e);

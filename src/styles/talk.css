@@ -1,0 +1,124 @@
+/* 대화창(talk/box.js) — 방 화면 아래 가로로 긴 흰 상자. 이중 테두리 · 이름표 · ▼ 는 손그림 선(로딩 집 윤곽과 같은 회색 계열) */
+.hsh-say {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
+  z-index: 70; /* archive · neighbor 흰 화면(60) · 방 창(50) 위 */
+  width: min(680px, calc(100vw - 32px));
+  translate: -50% 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease, translate 0.2s ease;
+}
+.hsh-say[hidden] { display: none; }
+.hsh-say.is-open { opacity: 1; translate: -50% 0; }
+
+/* 대화창 뒤로 삐져나오는 archive 아래 라벨 줄은 대화가 끝날 때까지 숨긴다 */
+.hsh-arc__foot { transition: opacity 0.2s ease; }
+.hsh-say-on .hsh-arc__foot { opacity: 0; pointer-events: none; }
+
+.hsh-say__box {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 112px;
+  margin: 0;
+  padding: 26px 34px 24px 28px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--hsh-text);
+  font: inherit;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.hsh-say__box:focus { outline: none; }
+.hsh-say__box:focus-visible .hsh-say__inner { stroke: var(--hsh-lilac-ink); }
+
+/* 이중 테두리 — 상자 크기 그대로의 SVG(선만 그려 둔다) */
+.hsh-say__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.hsh-say__frame path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.hsh-say__outer { stroke: var(--hsh-link); stroke-width: 2.4; }
+.hsh-say__sketch { stroke: var(--hsh-line); stroke-width: 0.8; opacity: 0.55; } /* 한 번 더 그은 듯한 겹선 */
+.hsh-say__inner { stroke: var(--hsh-line); stroke-width: 1.1; }
+
+/* 화자 이름표 — 왼쪽 위 테두리에 걸쳐 붙인 색종이 */
+.hsh-say__who {
+  position: absolute;
+  top: -13px;
+  left: 18px;
+  padding: 2px 11px 3px;
+  border: 1.2px solid var(--hsh-line);
+  border-radius: 5px 6px 4px 6px;
+  background: var(--c, var(--hsh-silver));
+  color: var(--hsh-text);
+  font-family: var(--hsh-label-font);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  rotate: -2deg;
+}
+
+.hsh-say__line {
+  position: relative;
+  display: block;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.hsh-say__rest { visibility: hidden; }
+
+/* 다음 대사 ▼ — 대사가 다 나오면 */
+.hsh-say__next {
+  position: absolute;
+  right: 16px;
+  bottom: 13px;
+  width: 10px;
+  height: 8px;
+  fill: var(--hsh-link);
+  opacity: 0;
+}
+.hsh-say.is-done .hsh-say__next { opacity: 1; animation: hsh-say-next 0.9s ease-in-out infinite alternate; }
+@keyframes hsh-say-next { to { translate: 0 2px; } }
+
+/* 화면 읽기 프로그램용 — 대사 한 줄을 통째로 */
+.hsh-say__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .hsh-say__box {
+    min-height: 96px;
+    padding: 22px 28px 20px 20px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .hsh-say__who { top: -12px; left: 14px; font-size: 12px; }
+  .hsh-say__next { right: 13px; bottom: 11px; }
+}
+
+.hsh-say.is-reduced,
+.hsh-say.is-reduced .hsh-say__next { transition: none; animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .hsh-arc__foot,
+  .hsh-say,
+  .hsh-say__next { transition: none; animation: none !important; }
+}
