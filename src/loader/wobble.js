@@ -8,8 +8,8 @@
 export const WOBBLE_FRAME = 190;
 const FRAMES = 4;
 
-// 글자 i, 프레임 k 마다 고정된 작은 값(-1..1)
-function jitter(i, k, salt) {
+// 글자 i, 프레임 k 마다 고정된 작은 값(-1..1) — 대화창 테두리(talk/box.js)도 같은 값으로 흔든다
+export function jitter(i, k, salt) {
   const s = Math.sin(i * 12.9898 + k * 78.233 + salt * 37.719) * 43758.5453;
   return (s - Math.floor(s)) * 2 - 1;
 }
