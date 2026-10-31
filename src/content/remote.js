@@ -5,7 +5,8 @@
 //   정적 파일은 Access-Control-Allow-Origin: * 로 나간다(Cloudflare Pages 기본).
 //   classic script 라 전역(함수 · const)을 남긴다 — 순서는 넣은 순서 그대로(async = false).
 
-const DEFAULT_ORIGIN = 'https://hongjiwon.love';
+// hongjiwon.love 도메인은 이제 다른 곳(티스토리)을 가리킨다 — 같은 사이트(Pages 프로젝트 web)의 기본 주소로 받는다
+const DEFAULT_ORIGIN = 'https://web-7i4.pages.dev';
 
 // 로컬에서만 ?content-origin=http://localhost:8788 처럼 다른 출처(로컬 web 저장소)를 시험할 수 있다
 function pickOrigin() {

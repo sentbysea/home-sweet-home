@@ -59,13 +59,16 @@ https://xn--9g3b29an0p.me/
 
 | 주소 | 무엇 | 설정 |
 | --- | --- | --- |
-| `https://ho.xn--9g3b29an0p.me` | 이 저장소(GitHub Pages) | 후이즈 DNS `ho` CNAME → `sentbysea.github.io.` · Pages Custom domain · 저장소 `CNAME` |
-| `https://xn--9g3b29an0p.me` · `www.` | `sentbysea/vibe-me-redirect`(GitHub Pages) | 후이즈 DNS 그대로(A 185.199.108~111.153 · www CNAME → `sentbysea.github.io.`) |
+| `https://ho.xn--9g3b29an0p.me` | 이 저장소(GitHub Pages) | Cloudflare DNS `ho` CNAME → `sentbysea.github.io.`(Proxied · SSL Full) · Pages Custom domain · 저장소 `CNAME` |
+| `https://ho.xn--9g3b29an0p.me/ops/` · `/api/hsh` | hongjiwon-ops Worker(경로 route) | 대시보드(Access 뒤) · 방문 집계 수신. 나머지 경로는 GitHub Pages 그대로 |
+| `https://xn--9g3b29an0p.me` · `www.` | `sentbysea/vibe-me-redirect`(GitHub Pages) | Cloudflare DNS(DNS only — A 185.199.108~111.153 · www CNAME → `sentbysea.github.io.`) |
 
 - 옛 주소는 어떤 경로든 `https://ho.xn--9g3b29an0p.me` + 같은 경로 · 쿼리 · 해시로 넘긴다(index.html · 404.html 의 location.replace).
   GitHub Pages 는 다른 호스트로 301 을 못 해서 문서가 넘긴다 — `/` 는 새 주소 로딩 → 홈, `/post/13` 같은 주소는 로딩 없이 그 창.
 - 주소마다 브라우저 저장소가 따로라 새 주소에서는 로그인(주인 edit · 관리자) · 방 하트 · 이웃 보기 방식 · 입주 신청 적던 글 · 비밀글 사진 열람(sessionStorage) 같은 이 브라우저 기억이 처음부터다 — 한 번 다시 로그인하면 된다.
 - hongjiwon.love CORS(`/api/post-cover`)는 새 주소 · 옛 주소 둘 다 연다(web `functions/`).
+- hongjiwon.love 도메인은 2026-11-01 부터 티스토리를 가리킨다 — web 사이트의 파일 · `/api/post-cover` 는 Pages 기본 주소
+  `https://web-7i4.pages.dev` 에서 받는다(src/content/remote.js `DEFAULT_ORIGIN`).
 
 ## 배포 뒤에만 확인할 수 있는 것
 
