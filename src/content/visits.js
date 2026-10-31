@@ -15,6 +15,11 @@ import { SITE_OWNER_ID } from './home-settings.js';
 // /api/collect 는 다른 사이트에서 보내면 추적 차단기에 걸려 나가지 않는다 — 같은 일을 하는 /api/hsh 로
 const ENDPOINT = 'https://hongjiwon.love/api/hsh';
 const HOSTS = ['ho.xn--9g3b29an0p.me', 'xn--9g3b29an0p.me', 'www.xn--9g3b29an0p.me'];
+// 예전 주소(바이브.me · www.) — 지금은 ho. 로 넘기기만 한다(sentbysea/vibe-me-redirect). 거기서 넘어왔으면 리퍼러가 그 주소라
+// 받는 쪽이 '사이트 안 이동'으로 보고 유입에서 뺀다 — 주소창에 바이브.me 를 친 방문(기록이 없는 개인정보 보호 탭 등)이 그렇다.
+// 그 리퍼러는 지우고 보낸다(직접 방문과 같다 — 넘기기 전의 리퍼러는 넘겨받지 못한다)
+const REDIRECT_HOSTS = ['xn--9g3b29an0p.me', 'www.xn--9g3b29an0p.me'];
+const throughRedirect = (ref) => { try { return REDIRECT_HOSTS.includes(new URL(ref).hostname); } catch { return false; } };
 const OPTOUT_KEY = 'hj-analytics-optout';
 const VISITOR_KEY = 'hj-visitor-id';
 const VISITOR_MAX_AGE = 400 * 24 * 60 * 60 * 1000;
@@ -127,7 +132,8 @@ export function startVisits() {
     last = page;
     if (optedOut() || ownerSaved()) return; // 도중에 주인으로 로그인했거나 제외를 켰다
     const entry = first && (via ? via.fresh : freshNavigation());
-    const ref = first ? (via ? via.ref : document.referrer) : '';
+    const raw = first ? (via ? via.ref : document.referrer) : '';
+    const ref = throughRedirect(raw) ? '' : raw;
     const body = JSON.stringify({ v: 1, site: 'vibe', eid: eventId(), vid: visitorId(), page, entry, ref });
     first = false;
     // referrerPolicy: 'origin' — 받는 쪽은 Origin 으로 바이브.me 인 줄 안다. Safari(WebKit)는 no-cors 요청의 Origin 을
