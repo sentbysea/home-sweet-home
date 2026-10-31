@@ -1,20 +1,20 @@
-// 바이브.me 방문 집계 — ho.바이브.me 에서만. hongjiwon.love 의 /api/hsh 로 보내면 그쪽 집계가
-//   바이브.me 표에 따로 센다(hongjiwon.love 숫자와 섞이지 않는다).
+// 바이브.me 방문 집계 — ho.바이브.me 에서만. 같은 주소의 /api/hsh 로 보낸다(Cloudflare 가 이 경로만
+//   집계 Worker 로 넘긴다 — 나머지 경로는 GitHub Pages 그대로). 바이브.me 표에 따로 센다.
 //   보내지 않는 경우 — 처음부터 아무것도 보내지 않는다:
 //     · 운영 주소가 아님(localhost · 미리보기) · 자동화 브라우저(navigator.webdriver)
 //     · 이 브라우저의 '내 방문 집계 제외'(주소의 ?hsh-optout=1|0 으로 켜고 끈다)
 //     · 이 브라우저에 사이트 주인 로그인이 저장돼 있음(supabase-js 를 받지 않고, 저장된 로그인의 사용자 id 로 본다)
 //   무엇을 세나: 문서를 연 화면 하나 + 그 뒤 화면 종류가 바뀔 때마다 하나(주소 → 화면 이름, 같은 화면 안 이동은 세지 않는다).
-//   no-cors · text/plain — 사전 요청 없이 보내고 응답은 읽지 않는다. 실패해도 다시 보내지 않고 화면에는 영향이 없다.
+//   같은 출처 · text/plain — 사전 요청 없이 보내고 응답은 읽지 않는다. 실패해도 다시 보내지 않고 화면에는 영향이 없다.
 //   브라우저에 두는 값: localStorage hj-visitor-id — 순방문자 추정용 임의 ID(400일), hongjiwon.love 와 같은 이름 · 모양.
 
 import { parsePath, ROOM_PATHS } from '../plan/routes.js';
 import { AUTH_KEY } from './supabase.js';
 import { SITE_OWNER_ID } from './home-settings.js';
 
-// /api/collect 는 다른 사이트에서 보내면 추적 차단기에 걸려 나가지 않는다 — 같은 일을 하는 /api/hsh 로
-const ENDPOINT = 'https://hongjiwon.love/api/hsh';
-const HOSTS = ['ho.xn--9g3b29an0p.me', 'xn--9g3b29an0p.me', 'www.xn--9g3b29an0p.me'];
+// 같은 출처 요청 — 다른 사이트로 보내던 때의 추적 차단기 · Origin 문제가 없다
+const ENDPOINT = '/api/hsh';
+const HOSTS = ['ho.xn--9g3b29an0p.me'];
 // 예전 주소(바이브.me · www.) — 지금은 ho. 로 넘기기만 한다(sentbysea/vibe-me-redirect). 거기서 넘어왔으면 리퍼러가 그 주소라
 // 받는 쪽이 '사이트 안 이동'으로 보고 유입에서 뺀다 — 주소창에 바이브.me 를 친 방문(기록이 없는 개인정보 보호 탭 등)이 그렇다.
 // 그 리퍼러는 지우고 보낸다(직접 방문과 같다 — 넘기기 전의 리퍼러는 넘겨받지 못한다)
@@ -136,9 +136,7 @@ export function startVisits() {
     const ref = throughRedirect(raw) ? '' : raw;
     const body = JSON.stringify({ v: 1, site: 'vibe', eid: eventId(), vid: visitorId(), page, entry, ref });
     first = false;
-    // referrerPolicy: 'origin' — 받는 쪽은 Origin 으로 바이브.me 인 줄 안다. Safari(WebKit)는 no-cors 요청의 Origin 을
-    // 문서의 리퍼러 정책을 따라 null 로 보내기도 해서(개인정보 보호 브라우징 등) 이 요청만은 주소(경로 없이)를 싣게 정해 둔다
-    fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', credentials: 'omit', keepalive: true, referrerPolicy: 'origin', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body })
+    fetch(ENDPOINT, { method: 'POST', credentials: 'omit', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body })
       .catch(() => { /* 세지 못해도 화면은 그대로 */ });
   };
   // 창을 열고 닫을 때 주소만 바뀐다(plan/room-window.js 의 pushState · replaceState) — 바뀐 뒤에 본다
