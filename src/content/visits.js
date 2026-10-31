@@ -130,7 +130,9 @@ export function startVisits() {
     const ref = first ? (via ? via.ref : document.referrer) : '';
     const body = JSON.stringify({ v: 1, site: 'vibe', eid: eventId(), vid: visitorId(), page, entry, ref });
     first = false;
-    fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', credentials: 'omit', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body })
+    // referrerPolicy: 'origin' — 받는 쪽은 Origin 으로 바이브.me 인 줄 안다. Safari(WebKit)는 no-cors 요청의 Origin 을
+    // 문서의 리퍼러 정책을 따라 null 로 보내기도 해서(개인정보 보호 브라우징 등) 이 요청만은 주소(경로 없이)를 싣게 정해 둔다
+    fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', credentials: 'omit', keepalive: true, referrerPolicy: 'origin', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body })
       .catch(() => { /* 세지 못해도 화면은 그대로 */ });
   };
   // 창을 열고 닫을 때 주소만 바뀐다(plan/room-window.js 의 pushState · replaceState) — 바뀐 뒤에 본다
