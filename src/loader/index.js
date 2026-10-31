@@ -8,6 +8,7 @@ import { drawHouse } from './draw.js';
 import { waitForEnter } from './enter.js';
 import { exitLoader } from './exit.js';
 import { startWobble } from './wobble.js';
+import { startIconMotion } from './icon-motion.js';
 
 export const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -28,7 +29,10 @@ export async function runLoader(el, { ready, reduced = prefersReducedMotion(), t
   const typed = typeLines(el, {
     ...typing, reduced, signal: stop.signal, duration: visitDuration({ minStep }), until: visited,
   });
-  if (!reduced) startWobble(el, { signal: stop.signal }); // 글자를 나눈 뒤에 시작
+  if (!reduced) {
+    startWobble(el, { signal: stop.signal }); // 글자를 나눈 뒤에 시작
+    startIconMotion(status, { signal: stop.signal });
+  }
 
   await typed; // 마지막 글자는 방문 단계·준비가 끝난 뒤
 
